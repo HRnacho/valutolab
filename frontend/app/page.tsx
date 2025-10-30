@@ -2,20 +2,32 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-white">
       {/* HERO SECTION */}
-      <section className="relative bg-gradient-to-br from-purple-600 via-purple-700 to-indigo-800 text-white py-20 px-4">
-        <div className="max-w-6xl mx-auto text-center">
-          <h1 className="text-5xl md:text-6xl font-bold mb-6">
+      <section className="relative bg-gradient-to-br from-purple-600 via-purple-700 to-indigo-800 text-white py-20 px-4 overflow-hidden">
+        {/* Background Image with Overlay */}
+        <div 
+          className="absolute inset-0 opacity-20"
+          style={{
+            backgroundImage: 'url("https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=1600&q=80")',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-900/50 to-indigo-900/50" />
+        
+        {/* Content */}
+        <div className="relative max-w-6xl mx-auto text-center z-10">
+          <h1 className="text-5xl md:text-6xl font-bold mb-6 drop-shadow-lg">
             Valuta le Soft Skills del Tuo Team<br />in 15 Minuti
           </h1>
-          <p className="text-xl md:text-2xl mb-8 text-purple-100">
+          <p className="text-xl md:text-2xl mb-8 text-purple-100 drop-shadow-md">
             Scopri i punti di forza e le aree di miglioramento delle competenze trasversali<br />
             con il nostro assessment scientifico e personalizzato
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button className="bg-white text-purple-700 px-8 py-4 rounded-lg font-bold text-lg hover:bg-purple-50 transition shadow-lg">
+            <button className="bg-white text-purple-700 px-8 py-4 rounded-lg font-bold text-lg hover:bg-purple-50 transition shadow-lg hover:scale-105 transform">
               Prova Gratis
             </button>
-            <button className="bg-purple-500 text-white px-8 py-4 rounded-lg font-bold text-lg hover:bg-purple-400 transition border-2 border-white">
+            <button className="bg-purple-500 text-white px-8 py-4 rounded-lg font-bold text-lg hover:bg-purple-400 transition border-2 border-white hover:scale-105 transform">
               Vedi Demo
             </button>
           </div>
