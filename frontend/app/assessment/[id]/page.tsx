@@ -98,7 +98,7 @@ export default function AssessmentQuestionPage() {
     }
   }
 
-  const handleComplete = async () => {
+ const handleComplete = async () => {
     // Check all questions answered
     const allAnswered = questions.every((q) => answers[q.id] !== undefined)
     
@@ -108,34 +108,30 @@ export default function AssessmentQuestionPage() {
     }
 
     try {
-      // Update assessment status
-      const { error } = await supabase
-        .from('assessments')
-        .update({
-          status: 'completed',
-          completed_at: new Date().toISOString(),
-        })
-        .eq('id', assessmentId)
+      // Call backend to calculate scores
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'https://valutolab-backend.onrender.com'}/api/assessments/${assessmentId}/calculate`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      )
 
-      if (error) throw error
+      if (!response.ok) {
+        throw new Error('Failed to calculate scores')
+      }
 
-      // Redirect to results (TODO: create results page)
+      const result = await response.json()
+      console.log('Assessment completed:', result)
+
+      // Redirect to dashboard
       router.push('/dashboard')
     } catch (error) {
       console.error('Error completing assessment:', error)
       alert('Errore nel completamento. Riprova.')
     }
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Caricamento...</p>
-        </div>
-      </div>
-    )
   }
 
   const isLastQuestion = currentQuestionIndex === questions.length - 1
