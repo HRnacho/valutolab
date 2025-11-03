@@ -5,23 +5,42 @@ import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { User } from '@supabase/supabase-js'
 
+interface Assessment {
+  id: string
+  status: string
+  started_at: string
+  completed_at: string | null
+  total_score: number | null
+}
+
 export default function DashboardPage() {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [assessments, setAssessments] = useState<Assessment[]>([])
 
   useEffect(() => {
-    // Check if user is logged in
     const checkUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       
       if (!user) {
-        // Not logged in - redirect to login
         router.push('/login')
         return
       }
 
       setUser(user)
+
+      // Load user's assessments
+      const { data: assessmentsData } = await supabase
+        .from('assessments')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('started_at', { ascending: false })
+
+      if (assessmentsData) {
+        setAssessments(assessmentsData)
+      }
+
       setLoading(false)
     }
 
@@ -43,6 +62,9 @@ export default function DashboardPage() {
       </div>
     )
   }
+
+  const inProgressAssessments = assessments.filter(a => a.status === 'in_progress')
+  const completedAssessments = assessments.filter(a => a.status === 'completed')
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -71,17 +93,85 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        {/* Assessment Section */}
+        {/* Assessment in Progress */}
+        {inProgressAssessments.length > 0 && (
+          <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg shadow p-6 mb-8">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">
+              ⚠️ Assessment in Corso
+            </h3>
+            {inProgressAssessments.map((assessment) => (
+              <div key={assessment.id} className="mb-4">
+                <p className="text-gray-700 mb-3">
+                  Hai un assessment iniziato il{' '}
+                  {new Date(assessment.started_at).toLocaleDateString('it-IT')}
+                </p>
+                
+                  href={`/assessment/${assessment.id}`}
+                  className="inline-block bg-yellow-500 text-white px-6 py-3 rounded-lg hover:bg-yellow-600 transition font-semibold"
+                >
+                  Riprendi Assessment →
+                </a>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Completed Assessments */}
+        {completedAssessments.length > 0 && (
+          <div className="bg-white rounded-lg shadow p-6 mb-8">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">
+              ✅ Assessment Completati
+            </h3>
+            <div className="space-y-3">
+              {completedAssessments.map((assessment) => (
+                <div
+                  key={assessment.id}
+                  className="border border-gray-200 rounded-lg p-4 flex justify-between items-center"
+                >
+                  <div>
+                    <p className="font-semibold text-gray-900">
+                      Assessment del {new Date(assessment.completed_at!).toLocaleDateString('it-IT')}
+                    </p>
+                    {assessment.total_score && (
+                      <p className="text-sm text-gray-600">
+                        Punteggio: {assessment.total_score.toFixed(1)}/5.0
+                      </p>
+                    )}
+                  </div>
+                  <button className="text-purple-600 hover:text-purple-700 font-semibold">
+                    Vedi Risultati →
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* New Assessment Section */}
         <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-xl font-bold text-gray-900 mb-4">I Tuoi Assessment</h3>
-          <div className="text-center py-12">
-            <p className="text-gray-600 mb-6">Non hai ancora completato nessun assessment.</p>
-            <a 
-  href="/assessment"
-  className="inline-block bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition font-semibold"
->
-  Inizia Nuovo Assessment
-</a>
+          <h3 className="text-xl font-bold text-gray-900 mb-4">Nuovo Assessment</h3>
+          <div className="text-center py-8">
+            <p className="text-gray-600 mb-6">
+              {inProgressAssessments.length > 0
+                ? 'Completa l\'assessment in corso prima di iniziarne uno nuovo.'
+                : 'Inizia un nuovo assessment per valutare le tue soft skills.'}
+            </p>
+            
+              href="/assessment"
+              className={`inline-block px-6 py-3 rounded-lg transition font-semibold ${
+                inProgressAssessments.length > 0
+                  ? 'bg-gray-400 text-white cursor-not-allowed'
+                  : 'bg-purple-600 text-white hover:bg-purple-700'
+              }`}
+              onClick={(e) => {
+                if (inProgressAssessments.length > 0) {
+                  e.preventDefault()
+                  alert('Completa l\'assessment in corso prima di iniziarne uno nuovo!')
+                }
+              }}
+            >
+              Inizia Nuovo Assessment
+            </a>
           </div>
         </div>
       </main>
