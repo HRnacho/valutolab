@@ -76,9 +76,12 @@ export default function DashboardPage() {
           <h3 className="text-xl font-bold text-gray-900 mb-4">I Tuoi Assessment</h3>
           <div className="text-center py-12">
             <p className="text-gray-600 mb-6">Non hai ancora completato nessun assessment.</p>
-            <button className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition font-semibold">
-              Inizia Nuovo Assessment
-            </button>
+            <a 
+  href="/assessment"
+  className="inline-block bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition font-semibold"
+>
+  Inizia Nuovo Assessment
+</a>
           </div>
         </div>
       </main>
