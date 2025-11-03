@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
+import assessmentsRouter from './routes/assessments.js';
 
 dotenv.config();
 
@@ -34,6 +35,8 @@ app.get('/api/v1/test', (req, res) => {
     version: '1.0.0'
   });
 });
+// Assessment routes
+app.use('/api/assessments', assessmentsRouter);
 
 // Start server
 app.listen(PORT, () => {
