@@ -105,7 +105,7 @@ export default function DashboardPage() {
                   Hai un assessment iniziato il{' '}
                   {new Date(assessment.started_at).toLocaleDateString('it-IT')}
                 </p>
-                
+                <a 
                   href={`/assessment/${assessment.id}`}
                   className="inline-block bg-yellow-500 text-white px-6 py-3 rounded-lg hover:bg-yellow-600 transition font-semibold"
                 >
@@ -156,7 +156,7 @@ export default function DashboardPage() {
                 ? 'Completa l\'assessment in corso prima di iniziarne uno nuovo.'
                 : 'Inizia un nuovo assessment per valutare le tue soft skills.'}
             </p>
-            
+            <a
               href="/assessment"
               className={`inline-block px-6 py-3 rounded-lg transition font-semibold ${
                 inProgressAssessments.length > 0
