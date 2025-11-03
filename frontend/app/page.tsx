@@ -1,6 +1,35 @@
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-white">
+      {/* NAVBAR */}
+      <nav className="sticky top-0 z-50 bg-white shadow-md">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            {/* Logo */}
+            <div className="flex-shrink-0">
+              <a href="/" className="text-2xl font-bold text-purple-600">
+                ValutoLab
+              </a>
+            </div>
+            
+            {/* Navigation Links */}
+            <div className="flex items-center space-x-4">
+              <a 
+                href="/login" 
+                className="text-gray-700 hover:text-purple-600 font-medium transition"
+              >
+                Accedi
+              </a>
+              <a 
+                href="/register" 
+                className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition font-semibold"
+              >
+                Registrati
+              </a>
+            </div>
+          </div>
+        </div>
+      </nav>
       {/* HERO SECTION */}
       <section className="relative bg-gradient-to-br from-purple-600 via-purple-700 to-indigo-800 text-white py-20 px-4 overflow-hidden">
         {/* Background Image with Overlay */}
