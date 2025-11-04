@@ -138,9 +138,12 @@ export default function DashboardPage() {
                       </p>
                     )}
                   </div>
-                  <button className="text-purple-600 hover:text-purple-700 font-semibold">
-                    Vedi Risultati →
-                  </button>
+                  <a 
+  href={`/dashboard/results/${assessment.id}`}
+  className="text-purple-600 hover:text-purple-700 font-semibold"
+>
+  Vedi Risultati →
+</a>
                 </div>
               ))}
             </div>
