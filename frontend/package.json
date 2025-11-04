@@ -17,7 +17,8 @@
     "lucide-react": "^0.294.0",
     "axios": "^1.6.2",
     "@supabase/supabase-js": "^2.38.4",
-    "@supabase/auth-helpers-nextjs": "^0.8.7"
+    "@supabase/auth-helpers-nextjs": "^0.8.7",
+    "recharts": "^2.10.3" 
   },
   "devDependencies": {
     "typescript": "^5.3.3",
