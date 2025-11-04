@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter, useParams } from 'next/navigation'
 import { categoryLabels } from '@/data/questions'
-import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts'
+import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts'
 
 interface AssessmentResult {
   skill_category: string
@@ -129,7 +129,7 @@ export default function ResultsPage() {
         {/* Overview Card */}
         <div className="bg-gradient-to-br from-purple-600 to-indigo-700 rounded-lg shadow-lg p-8 mb-8 text-white">
           <h2 className="text-3xl font-bold mb-4">Complimenti! 🎉</h2>
-          <p className="text-xl mb-6">Hai completato l'assessment delle soft skills</p>
+          <p className="text-xl mb-6">Hai completato l&apos;assessment delle soft skills</p>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-white/20 rounded-lg p-6">
@@ -266,3 +266,14 @@ export default function ResultsPage() {
     </div>
   )
 }
+```
+
+**Salva il file** (Ctrl+S).
+
+---
+
+**Poi commit & push!** 📤
+
+Messaggio commit:
+```
+Fix syntax error in results page
