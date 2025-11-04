@@ -116,7 +116,7 @@ export default function ResultsPage() {
         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">
           <h1 className="text-2xl font-bold text-gray-900">Risultati Assessment</h1>
           
-            href="/dashboard"
+           <a href="/dashboard"
             className="text-purple-600 hover:text-purple-700 font-medium"
           >
             ← Dashboard
