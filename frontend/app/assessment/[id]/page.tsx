@@ -42,6 +42,12 @@ export default function AssessmentQuestionPage() {
           answersMap[r.question_id] = r.answer
         })
         setAnswers(answersMap)
+        
+        // Find first unanswered question
+        const firstUnanswered = questions.findIndex((q) => !answersMap[q.id])
+        if (firstUnanswered !== -1) {
+          setCurrentQuestionIndex(firstUnanswered)
+        }
       }
 
       setLoading(false)
@@ -78,12 +84,12 @@ export default function AssessmentQuestionPage() {
   const handleAnswer = async (value: number) => {
     await saveAnswer(currentQuestion.id, value)
     
-    // Auto-advance to next question after 300ms
+    // Auto-advance to next question after 500ms (più lento)
     setTimeout(() => {
       if (currentQuestionIndex < questions.length - 1) {
         setCurrentQuestionIndex(currentQuestionIndex + 1)
       }
-    }, 300)
+    }, 500)
   }
 
   const handlePrevious = () => {
@@ -98,7 +104,9 @@ export default function AssessmentQuestionPage() {
     }
   }
 
- const handleComplete = async () => {
+  const handleComplete = async () => {
+    console.log('🔍 handleComplete called')
+    
     // Check all questions answered
     const allAnswered = questions.every((q) => answers[q.id] !== undefined)
     
@@ -107,31 +115,51 @@ export default function AssessmentQuestionPage() {
       return
     }
 
+    const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || 'https://valutolab-backend.onrender.com'}/api/assessments/${assessmentId}/calculate`
+    
+    console.log('🔍 Assessment ID:', assessmentId)
+    console.log('🔍 API URL env:', process.env.NEXT_PUBLIC_API_URL)
+    console.log('🔍 Full URL:', apiUrl)
+    console.log('🔍 Method: POST')
+
     try {
-      // Call backend to calculate scores
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'https://valutolab-backend.onrender.com'}/api/assessments/${assessmentId}/calculate`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      )
+      console.log('🔍 Making fetch call...')
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      console.log('🔍 Response status:', response.status)
+      console.log('🔍 Response ok:', response.ok)
 
       if (!response.ok) {
+        const errorText = await response.text()
+        console.log('🔍 Error response:', errorText)
         throw new Error('Failed to calculate scores')
       }
 
       const result = await response.json()
-      console.log('Assessment completed:', result)
+      console.log('🔍 Assessment completed:', result)
 
       // Redirect to dashboard
       router.push('/dashboard')
     } catch (error) {
-      console.error('Error completing assessment:', error)
+      console.error('❌ Error completing assessment:', error)
       alert('Errore nel completamento. Riprova.')
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Caricamento...</p>
+        </div>
+      </div>
+    )
   }
 
   const isLastQuestion = currentQuestionIndex === questions.length - 1
