@@ -31,14 +31,12 @@ export default function ResultsPage() {
 
   useEffect(() => {
     const loadResults = async () => {
-      // Check user
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         router.push('/login')
         return
       }
 
-      // Load assessment
       const { data: assessmentData } = await supabase
         .from('assessments')
         .select('*')
@@ -52,7 +50,6 @@ export default function ResultsPage() {
 
       setAssessment(assessmentData)
 
-      // Load results
       const { data: resultsData } = await supabase
         .from('assessment_results')
         .select('*')
@@ -86,47 +83,38 @@ export default function ResultsPage() {
         <div className="text-center">
           <p className="text-gray-600">Nessun risultato trovato</p>
           <a href="/dashboard" className="text-purple-600 hover:text-purple-700 mt-4 inline-block">
-            ← Torna alla Dashboard
+            Torna alla Dashboard
           </a>
         </div>
       </div>
     )
   }
 
-  // Prepare data for radar chart
   const radarData = results.map((r) => ({
     category: categoryLabels[r.skill_category]?.substring(0, 12) || r.skill_category,
     score: r.score,
   }))
 
-  // Prepare data for bar chart
   const barData = results.map((r) => ({
     name: categoryLabels[r.skill_category] || r.skill_category,
     punteggio: r.score,
   }))
 
-  // Get top 3 strengths and improvements
   const strengths = results.slice(0, 3)
   const improvements = results.slice(-3).reverse()
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">
           <h1 className="text-2xl font-bold text-gray-900">Risultati Assessment</h1>
-          
-           <a href="/dashboard"
-            className="text-purple-600 hover:text-purple-700 font-medium"
-          >
-            ← Dashboard
+          <a href="/dashboard" className="text-purple-600 hover:text-purple-700 font-medium">
+            Torna alla Dashboard
           </a>
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        {/* Overview Card */}
         <div className="bg-gradient-to-br from-purple-600 to-indigo-700 rounded-lg shadow-lg p-8 mb-8 text-white">
           <h2 className="text-3xl font-bold mb-4">Complimenti! 🎉</h2>
           <p className="text-xl mb-6">Hai completato l&apos;assessment delle soft skills</p>
@@ -146,9 +134,7 @@ export default function ResultsPage() {
           </div>
         </div>
 
-        {/* Strengths and Improvements */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-          {/* Strengths */}
           <div className="bg-white rounded-lg shadow p-6">
             <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
               <span className="text-2xl mr-2">🌟</span>
@@ -173,7 +159,6 @@ export default function ResultsPage() {
             </div>
           </div>
 
-          {/* Improvements */}
           <div className="bg-white rounded-lg shadow p-6">
             <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
               <span className="text-2xl mr-2">📈</span>
@@ -199,7 +184,6 @@ export default function ResultsPage() {
           </div>
         </div>
 
-        {/* Radar Chart */}
         <div className="bg-white rounded-lg shadow p-6 mb-8">
           <h3 className="text-xl font-bold text-gray-900 mb-6">Panoramica Competenze</h3>
           <ResponsiveContainer width="100%" height={400}>
@@ -211,7 +195,6 @@ export default function ResultsPage() {
           </ResponsiveContainer>
         </div>
 
-        {/* Bar Chart */}
         <div className="bg-white rounded-lg shadow p-6 mb-8">
           <h3 className="text-xl font-bold text-gray-900 mb-6">Dettaglio per Categoria</h3>
           <ResponsiveContainer width="100%" height={500}>
@@ -225,7 +208,6 @@ export default function ResultsPage() {
           </ResponsiveContainer>
         </div>
 
-        {/* Category Details */}
         <div className="bg-white rounded-lg shadow p-6 mb-8">
           <h3 className="text-xl font-bold text-gray-900 mb-6">Dettaglio Completo</h3>
           <div className="space-y-6">
@@ -240,10 +222,7 @@ export default function ResultsPage() {
                   </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-3 mb-4">
-                  <div
-                    className="bg-purple-600 h-3 rounded-full"
-                    style={{ width: `${(result.score / 5) * 100}%` }}
-                  ></div>
+                  <div className="bg-purple-600 h-3 rounded-full" style={{ width: `${(result.score / 5) * 100}%` }}></div>
                 </div>
                 <p className="text-sm text-gray-600">
                   {((result.score / 5) * 100).toFixed(0)}% delle competenze in questa categoria
@@ -253,12 +232,8 @@ export default function ResultsPage() {
           </div>
         </div>
 
-        {/* Actions */}
         <div className="flex justify-center gap-4">
-          
-            href="/dashboard"
-            className="bg-purple-600 text-white px-8 py-3 rounded-lg hover:bg-purple-700 transition font-semibold"
-          >
+          <a href="/dashboard" className="bg-purple-600 text-white px-8 py-3 rounded-lg hover:bg-purple-700 transition font-semibold">
             Torna alla Dashboard
           </a>
         </div>
@@ -266,14 +241,3 @@ export default function ResultsPage() {
     </div>
   )
 }
-```
-
-**Salva il file** (Ctrl+S).
-
----
-
-**Poi commit & push!** 📤
-
-Messaggio commit:
-```
-Fix syntax error in results page
