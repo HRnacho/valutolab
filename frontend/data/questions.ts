@@ -1,36 +1,9 @@
-export interface Question {
-  id: number
-  category: string
-  categoryLabel: string
-  question: string
-}
-
-export interface LikertOption {
-  value: number
-  label: string
-}
-
-export const likertScale: LikertOption[] = [
+export const likertScale = [
   { value: 1, label: 'Mai' },
   { value: 2, label: 'Raramente' },
   { value: 3, label: 'A volte' },
   { value: 4, label: 'Spesso' },
   { value: 5, label: 'Sempre' },
-]
-
-export const categories = [
-  'communication',
-  'leadership',
-  'problem_solving',
-  'teamwork',
-  'time_management',
-  'adaptability',
-  'creativity',
-  'critical_thinking',
-  'empathy',
-  'resilience',
-  'negotiation',
-  'decision_making',
 ]
 
 export const categoryLabels: Record<string, string> = {
@@ -48,7 +21,7 @@ export const categoryLabels: Record<string, string> = {
   decision_making: 'Decision Making',
 }
 
-export const questions: Question[] = [
+export const questions = [
   // COMUNICAZIONE (1-4)
   {
     id: 1,
@@ -66,7 +39,7 @@ export const questions: Question[] = [
     id: 3,
     category: 'communication',
     categoryLabel: 'Comunicazione',
-    question: "Adatto il mio stile comunicativo in base all'interlocutore",
+    question: 'Adatto il mio stile comunicativo in base all\'interlocutore',
   },
   {
     id: 4,
@@ -196,7 +169,7 @@ export const questions: Question[] = [
     id: 23,
     category: 'adaptability',
     categoryLabel: 'Adattabilità',
-    question: "Gestisco bene l'incertezza",
+    question: 'Gestisco bene l\'incertezza',
   },
   {
     id: 24,
@@ -326,7 +299,7 @@ export const questions: Question[] = [
     id: 43,
     category: 'negotiation',
     categoryLabel: 'Negoziazione',
-    question: "Comprendo i bisogni dell'altra parte",
+    question: 'Comprendo i bisogni dell\'altra parte',
   },
   {
     id: 44,
