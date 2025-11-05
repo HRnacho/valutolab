@@ -198,10 +198,10 @@ export default function ResultsPage() {
         <div className="bg-white rounded-lg shadow p-6 mb-8">
           <h3 className="text-xl font-bold text-gray-900 mb-6">Dettaglio per Categoria</h3>
           <ResponsiveContainer width="100%" height={500}>
-            <BarChart data={barData} layout="horizontal">
+            <BarChart data={barData}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis type="number" domain={[0, 5]} />
-              <YAxis dataKey="name" type="category" width={150} />
+              <XAxis dataKey="name" angle={-45} textAnchor="end" height={150} />
+              <YAxis domain={[0, 5]} />
               <Tooltip />
               <Bar dataKey="punteggio" fill="#8b5cf6" />
             </BarChart>
@@ -209,17 +209,18 @@ export default function ResultsPage() {
         </div>
 
         <div className="bg-white rounded-lg shadow p-6 mb-8">
-  <h3 className="text-xl font-bold text-gray-900 mb-6">Dettaglio per Categoria</h3>
-  <ResponsiveContainer width="100%" height={500}>
-    <BarChart data={barData}>
-      <CartesianGrid strokeDasharray="3 3" />
-      <XAxis dataKey="name" angle={-45} textAnchor="end" height={150} />
-      <YAxis domain={[0, 5]} />
-      <Tooltip />
-      <Bar dataKey="punteggio" fill="#8b5cf6" />
-    </BarChart>
-  </ResponsiveContainer>
-</div>
+          <h3 className="text-xl font-bold text-gray-900 mb-6">Dettaglio Completo</h3>
+          <div className="space-y-6">
+            {results.map((result) => (
+              <div key={result.skill_category} className="border-b pb-6 last:border-b-0">
+                <div className="flex justify-between items-center mb-2">
+                  <h4 className="text-lg font-semibold text-gray-900">
+                    {categoryLabels[result.skill_category]}
+                  </h4>
+                  <span className="text-2xl font-bold text-purple-600">
+                    {result.score.toFixed(1)}
+                  </span>
+                </div>
                 <div className="w-full bg-gray-200 rounded-full h-3 mb-4">
                   <div className="bg-purple-600 h-3 rounded-full" style={{ width: `${(result.score / 5) * 100}%` }}></div>
                 </div>
