@@ -21,14 +21,3 @@
     "@anthropic-ai/sdk": "^0.30.1"
   }
 }
-```
-
-**Nota:** Rimossa la virgola dopo `"@anthropic-ai/sdk": "^0.30.1"` ☝️
-
----
-
-**Salva, commit & push!**
-
-Messaggio:
-```
-Fix JSON syntax error in package.json
