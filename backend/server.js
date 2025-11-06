@@ -3,11 +3,12 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
 import assessmentsRouter from './routes/assessments.js';
+import aiReportsRouter from './routes/ai-reports.js';
 
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 10000;
 
 // Middleware
 app.use(cors());
@@ -23,7 +24,7 @@ const supabase = createClient(
 app.get('/health', (req, res) => {
   res.json({ 
     status: 'ok', 
-    message: 'ValutoLab API is running',
+    message: 'ValutoLab Backend running on port 10000',
     timestamp: new Date().toISOString()
   });
 });
@@ -35,11 +36,32 @@ app.get('/api/v1/test', (req, res) => {
     version: '1.0.0'
   });
 });
+
 // Assessment routes
 app.use('/api/assessments', assessmentsRouter);
+
+// AI Reports routes
+app.use('/api/ai-reports', aiReportsRouter);
 
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 ValutoLab Backend running on port ${PORT}`);
   console.log(`📍 Health check: http://localhost:${PORT}/health`);
+  console.log(`🤖 AI Reports: http://localhost:${PORT}/api/ai-reports`);
 });
+```
+
+---
+
+**Modifiche:**
+- ✅ Importato `aiReportsRouter`
+- ✅ Registrato route `/api/ai-reports`
+- ✅ Aggiunto log di startup per AI Reports
+
+---
+
+**Salva, commit & push!**
+
+Messaggio commit:
+```
+Add AI report generator service and API endpoints
