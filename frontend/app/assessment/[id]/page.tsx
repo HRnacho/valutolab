@@ -8,7 +8,7 @@ import SituationalQuestion from '@/components/SituationalQuestion'
 
 interface Question {
   id: string
-  text: string
+  question: string
   category: string
 }
 
@@ -388,7 +388,7 @@ export default function AssessmentPage() {
 
         <div className="bg-white rounded-lg shadow-lg p-8 mb-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-8">
-            {currentQuestion.text}
+            {currentQuestion.question}
           </h2>
 
           <div className="space-y-3">
