@@ -20,6 +20,12 @@ interface Assessment {
   completed_at: string
 }
 
+interface QualitativeReport {
+  category_interpretations: any
+  development_plan: any
+  profile_insights: any
+}
+
 export default function ResultsPage() {
   const router = useRouter()
   const params = useParams()
@@ -28,6 +34,8 @@ export default function ResultsPage() {
   const [loading, setLoading] = useState(true)
   const [assessment, setAssessment] = useState<Assessment | null>(null)
   const [results, setResults] = useState<AssessmentResult[]>([])
+  const [qualitativeReport, setQualitativeReport] = useState<QualitativeReport | null>(null)
+  const [loadingReport, setLoadingReport] = useState(false)
 
   useEffect(() => {
     const loadResults = async () => {
@@ -61,10 +69,40 @@ export default function ResultsPage() {
       }
 
       setLoading(false)
+      
+      loadQualitativeReport()
     }
 
     loadResults()
   }, [assessmentId, router])
+
+  const loadQualitativeReport = async () => {
+    setLoadingReport(true)
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://valutolab-backend.onrender.com'
+      const response = await fetch(`${apiUrl}/api/ai-reports/generate/${assessmentId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success && data.report) {
+          setQualitativeReport({
+            category_interpretations: data.report.category_interpretations,
+            development_plan: data.report.development_plan,
+            profile_insights: data.report.profile_insights
+          })
+        }
+      }
+    } catch (error) {
+      console.error('Error loading qualitative report:', error)
+    } finally {
+      setLoadingReport(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -183,6 +221,147 @@ export default function ResultsPage() {
             </div>
           </div>
         </div>
+
+        {loadingReport && (
+          <div className="bg-white rounded-lg shadow p-8 mb-8 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Generazione report qualitativo AI in corso...</p>
+            <p className="text-sm text-gray-500 mt-2">Questo può richiedere 10-20 secondi</p>
+          </div>
+        )}
+
+        {qualitativeReport && qualitativeReport.profile_insights && (
+          <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-lg shadow-lg p-8 mb-8 text-white">
+            <h3 className="text-2xl font-bold mb-4 flex items-center">
+              <span className="text-3xl mr-3">💡</span>
+              Il Tuo Profilo Professionale
+            </h3>
+            <div className="bg-white/10 rounded-lg p-6 mb-6">
+              <p className="text-lg mb-4">{qualitativeReport.profile_insights.summary}</p>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <p className="font-semibold mb-2 text-sm opacity-90">Profilo Suggerito:</p>
+                  <p className="text-xl font-bold">{qualitativeReport.profile_insights.suggested_profile}</p>
+                </div>
+                <div>
+                  <p className="font-semibold mb-2 text-sm opacity-90">Ruoli Ideali:</p>
+                  <ul className="space-y-1">
+                    {qualitativeReport.profile_insights.ideal_roles?.map((role: string, idx: number) => (
+                      <li key={idx} className="text-sm">• {role}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white/10 rounded-lg p-4">
+              <p className="font-semibold mb-2">La Tua Unicità:</p>
+              <p className="text-sm">{qualitativeReport.profile_insights.unique_strengths}</p>
+            </div>
+          </div>
+        )}
+
+        {qualitativeReport && qualitativeReport.category_interpretations && (
+          <div className="bg-white rounded-lg shadow p-6 mb-8">
+            <h3 className="text-xl font-bold text-gray-900 mb-6">
+              🤖 Interpretazione Qualitativa AI
+            </h3>
+            <div className="space-y-6">
+              {Object.entries(qualitativeReport.category_interpretations).map(([category, data]: [string, any]) => (
+                <div key={category} className="border-b pb-6 last:border-b-0">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <h4 className="text-lg font-semibold text-gray-900">
+                        {categoryLabels[category as keyof typeof categoryLabels]}
+                      </h4>
+                      <span className="inline-block bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm mt-2">
+                        {data.level} - {data.score}/5.0
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-gray-700 mb-4">{data.description}</p>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="bg-green-50 p-4 rounded-lg">
+                      <p className="font-semibold text-green-800 mb-2">✅ Punti di Forza</p>
+                      <ul className="space-y-1">
+                        {data.strengths?.map((strength: string, idx: number) => (
+                          <li key={idx} className="text-sm text-gray-700">• {strength}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div className="bg-orange-50 p-4 rounded-lg">
+                      <p className="font-semibold text-orange-800 mb-2">📈 Da Sviluppare</p>
+                      <ul className="space-y-1">
+                        {data.improvements?.map((improvement: string, idx: number) => (
+                          <li key={idx} className="text-sm text-gray-700">• {improvement}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {qualitativeReport && qualitativeReport.development_plan && (
+          <div className="bg-gradient-to-br from-green-50 to-emerald-100 rounded-lg shadow p-6 mb-8">
+            <h3 className="text-xl font-bold text-gray-900 mb-6">
+              🎯 Piano di Sviluppo Personalizzato (90 giorni)
+            </h3>
+            
+            <div className="bg-white rounded-lg p-6 mb-6">
+              <h4 className="font-bold text-gray-900 mb-3">⚡ Quick Wins</h4>
+              <ul className="space-y-2">
+                {qualitativeReport.development_plan.quick_wins?.map((win: string, idx: number) => (
+                  <li key={idx} className="flex items-start">
+                    <span className="text-green-600 mr-2">✓</span>
+                    <span className="text-gray-700">{win}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="space-y-6">
+              {qualitativeReport.development_plan.focus_areas?.map((area: any, idx: number) => (
+                <div key={idx} className="bg-white rounded-lg p-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h4 className="text-lg font-bold text-gray-900">{area.skill}</h4>
+                      <p className="text-sm text-gray-600">
+                        Da {area.current_score} a {area.target_score} | Priorità: 
+                        <span className={`ml-2 font-semibold ${
+                          area.priority === 'Alta' ? 'text-red-600' : 
+                          area.priority === 'Media' ? 'text-orange-600' : 'text-blue-600'
+                        }`}>
+                          {area.priority}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mb-4">
+                    <p className="font-semibold text-gray-900 mb-2">Azioni Concrete:</p>
+                    <ul className="space-y-2">
+                      {area.actions?.map((action: string, actionIdx: number) => (
+                        <li key={actionIdx} className="flex items-start">
+                          <span className="text-purple-600 mr-2">{actionIdx + 1}.</span>
+                          <span className="text-gray-700 text-sm">{action}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900 mb-2">📚 Risorse Consigliate:</p>
+                    <ul className="space-y-1">
+                      {area.resources?.map((resource: string, resIdx: number) => (
+                        <li key={resIdx} className="text-sm text-gray-600">• {resource}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="bg-white rounded-lg shadow p-6 mb-8">
           <h3 className="text-xl font-bold text-gray-900 mb-6">Panoramica Competenze</h3>
