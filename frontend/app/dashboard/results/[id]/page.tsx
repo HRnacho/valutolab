@@ -263,7 +263,7 @@ export default function ResultsPage() {
         {qualitativeReport && qualitativeReport.category_interpretations && (
           <div className="bg-white rounded-lg shadow p-6 mb-8">
             <h3 className="text-xl font-bold text-gray-900 mb-6">
-              🤖 Interpretazione Qualitativa AI
+              🤖 Interpretazione Qualitativa
             </h3>
             <div className="space-y-6">
               {Object.entries(qualitativeReport.category_interpretations).map(([category, data]: [string, any]) => (
