@@ -268,11 +268,19 @@ export default function ResultsPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-lg p-8">
+       <div className="bg-white rounded-xl shadow-lg p-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Panoramica Competenze</h2>
           <div className="h-96">
             <ResponsiveContainer width="100%" height="100%">
               <RadarChart data={radarData}>
+                <defs>
+                  <radialGradient id="colorGradient">
+                    <stop offset="0%" stopColor="#8B5CF6" stopOpacity={0.8} />
+                    <stop offset="33%" stopColor="#EC4899" stopOpacity={0.7} />
+                    <stop offset="66%" stopColor="#3B82F6" stopOpacity={0.6} />
+                    <stop offset="100%" stopColor="#10B981" stopOpacity={0.5} />
+                  </radialGradient>
+                </defs>
                 <PolarGrid stroke="#e5e7eb" />
                 <PolarAngleAxis dataKey="skill" tick={{ fill: '#374151', fontSize: 12 }} />
                 <PolarRadiusAxis angle={90} domain={[0, 5]} tick={{ fill: '#6b7280' }} />
@@ -280,7 +288,7 @@ export default function ResultsPage() {
                   name="Competenze" 
                   dataKey="score" 
                   stroke="#8B5CF6" 
-                  fill="#8B5CF6" 
+                  fill="url(#colorGradient)" 
                   fillOpacity={0.6} 
                 />
               </RadarChart>
