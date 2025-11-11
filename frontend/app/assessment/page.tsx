@@ -3,182 +3,249 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
-import { categoryLabels } from '@/data/questions'
-import { User } from '@supabase/supabase-js'
 
-export default function AssessmentIntroPage() {
+export default function AssessmentInfoPage() {
   const router = useRouter()
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
 
-  useEffect(() => {
-    const checkUser = async () => {
+  const handleStartAssessment = async () => {
+    setLoading(true)
+    try {
       const { data: { user } } = await supabase.auth.getUser()
-      
+
       if (!user) {
         router.push('/login')
         return
       }
 
-      setUser(user)
-      setLoading(false)
-    }
+      const { data: existingAssessment } = await supabase
+        .from('assessments')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('status', 'in_progress')
+        .single()
 
-    checkUser()
-  }, [router])
+      if (existingAssessment) {
+        router.push(`/assessment/${existingAssessment.id}`)
+        return
+      }
 
-  const handleStartAssessment = async () => {
-    if (!user) return
-
-    try {
-      // Create new assessment in database
-      const { data, error } = await supabase
+      const { data: newAssessment, error } = await supabase
         .from('assessments')
         .insert({
           user_id: user.id,
-          status: 'in_progress',
+          status: 'in_progress'
         })
         .select()
         .single()
 
       if (error) throw error
 
-      // Redirect to first question
-      router.push(`/assessment/${data.id}`)
+      router.push(`/assessment/${newAssessment.id}`)
     } catch (error) {
-      console.error('Error creating assessment:', error)
-      alert('Errore durante la creazione dell\'assessment. Riprova.')
+      console.error('Error starting assessment:', error)
+      alert('Errore nell\'avvio dell\'assessment. Riprova.')
+    } finally {
+      setLoading(false)
     }
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Caricamento...</p>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100">
-      {/* Header */}
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900">ValutoLab</h1>
-          <a href="/dashboard" className="text-purple-600 hover:text-purple-700 font-medium">
-            ← Dashboard
-          </a>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
-        {/* Title */}
-        <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold text-gray-900 mb-4">
-            Assessment Soft Skills
-          </h2>
-          <p className="text-xl text-gray-600">
-            Valuta le tue competenze trasversali in 15 minuti
-          </p>
-        </div>
-
-        {/* Info Card */}
-        <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
-          <h3 className="text-2xl font-bold text-gray-900 mb-6">Come funziona</h3>
-          
-          <div className="space-y-4 mb-8">
-            <div className="flex items-start">
-              <div className="flex-shrink-0 w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold">
-                1
-              </div>
-              <div className="ml-4">
-                <p className="text-gray-700">
-                  <strong>48 domande</strong> su 12 categorie di soft skills
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start">
-              <div className="flex-shrink-0 w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold">
-                2
-              </div>
-              <div className="ml-4">
-                <p className="text-gray-700">
-                  Rispondi usando la scala: <strong>Mai</strong>, <strong>Raramente</strong>, <strong>A volte</strong>, <strong>Spesso</strong>, <strong>Sempre</strong>
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start">
-              <div className="flex-shrink-0 w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold">
-                3
-              </div>
-              <div className="ml-4">
-                <p className="text-gray-700">
-                  Le tue risposte vengono <strong>salvate automaticamente</strong>
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start">
-              <div className="flex-shrink-0 w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold">
-                4
-              </div>
-              <div className="ml-4">
-                <p className="text-gray-700">
-                  Alla fine riceverai un <strong>report dettagliato</strong> con i tuoi risultati
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Time estimate */}
-          <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-8">
-            <p className="text-center text-purple-900">
-              ⏱️ <strong>Tempo stimato:</strong> 10-15 minuti
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 py-12">
+      <div className="max-w-4xl mx-auto px-4">
+        <div className="bg-white rounded-2xl shadow-xl p-8 md:p-12">
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">
+              Assessment Soft Skills
+            </h1>
+            <p className="text-xl text-gray-600">
+              Scopri i tuoi punti di forza e le aree di miglioramento
             </p>
           </div>
 
-          {/* Categories */}
-          <div className="mb-8">
-            <h4 className="text-lg font-bold text-gray-900 mb-4">
-              Categorie valutate (12):
-            </h4>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {Object.values(categoryLabels).map((label) => (
-                <div key={label} className="bg-gray-50 px-4 py-2 rounded-lg text-gray-700 text-sm">
-                  ✓ {label}
+          <div className="bg-gradient-to-r from-purple-100 to-blue-100 rounded-xl p-6 mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Come funziona</h2>
+            
+            <div className="space-y-4">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold">
+                  1
                 </div>
-              ))}
+                <div>
+                  <p className="text-gray-800 font-medium">48 domande su 12 categorie di soft skills</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold">
+                  2
+                </div>
+                <div>
+                  <p className="text-gray-800 font-medium mb-2">
+                    Rispondi usando la scala: <span className="font-semibold">Per niente d&apos;accordo</span>, <span className="font-semibold">Poco d&apos;accordo</span>, <span className="font-semibold">Mediamente d&apos;accordo</span>, <span className="font-semibold">Abbastanza d&apos;accordo</span>, <span className="font-semibold">Pienamente d&apos;accordo</span>
+                  </p>
+                  <p className="text-sm text-gray-700 italic">
+                    Dove <span className="font-semibold">Per niente d&apos;accordo</span> significa che non agiresti in quel modo e <span className="font-semibold">Pienamente d&apos;accordo</span> rispecchia il comportamento che sicuramente avresti
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold">
+                  3
+                </div>
+                <div>
+                  <p className="text-gray-800 font-medium">
+                    Le tue risposte vengono salvate automaticamente, puoi lasciare il test e riprenderlo in un secondo momento dal punto in cui hai interrotto.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold">
+                  4
+                </div>
+                <div>
+                  <p className="text-gray-800 font-medium">
+                    Successivamente ci saranno 12 domande situazionali
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold">
+                  5
+                </div>
+                <div>
+                  <p className="text-gray-800 font-medium">
+                    Alla fine riceverai un report dettagliato con i tuoi risultati
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Start Button */}
+          <div className="bg-blue-50 rounded-xl p-6 mb-8">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Consigli:</h3>
+            <ul className="space-y-2">
+              <li className="flex items-start gap-2">
+                <span className="text-blue-600 font-bold">•</span>
+                <span className="text-gray-800">Rispondi onestamente senza pensarci troppo</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-blue-600 font-bold">•</span>
+                <span className="text-gray-800">Non ci sono risposte giuste o sbagliate</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-blue-600 font-bold">•</span>
+                <span className="text-gray-800">Puoi mettere in pausa e riprendere quando vuoi</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-blue-600 font-bold">•</span>
+                <span className="text-gray-800">I risultati sono visibili solo a te</span>
+              </li>
+            </ul>
+          </div>
+
+          <div className="bg-purple-50 rounded-xl p-6 mb-8 text-center">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="text-lg font-semibold text-gray-900">Tempo stimato:</span>
+            </div>
+            <p className="text-2xl font-bold text-purple-600">15-20 minuti</p>
+          </div>
+
+          <div className="mb-8">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Categorie valutate (12):</h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <div className="flex items-center gap-2 text-gray-700">
+                <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+                <span>Comunicazione</span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-700">
+                <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+                <span>Leadership</span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-700">
+                <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+                <span>Problem Solving</span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-700">
+                <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+                <span>Lavoro di Squadra</span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-700">
+                <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+                <span>Gestione del Tempo</span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-700">
+                <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+                <span>Creatività</span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-700">
+                <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+                <span>Pensiero Critico</span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-700">
+                <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+                <span>Adattabilità</span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-700">
+                <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+                <span>Empatia</span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-700">
+                <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+                <span>Resilienza</span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-700">
+                <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+                <span>Negoziazione</span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-700">
+                <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+                <span>Decision Making</span>
+              </div>
+            </div>
+          </div>
+
           <div className="text-center">
             <button
               onClick={handleStartAssessment}
-              className="bg-purple-600 text-white px-8 py-4 rounded-lg hover:bg-purple-700 transition font-bold text-lg"
+              disabled={loading}
+              className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-12 py-4 rounded-xl text-xl font-bold hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-lg"
             >
-              Inizia Assessment →
+              {loading ? 'Avvio in corso...' : 'Inizia Assessment →'}
             </button>
           </div>
         </div>
-
-        {/* Tips */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h4 className="font-bold text-gray-900 mb-3">💡 Consigli:</h4>
-          <ul className="space-y-2 text-gray-700 text-sm">
-            <li>• Rispondi onestamente senza pensarci troppo</li>
-            <li>• Non ci sono risposte giuste o sbagliate</li>
-            <li>• Puoi mettere in pausa e riprendere quando vuoi</li>
-            <li>• I risultati sono visibili solo a te</li>
-          </ul>
-        </div>
-      </main>
+      </div>
     </div>
   )
 }
