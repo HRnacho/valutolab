@@ -85,6 +85,16 @@ router.get('/users', async (req, res) => {
 
 router.get('/assessments', async (req, res) => {
   try {
+    const { data: { users: authUsers } } = await supabase.auth.admin.listUsers();
+    
+    const usersMap = {};
+    authUsers.forEach(user => {
+      usersMap[user.id] = {
+        email: user.email,
+        created_at: user.created_at
+      };
+    });
+
     const { data: assessments } = await supabase
       .from('assessments')
       .select(`
@@ -105,12 +115,12 @@ router.get('/assessments', async (req, res) => {
         .eq('id', assessment.user_id)
         .single();
 
-      const { data: email } = await supabase.auth.admin.getUserById(assessment.user_id);
+      const authUser = usersMap[assessment.user_id];
 
       return {
         ...assessment,
         userName: profile?.full_name || 'N/A',
-        userEmail: email?.user?.email || 'N/A'
+        userEmail: authUser?.email || 'N/A'
       };
     }));
 
