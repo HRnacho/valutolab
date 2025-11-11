@@ -84,9 +84,7 @@ export default function AssessmentInfoPage() {
                   <p className="text-gray-800 font-medium mb-2">
                     Rispondi usando la scala: <span className="font-semibold">Per niente d&apos;accordo</span>, <span className="font-semibold">Poco d&apos;accordo</span>, <span className="font-semibold">Mediamente d&apos;accordo</span>, <span className="font-semibold">Abbastanza d&apos;accordo</span>, <span className="font-semibold">Pienamente d&apos;accordo</span>
                   </p>
-                  <p className="text-sm text-gray-700 italic">
-                    Dove <span className="font-semibold">Per niente d&apos;accordo</span> significa che non agiresti in quel modo e <span className="font-semibold">Pienamente d&apos;accordo</span> rispecchia il comportamento che sicuramente avresti
-                  </p>
+                  
                 </div>
               </div>
 
