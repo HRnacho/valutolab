@@ -76,9 +76,9 @@ export default function AssessmentPage() {
         })
         setAnswers(answersMap)
         
-        const lastAnsweredIndex = questions.findIndex(q => !answersMap[q.id])
-        if (lastAnsweredIndex !== -1) {
-          setCurrentQuestionIndex(lastAnsweredIndex)
+        const firstUnansweredIndex = questions.findIndex(q => !answersMap[q.id])
+        if (firstUnansweredIndex !== -1) {
+          setCurrentQuestionIndex(firstUnansweredIndex)
         } else {
           setCurrentQuestionIndex(questions.length - 1)
         }
@@ -402,18 +402,13 @@ export default function AssessmentPage() {
                     : 'border-gray-200 hover:border-purple-300 hover:bg-gray-50'
                 }`}
               >
-                <div className="flex items-center justify-between">
-                  <span className="font-medium text-gray-900">
-                    {value === 1 && 'Mai'}
-                    {value === 2 && 'Raramente'}
-                    {value === 3 && 'A volte'}
-                    {value === 4 && 'Spesso'}
-                    {value === 5 && 'Sempre'}
-                  </span>
-                  <span className="text-2xl">
-                    {'⭐'.repeat(value)}
-                  </span>
-                </div>
+                <span className="font-medium text-gray-900">
+                  {value === 1 && 'Per niente d\'accordo'}
+                  {value === 2 && 'Poco d\'accordo'}
+                  {value === 3 && 'Mediamente d\'accordo'}
+                  {value === 4 && 'Abbastanza d\'accordo'}
+                  {value === 5 && 'Pienamente d\'accordo'}
+                </span>
               </button>
             ))}
           </div>
