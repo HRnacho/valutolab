@@ -5,6 +5,7 @@ import { createClient } from '@supabase/supabase-js';
 import assessmentsRouter from './routes/assessments.js';
 import aiReportsRouter from './routes/ai-reports.js';
 import situationalRouter from './routes/situational.js';
+import adminRoutes from './routes/admin.js';
 
 dotenv.config();
 
@@ -37,10 +38,12 @@ app.get('/api/v1/test', (req, res) => {
 app.use('/api/assessments', assessmentsRouter);
 app.use('/api/ai-reports', aiReportsRouter);
 app.use('/api', situationalRouter);
+app.use('/api/admin', adminRoutes);
 
 app.listen(PORT, () => {
   console.log(`ValutoLab Backend running on port ${PORT}`);
   console.log(`Health check: http://localhost:${PORT}/health`);
   console.log(`AI Reports: http://localhost:${PORT}/api/ai-reports`);
   console.log(`Situational Questions: http://localhost:${PORT}/api/situational-questions`);
+  console.log(`Admin Dashboard: http://localhost:${PORT}/api/admin`);
 });
