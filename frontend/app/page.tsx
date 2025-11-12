@@ -3,7 +3,6 @@ import Footer from '@/components/Footer'
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
-      {/* NAVBAR */}
       <nav className="bg-white shadow-sm sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-2">
@@ -14,13 +13,13 @@ export default function HomePage() {
           </div>
           <div className="flex gap-4">
             
-              href="/login"
+             <a href="/login"
               className="px-6 py-2 text-gray-700 hover:text-purple-600 font-semibold transition"
             >
               Accedi
             </a>
             
-              href="/register"
+             <a href="/register"
               className="px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-semibold hover:shadow-lg transition"
             >
               Registrati
@@ -29,7 +28,6 @@ export default function HomePage() {
         </div>
       </nav>
 
-      {/* HERO SECTION */}
       <section className="py-20 px-4">
         <div className="max-w-6xl mx-auto text-center">
           <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
@@ -44,13 +42,13 @@ export default function HomePage() {
           </p>
           <div className="flex gap-4 justify-center">
             
-              href="/register"
+             <a href="/register"
               className="px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-bold text-lg hover:shadow-2xl transition transform hover:scale-105"
             >
               Inizia Gratis
             </a>
             
-              href="/assessment"
+              <a href="/assessment"
               className="px-8 py-4 bg-white text-purple-600 rounded-xl font-bold text-lg hover:shadow-lg transition border-2 border-purple-200"
             >
               Scopri di più
@@ -59,7 +57,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* FEATURES */}
       <section className="py-16 px-4 bg-white">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl font-bold text-center mb-12 text-gray-900">
@@ -91,7 +88,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* HOW IT WORKS */}
       <section className="py-16 px-4">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl font-bold text-center mb-12 text-gray-900">
@@ -123,7 +119,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* COMPETENZE VALUTATE */}
       <section className="py-16 px-4 bg-white">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl font-bold text-center mb-12 text-gray-900">
@@ -155,7 +150,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* CTA FINALE */}
       <section className="py-20 px-4 bg-gradient-to-r from-purple-600 to-blue-600">
         <div className="max-w-4xl mx-auto text-center text-white">
           <h2 className="text-4xl font-bold mb-6">
@@ -165,7 +159,7 @@ export default function HomePage() {
             Inizia subito il tuo assessment gratuito e ricevi il report dettagliato
           </p>
           
-            href="/register"
+            <a href="/register"
             className="inline-block px-10 py-4 bg-white text-purple-600 rounded-xl font-bold text-lg hover:shadow-2xl transition transform hover:scale-105"
           >
             Inizia Ora - È Gratis
