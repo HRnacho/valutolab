@@ -12,6 +12,13 @@ interface Assessment {
   completed_at: string | null
 }
 
+interface ShareData {
+  assessment_id: string
+  share_token: string
+  is_active: boolean
+  view_count: number
+}
+
 export default function DashboardPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
@@ -19,6 +26,20 @@ export default function DashboardPage() {
   const [assessments, setAssessments] = useState<Assessment[]>([])
   const [responsesCount, setResponsesCount] = useState<Record<string, number>>({})
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [shareData, setShareData] = useState<Record<string, ShareData>>({})
+  const [creatingShare, setCreatingShare] = useState<string | null>(null)
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
+  useEffect(() => {
+    if (message) {
+      const timer = setTimeout(() => setMessage(null), 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [message])
+
+  const showMessage = (type: 'success' | 'error', text: string) => {
+    setMessage({ type, text })
+  }
 
   useEffect(() => {
     const fetchData = async () => {
@@ -52,11 +73,81 @@ export default function DashboardPage() {
       }
       setResponsesCount(counts)
 
+      // Carica dati di condivisione per assessment completati
+      const completedIds = (assessmentsData || [])
+        .filter(a => a.status === 'completed')
+        .map(a => a.id)
+
+      if (completedIds.length > 0) {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://valutolab-backend.onrender.com'
+        
+        const sharePromises = completedIds.map(async (id) => {
+          try {
+            const response = await fetch(`${apiUrl}/api/share/create`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ userId: user.id, assessmentId: id })
+            })
+            const data = await response.json()
+            if (data.success) {
+              return { [id]: data.share }
+            }
+          } catch (error) {
+            console.error('Error checking share:', error)
+          }
+          return null
+        })
+
+        const shareResults = await Promise.all(sharePromises)
+        const shares = shareResults.reduce((acc, result) => {
+          if (result) return { ...acc, ...result }
+          return acc
+        }, {})
+        
+        setShareData(shares)
+      }
+
       setLoading(false)
     }
 
     fetchData()
   }, [router])
+
+  const handleToggleShare = async (assessmentId: string) => {
+    if (!user || !shareData[assessmentId]) return
+
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://valutolab-backend.onrender.com'
+      const response = await fetch(
+        `${apiUrl}/api/share/${shareData[assessmentId].share_token}/toggle`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id })
+        }
+      )
+
+      const data = await response.json()
+
+      if (data.success) {
+        setShareData({
+          ...shareData,
+          [assessmentId]: data.share
+        })
+        showMessage('success', data.message)
+      }
+    } catch (error) {
+      showMessage('error', 'Errore durante l\'aggiornamento')
+    }
+  }
+
+  const handleCopyLink = (assessmentId: string) => {
+    if (!shareData[assessmentId]) return
+    
+    const link = `https://valutolab.com/profile/${shareData[assessmentId].share_token}`
+    navigator.clipboard.writeText(link)
+    showMessage('success', 'Link copiato!')
+  }
 
   const handleStartNewAssessment = async () => {
     try {
@@ -114,6 +205,11 @@ export default function DashboardPage() {
         .eq('assessment_id', assessmentId)
 
       await supabase
+        .from('shared_profiles')
+        .delete()
+        .eq('assessment_id', assessmentId)
+
+      await supabase
         .from('assessments')
         .delete()
         .eq('id', assessmentId)
@@ -163,6 +259,14 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
+      {message && (
+        <div className={`fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg ${
+          message.type === 'success' ? 'bg-green-500' : 'bg-red-500'
+        } text-white font-semibold`}>
+          {message.text}
+        </div>
+      )}
+
       <nav className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -267,74 +371,143 @@ export default function DashboardPage() {
           <div>
             <h3 className="text-2xl font-bold text-gray-900 mb-4">Assessment Completati</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {completedAssessments.map((assessment) => (
-                <div key={assessment.id} className="bg-white rounded-xl shadow-lg p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h4 className="text-lg font-semibold text-gray-900">Assessment Soft Skills</h4>
-                      <p className="text-sm text-gray-600">
-                        Completato il {new Date(assessment.completed_at || '').toLocaleDateString('it-IT')}
+              {completedAssessments.map((assessment) => {
+                const share = shareData[assessment.id]
+                
+                return (
+                  <div key={assessment.id} className="bg-white rounded-xl shadow-lg p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h4 className="text-lg font-semibold text-gray-900">Assessment Soft Skills</h4>
+                        <p className="text-sm text-gray-600">
+                          Completato il {new Date(assessment.completed_at || '').toLocaleDateString('it-IT')}
+                        </p>
+                      </div>
+                      <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-semibold">
+                        Completato
+                      </span>
+                    </div>
+
+                    <div className="bg-gradient-to-r from-purple-100 to-blue-100 rounded-lg p-4 mb-4">
+                      <p className="text-sm text-gray-600 mb-1">Punteggio Generale</p>
+                      <p className="text-3xl font-bold text-gray-900">
+                        {assessment.total_score?.toFixed(1)}<span className="text-lg text-gray-600">/5.0</span>
                       </p>
                     </div>
-                    <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-semibold">
-                      Completato
-                    </span>
-                  </div>
 
-                  <div className="bg-gradient-to-r from-purple-100 to-blue-100 rounded-lg p-4 mb-4">
-                    <p className="text-sm text-gray-600 mb-1">Punteggio Generale</p>
-                    <p className="text-3xl font-bold text-gray-900">
-                      {assessment.total_score?.toFixed(1)}<span className="text-lg text-gray-600">/5.0</span>
-                    </p>
-                  </div>
+                    <div className="space-y-3">
+                      <button
+                        onClick={() => router.push(`/dashboard/results/${assessment.id}`)}
+                        className="w-full bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-purple-700 transition"
+                      >
+                        Visualizza Risultati
+                      </button>
 
-                  <div className="space-y-2">
-                    <button
-                      onClick={() => router.push(`/dashboard/results/${assessment.id}`)}
-                      className="w-full bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-purple-700 transition"
-                    >
-                      Visualizza Risultati
-                    </button>
-                    
-                    <div className="grid grid-cols-3 gap-2">
-                      <button
-                        onClick={() => handlePrintPDF(assessment.id)}
-                        className="px-3 py-2 border-2 border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition flex items-center justify-center gap-1"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                        </svg>
-                        PDF
-                      </button>
+                      {share && (
+                        <div className="border-2 border-purple-200 rounded-lg p-4 bg-purple-50">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-semibold text-gray-700">🔗 Condivisione</span>
+                              {share.is_active && (
+                                <span className="text-xs text-gray-600">👁️ {share.view_count} views</span>
+                              )}
+                            </div>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={share.is_active}
+                                onChange={() => handleToggleShare(assessment.id)}
+                                className="sr-only peer"
+                              />
+                              <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
+                            </label>
+                          </div>
+
+                          {share.is_active && (
+                            <div className="space-y-2">
+                              <div className="flex gap-2">
+                                <input
+                                  type="text"
+                                  value={`valutolab.com/profile/${share.share_token}`}
+                                  readOnly
+                                  className="flex-1 px-3 py-1 text-xs border border-gray-300 rounded bg-white text-gray-600 font-mono"
+                                />
+                                <button
+                                  onClick={() => handleCopyLink(assessment.id)}
+                                  className="px-3 py-1 bg-purple-600 text-white rounded text-xs font-semibold hover:bg-purple-700"
+                                >
+                                  Copia
+                                </button>
+                              </div>
+                              
+                              <div className="grid grid-cols-3 gap-2">
+                                <button
+                                  disabled
+                                  className="px-2 py-1 border border-gray-300 text-gray-400 rounded text-xs font-semibold cursor-not-allowed opacity-50"
+                                  title="Coming Soon"
+                                >
+                                  📱 Badge
+                                </button>
+                                <button
+                                  disabled
+                                  className="px-2 py-1 border border-gray-300 text-gray-400 rounded text-xs font-semibold cursor-not-allowed opacity-50"
+                                  title="Coming Soon"
+                                >
+                                  📄 QR
+                                </button>
+                                <button
+                                  disabled
+                                  className="px-2 py-1 border border-gray-300 text-gray-400 rounded text-xs font-semibold cursor-not-allowed opacity-50"
+                                  title="Coming Soon"
+                                >
+                                  📋 PDF
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                       
-                      <button
-                        onClick={() => handleShareEmail(assessment.id)}
-                        className="px-3 py-2 border-2 border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition flex items-center justify-center gap-1"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                        </svg>
-                        Email
-                      </button>
-                      
-                      <button
-                        onClick={() => {
-                          if (window.confirm('Sei sicuro di voler eliminare questo assessment? Questa azione è irreversibile.')) {
-                            handleDeleteAssessment(assessment.id)
-                          }
-                        }}
-                        disabled={deleting === assessment.id}
-                        className="px-3 py-2 border-2 border-red-300 text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 transition disabled:opacity-50 flex items-center justify-center gap-1"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                        {deleting === assessment.id ? '...' : 'Elimina'}
-                      </button>
+                      <div className="grid grid-cols-3 gap-2">
+                        <button
+                          onClick={() => handlePrintPDF(assessment.id)}
+                          className="px-3 py-2 border-2 border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition flex items-center justify-center gap-1"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                          </svg>
+                          PDF
+                        </button>
+                        
+                        <button
+                          onClick={() => handleShareEmail(assessment.id)}
+                          className="px-3 py-2 border-2 border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition flex items-center justify-center gap-1"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                          </svg>
+                          Email
+                        </button>
+                        
+                        <button
+                          onClick={() => {
+                            if (window.confirm('Sei sicuro di voler eliminare questo assessment? Questa azione è irreversibile.')) {
+                              handleDeleteAssessment(assessment.id)
+                            }
+                          }}
+                          disabled={deleting === assessment.id}
+                          className="px-3 py-2 border-2 border-red-300 text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 transition disabled:opacity-50 flex items-center justify-center gap-1"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                          {deleting === assessment.id ? '...' : 'Elimina'}
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         )}
