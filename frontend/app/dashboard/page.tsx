@@ -98,11 +98,11 @@ export default function DashboardPage() {
           return null
         })
 
-        const shareResults = await Promise.all(sharePromises)
-        const shares = shareResults.reduce((acc, result) => {
+       const shareResults = await Promise.all(sharePromises)
+        const shares: Record<string, ShareData> = shareResults.reduce((acc, result) => {
           if (result) return { ...acc, ...result }
           return acc
-        }, {})
+        }, {} as Record<string, ShareData>)
         
         setShareData(shares)
       }
@@ -527,3 +527,4 @@ export default function DashboardPage() {
     </div>
   )
 }
+
