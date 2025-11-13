@@ -3,6 +3,25 @@ import { supabase } from '../config/supabase.js';
 
 const router = express.Router();
 
+// Helper function per formattare nomi categorie
+function formatCategoryName(category) {
+  const categoryMap = {
+    'communication': 'Comunicazione',
+    'leadership': 'Leadership',
+    'problem_solving': 'Problem Solving',
+    'teamwork': 'Lavoro di Squadra',
+    'time_management': 'Gestione del Tempo',
+    'adaptability': 'Adattabilità',
+    'emotional_intelligence': 'Intelligenza Emotiva',
+    'creativity': 'Creatività',
+    'critical_thinking': 'Pensiero Critico',
+    'empathy': 'Empatia',
+    'negotiation': 'Negoziazione',
+    'resilience': 'Resilienza'
+  };
+  return categoryMap[category] || category;
+}
+
 // POST /api/share/create - Crea condivisione profilo
 router.post('/create', async (req, res) => {
   try {
@@ -124,11 +143,17 @@ router.get('/:token', async (req, res) => {
       .eq('id', share.assessments.user_id)
       .single();
 
-    // Ottieni risultati assessment
+    // Ottieni risultati assessment con colonne corrette
     const { data: results } = await supabase
       .from('combined_assessment_results')
-      .select('*')
+      .select('skill_category, final_score')
       .eq('assessment_id', share.assessment_id);
+
+    // Mappa i risultati nel formato atteso dal frontend
+    const mappedResults = results ? results.map(r => ({
+      category: formatCategoryName(r.skill_category),
+      score: Math.round(parseFloat(r.final_score) * 20) // Converte da 0-5 a 0-100
+    })) : [];
 
     // Incrementa view count
     await supabase
@@ -145,7 +170,7 @@ router.get('/:token', async (req, res) => {
         name: profile?.full_name || 'Utente ValutoLab',
         completedAt: share.assessments.completed_at,
         totalScore: share.assessments.total_score,
-        results: results
+        results: mappedResults
       }
     });
 
