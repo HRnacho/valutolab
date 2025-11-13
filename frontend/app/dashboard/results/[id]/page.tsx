@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter, useParams } from 'next/navigation'
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Cell } from 'recharts'
+import ShareSection from '@/components/ShareSection'
 
 const skillColors = {
   adaptability: '#06B6D4',
@@ -45,6 +46,7 @@ export default function ResultsPage() {
   const [results, setResults] = useState<any[]>([])
   const [qualitativeReport, setQualitativeReport] = useState<any>(null)
   const [generatingReport, setGeneratingReport] = useState(false)
+  const [userId, setUserId] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchResults = async () => {
@@ -54,6 +56,8 @@ export default function ResultsPage() {
           router.push('/login')
           return
         }
+
+        setUserId(user.id)
 
         const { data: assessmentData } = await supabase
           .from('assessments')
@@ -576,6 +580,13 @@ export default function ResultsPage() {
               <p className="text-gray-600">Generazione report qualitativo in corso...</p>
             </div>
           </div>
+        )}
+
+        {userId && (
+          <ShareSection 
+            assessmentId={assessmentId}
+            userId={userId}
+          />
         )}
 
         <div className="flex justify-center">
