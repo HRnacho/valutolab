@@ -6,6 +6,7 @@ import assessmentsRouter from './routes/assessments.js';
 import aiReportsRouter from './routes/ai-reports.js';
 import situationalRouter from './routes/situational.js';
 import adminRoutes from './routes/admin.js';
+import shareRoutes from './routes/share.js';
 
 dotenv.config();
 
@@ -39,6 +40,7 @@ app.use('/api/assessments', assessmentsRouter);
 app.use('/api/ai-reports', aiReportsRouter);
 app.use('/api', situationalRouter);
 app.use('/api/admin', adminRoutes);
+app.use('/api/share', shareRoutes);
 
 app.listen(PORT, () => {
   console.log(`ValutoLab Backend running on port ${PORT}`);
