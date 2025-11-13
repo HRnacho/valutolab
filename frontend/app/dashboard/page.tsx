@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import BadgeGenerator from '@/components/BadgeGenerator'
 
 interface Assessment {
   id: string
@@ -29,6 +30,14 @@ export default function DashboardPage() {
   const [shareData, setShareData] = useState<Record<string, ShareData>>({})
   const [creatingShare, setCreatingShare] = useState<string | null>(null)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [badgeModal, setBadgeModal] = useState<{
+    open: boolean;
+    assessmentId: string | null;
+    userName: string;
+    score: number;
+    topSkills: Array<{ name: string; score: number }>;
+    shareToken: string;
+  } | null>(null)
 
   useEffect(() => {
     if (message) {
@@ -98,7 +107,7 @@ export default function DashboardPage() {
           return null
         })
 
-       const shareResults = await Promise.all(sharePromises)
+        const shareResults = await Promise.all(sharePromises)
         const shares: Record<string, ShareData> = shareResults
           .filter((result): result is Record<string, ShareData> => result !== null)
           .reduce((acc, result) => {
@@ -148,6 +157,61 @@ export default function DashboardPage() {
     const link = `https://valutolab.com/profile/${shareData[assessmentId].share_token}`
     navigator.clipboard.writeText(link)
     showMessage('success', 'Link copiato!')
+  }
+
+  const handleOpenBadge = async (assessmentId: string) => {
+    try {
+      const { data: assessment } = await supabase
+        .from('assessments')
+        .select('total_score')
+        .eq('id', assessmentId)
+        .single()
+
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single()
+
+      const { data: results } = await supabase
+        .from('combined_assessment_results')
+        .select('skill_category, final_score')
+        .eq('assessment_id', assessmentId)
+        .order('final_score', { ascending: false })
+        .limit(3)
+
+      const categoryLabels: Record<string, string> = {
+        communication: 'Comunicazione',
+        leadership: 'Leadership',
+        problem_solving: 'Problem Solving',
+        teamwork: 'Lavoro di Squadra',
+        time_management: 'Gestione del Tempo',
+        adaptability: 'Adattabilità',
+        creativity: 'Creatività',
+        critical_thinking: 'Pensiero Critico',
+        empathy: 'Empatia',
+        resilience: 'Resilienza',
+        negotiation: 'Negoziazione',
+        decision_making: 'Decision Making'
+      }
+
+      const topSkills = (results || []).map(r => ({
+        name: categoryLabels[r.skill_category] || r.skill_category,
+        score: Math.round(parseFloat(r.final_score) * 20)
+      }))
+
+      setBadgeModal({
+        open: true,
+        assessmentId,
+        userName: profile?.full_name || 'Utente ValutoLab',
+        score: assessment?.total_score || 0,
+        topSkills,
+        shareToken: shareData[assessmentId]?.share_token || ''
+      })
+    } catch (error) {
+      console.error('Error loading badge data:', error)
+      showMessage('error', 'Errore nel caricamento dei dati')
+    }
   }
 
   const handleStartNewAssessment = async () => {
@@ -443,9 +507,8 @@ export default function DashboardPage() {
                               
                               <div className="grid grid-cols-3 gap-2">
                                 <button
-                                  disabled
-                                  className="px-2 py-1 border border-gray-300 text-gray-400 rounded text-xs font-semibold cursor-not-allowed opacity-50"
-                                  title="Coming Soon"
+                                  onClick={() => handleOpenBadge(assessment.id)}
+                                  className="px-2 py-1 border border-purple-300 text-purple-700 rounded text-xs font-semibold hover:bg-purple-50"
                                 >
                                   📱 Badge
                                 </button>
@@ -524,9 +587,32 @@ export default function DashboardPage() {
             <p className="text-gray-600">Inizia il tuo primo assessment per scoprire le tue soft skills</p>
           </div>
         )}
+
+        {badgeModal?.open && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-2xl font-bold text-gray-900">Badge LinkedIn</h3>
+                <button
+                  onClick={() => setBadgeModal(null)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <BadgeGenerator
+                userName={badgeModal.userName}
+                score={badgeModal.score}
+                topSkills={badgeModal.topSkills}
+                shareToken={badgeModal.shareToken}
+              />
+            </div>
+          </div>
+        )}
       </main>
     </div>
   )
 }
-
-
