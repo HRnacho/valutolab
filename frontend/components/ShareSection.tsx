@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { toast } from 'react-hot-toast';
 
 interface ShareSectionProps {
   assessmentId: string;
@@ -12,15 +11,25 @@ export default function ShareSection({ assessmentId, userId }: ShareSectionProps
   const [shareData, setShareData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
     checkExistingShare();
   }, [assessmentId]);
 
+  useEffect(() => {
+    if (message) {
+      const timer = setTimeout(() => setMessage(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [message]);
+
+  const showMessage = (type: 'success' | 'error', text: string) => {
+    setMessage({ type, text });
+  };
+
   const checkExistingShare = async () => {
     try {
-      // Verifica se esiste già una condivisione
-      // Per ora chiamiamo direttamente create che gestisce esistenti
       setLoading(false);
     } catch (error) {
       console.error('Error checking share:', error);
@@ -46,12 +55,12 @@ export default function ShareSection({ assessmentId, userId }: ShareSectionProps
 
       if (data.success) {
         setShareData(data.share);
-        toast.success('Condivisione attivata!');
+        showMessage('success', 'Condivisione attivata!');
       } else {
-        toast.error(data.error || 'Errore nella creazione');
+        showMessage('error', data.error || 'Errore nella creazione');
       }
     } catch (error) {
-      toast.error('Errore di connessione');
+      showMessage('error', 'Errore di connessione');
     } finally {
       setCreating(false);
     }
@@ -76,10 +85,10 @@ export default function ShareSection({ assessmentId, userId }: ShareSectionProps
 
       if (data.success) {
         setShareData(data.share);
-        toast.success(data.message);
+        showMessage('success', data.message);
       }
     } catch (error) {
-      toast.error('Errore durante l\'aggiornamento');
+      showMessage('error', 'Errore durante l\'aggiornamento');
     }
   };
 
@@ -88,7 +97,7 @@ export default function ShareSection({ assessmentId, userId }: ShareSectionProps
     
     const link = `https://valutolab.com/profile/${shareData.share_token}`;
     navigator.clipboard.writeText(link);
-    toast.success('Link copiato negli appunti!');
+    showMessage('success', 'Link copiato negli appunti!');
   };
 
   const deleteShare = async () => {
@@ -112,10 +121,10 @@ export default function ShareSection({ assessmentId, userId }: ShareSectionProps
 
       if (data.success) {
         setShareData(null);
-        toast.success('Condivisione eliminata');
+        showMessage('success', 'Condivisione eliminata');
       }
     } catch (error) {
-      toast.error('Errore durante l\'eliminazione');
+      showMessage('error', 'Errore durante l\'eliminazione');
     }
   };
 
@@ -132,6 +141,12 @@ export default function ShareSection({ assessmentId, userId }: ShareSectionProps
 
   return (
     <div className="bg-white rounded-xl shadow-lg p-8">
+      {message && (
+        <div className={`mb-4 p-4 rounded-lg ${message.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+          {message.text}
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
@@ -221,7 +236,7 @@ export default function ShareSection({ assessmentId, userId }: ShareSectionProps
               </div>
 
               <div className="grid md:grid-cols-2 gap-4">
-                
+                <a
                   href={`https://valutolab.com/profile/${shareData.share_token}`}
                   target="_blank"
                   rel="noopener noreferrer"
