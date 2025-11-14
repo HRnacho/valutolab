@@ -86,6 +86,19 @@ export default function LoginPage() {
           >
             {loading ? 'Accesso in corso...' : 'Accedi'}
           </button>
+
+          {/* Forgot Password Link */}
+          <div className="text-center">
+            <Link
+              href="/forgot-password"
+              className="text-sm text-purple-600 hover:text-purple-700 font-medium inline-flex items-center gap-1"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+              </svg>
+              Password dimenticata?
+            </Link>
+          </div>
         </form>
 
         <div className="mt-6 text-center">
