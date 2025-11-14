@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import BadgeGenerator from '@/components/BadgeGenerator'
+import QRCodeGenerator from '@/components/QRCodeGenerator'
 
 interface Assessment {
   id: string
@@ -37,6 +38,11 @@ export default function DashboardPage() {
     score: number;
     topSkills: Array<{ name: string; score: number }>;
     shareToken: string;
+  } | null>(null)
+  const [qrModal, setQrModal] = useState<{
+    open: boolean;
+    profileUrl: string;
+    userName: string;
   } | null>(null)
 
   useEffect(() => {
@@ -211,6 +217,31 @@ export default function DashboardPage() {
     } catch (error) {
       console.error('Error loading badge data:', error)
       showMessage('error', 'Errore nel caricamento dei dati')
+    }
+  }
+
+  const handleOpenQR = async (assessmentId: string) => {
+    try {
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single()
+
+      const shareToken = shareData[assessmentId]?.share_token
+      if (!shareToken) {
+        showMessage('error', 'Errore: token di condivisione non trovato')
+        return
+      }
+
+      setQrModal({
+        open: true,
+        profileUrl: `https://valutolab.com/profile/${shareToken}`,
+        userName: profile?.full_name || 'Utente ValutoLab'
+      })
+    } catch (error) {
+      console.error('Error opening QR modal:', error)
+      showMessage('error', 'Errore nel caricamento del QR code')
     }
   }
 
@@ -512,12 +543,11 @@ export default function DashboardPage() {
                                 >
                                   📱 Badge
                                 </button>
-                               <button
-                                  onClick={() => setShowQRModal(true)}
-                                  className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-4 py-3 rounded-lg font-semibold text-sm transition-all duration-200 transform hover:scale-105 flex items-center justify-center gap-2"
+                                <button
+                                  onClick={() => handleOpenQR(assessment.id)}
+                                  className="px-2 py-1 border border-purple-300 text-purple-700 rounded text-xs font-semibold hover:bg-purple-50"
                                 >
-                                <span>📄</span>
-                                  QR
+                                  📄 QR
                                 </button>
                                 <button
                                   disabled
@@ -612,8 +642,29 @@ export default function DashboardPage() {
             </div>
           </div>
         )}
+
+        {qrModal?.open && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full">
+              <div className="flex items-center justify-between mb-6">
+                <button
+                  onClick={() => setQrModal(null)}
+                  className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <QRCodeGenerator
+                profileUrl={qrModal.profileUrl}
+                userName={qrModal.userName}
+              />
+            </div>
+          </div>
+        )}
       </main>
     </div>
   )
 }
-
