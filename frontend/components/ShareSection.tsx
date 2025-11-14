@@ -5,20 +5,22 @@ import QRCodeGenerator from './QRCodeGenerator';
 
 interface ShareSectionProps {
   assessmentId: string;
-  userName: string;
+  userId: string;
 }
 
-export default function ShareSection({ assessmentId, userName }: ShareSectionProps) {
+export default function ShareSection({ assessmentId, userId }: ShareSectionProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [shareData, setShareData] = useState<any>(null);
   const [isActive, setIsActive] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [showQRModal, setShowQRModal] = useState(false);
+  const [userName, setUserName] = useState('Utente');
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
   useEffect(() => {
     fetchShareStatus();
+    fetchUserName();
   }, [assessmentId]);
 
   useEffect(() => {
@@ -27,6 +29,23 @@ export default function ShareSection({ assessmentId, userName }: ShareSectionPro
       return () => clearTimeout(timer);
     }
   }, [message]);
+
+  const fetchUserName = async () => {
+    try {
+      const response = await fetch(`${API_URL}/users/profile`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setUserName(data.full_name || 'Utente');
+      }
+    } catch (error) {
+      console.error('Errore recupero nome utente:', error);
+    }
+  };
 
   const fetchShareStatus = async () => {
     try {
