@@ -512,12 +512,12 @@ export default function DashboardPage() {
                                 >
                                   📱 Badge
                                 </button>
-                                <button
-                                  disabled
-                                  className="px-2 py-1 border border-gray-300 text-gray-400 rounded text-xs font-semibold cursor-not-allowed opacity-50"
-                                  title="Coming Soon"
+                               <button
+                                  onClick={() => setShowQRModal(true)}
+                                  className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-4 py-3 rounded-lg font-semibold text-sm transition-all duration-200 transform hover:scale-105 flex items-center justify-center gap-2"
                                 >
-                                  📄 QR
+                                <span>📄</span>
+                                  QR
                                 </button>
                                 <button
                                   disabled
@@ -616,3 +616,4 @@ export default function DashboardPage() {
     </div>
   )
 }
+
