@@ -229,7 +229,7 @@ export default function BadgeGenerator({
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Decorative circles
+    // Decorative circles (no shadow)
     ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
     ctx.beginPath();
     ctx.arc(100, 100, 80, 0, Math.PI * 2);
@@ -238,13 +238,9 @@ export default function BadgeGenerator({
     ctx.arc(canvas.width - 100, canvas.height - 100, 120, 0, Math.PI * 2);
     ctx.fill();
 
-    // Main white card
+    // Main white card (no shadow)
     ctx.fillStyle = 'white';
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
-    ctx.shadowBlur = 30;
-    ctx.shadowOffsetY = 10;
     ctx.fillRect(80, 60, canvas.width - 160, canvas.height - 120);
-    ctx.shadowBlur = 0;
 
     // Colorful header
     const headerGradient = ctx.createLinearGradient(100, 80, canvas.width - 100, 80);
@@ -270,72 +266,76 @@ export default function BadgeGenerator({
 
     // User name
     ctx.fillStyle = '#1F2937';
-    ctx.font = 'bold 52px Arial';
-    ctx.fillText(userName, 120, 270);
+    ctx.font = 'bold 48px Arial';
+    ctx.fillText(userName, 120, 260);
 
     // Score in colorful box
-    ctx.fillStyle = '#F3F4F6';
-    ctx.fillRect(canvas.width - 320, 230, 200, 100);
+    ctx.fillStyle = '#F9FAFB';
+    ctx.fillRect(canvas.width - 300, 220, 180, 80);
     
     ctx.fillStyle = '#EC4899';
-    ctx.font = 'bold 64px Arial';
-    ctx.fillText(score.toFixed(1), canvas.width - 300, 295);
+    ctx.font = 'bold 56px Arial';
+    ctx.fillText(score.toFixed(1), canvas.width - 285, 275);
     
     ctx.fillStyle = '#6B7280';
-    ctx.font = 'bold 24px Arial';
-    ctx.fillText('/5.0', canvas.width - 200, 295);
+    ctx.font = 'bold 20px Arial';
+    ctx.fillText('/5.0', canvas.width - 195, 275);
 
-    // Skills with emoji icons
+    // Skills section title (moved down and spaced properly)
     const skillEmojis = ['🏆', '⭐', '💪'];
     ctx.fillStyle = '#1F2937';
-    ctx.font = 'bold 24px Arial';
-    ctx.fillText('Your Superpowers:', 120, 360);
+    ctx.font = 'bold 26px Arial';
+    ctx.fillText('Your Superpowers:', 120, 340);
 
+    // Skills with proper spacing
     topSkills.slice(0, 3).forEach((skill, index) => {
-      const y = 400 + (index * 60);
+      const y = 395 + (index * 65);
       
       // Colorful skill box
       const colors = ['#EC4899', '#8B5CF6', '#3B82F6'];
-      ctx.fillStyle = colors[index] + '20';
-      ctx.fillRect(120, y - 30, 500, 50);
+      ctx.fillStyle = colors[index] + '15';
+      ctx.fillRect(120, y - 35, 520, 55);
       
       // Emoji
-      ctx.font = '32px Arial';
-      ctx.fillText(skillEmojis[index], 135, y);
+      ctx.font = '28px Arial';
+      ctx.fillText(skillEmojis[index], 140, y);
       
       // Skill name
       ctx.fillStyle = '#1F2937';
-      ctx.font = 'bold 22px Arial';
-      ctx.fillText(skill.name, 185, y);
+      ctx.font = 'bold 24px Arial';
+      ctx.fillText(skill.name, 190, y);
       
       // Score badge
       ctx.fillStyle = colors[index];
       ctx.beginPath();
-      ctx.arc(580, y - 5, 25, 0, Math.PI * 2);
+      ctx.arc(605, y - 8, 28, 0, Math.PI * 2);
       ctx.fill();
       
       ctx.fillStyle = 'white';
-      ctx.font = 'bold 18px Arial';
+      ctx.font = 'bold 20px Arial';
       const scoreStr = skill.score.toString();
       const scoreStrWidth = ctx.measureText(scoreStr).width;
-      ctx.fillText(scoreStr, 580 - scoreStrWidth / 2, y + 2);
+      ctx.fillText(scoreStr, 605 - scoreStrWidth / 2, y);
     });
 
-    // Bottom section
+    // Bottom section - well spaced
+    const bottomY = canvas.height - 90;
+    
     ctx.fillStyle = '#10B981';
-    ctx.fillRect(120, canvas.height - 140, 30, 30);
+    ctx.fillRect(120, bottomY - 15, 28, 28);
     ctx.fillStyle = 'white';
-    ctx.font = 'bold 24px Arial';
-    ctx.fillText('✓', 127, canvas.height - 115);
+    ctx.font = 'bold 20px Arial';
+    ctx.fillText('✓', 127, bottomY + 5);
     
     ctx.fillStyle = '#059669';
-    ctx.font = 'bold 20px Arial';
-    ctx.fillText('Verified by ValutoLab', 165, canvas.height - 115);
+    ctx.font = 'bold 18px Arial';
+    ctx.fillText('Verified by ValutoLab', 160, bottomY + 3);
 
     ctx.fillStyle = '#6B7280';
-    ctx.font = '16px Arial';
+    ctx.font = '15px Arial';
     const linkText = `valutolab.com/profile/${shareToken.substring(0, 8)}...`;
-    ctx.fillText(linkText, 120, canvas.height - 80);
+    const linkWidth = ctx.measureText(linkText).width;
+    ctx.fillText(linkText, canvas.width - linkWidth - 120, bottomY + 3);
   };
 
   const generateBadge = () => {
