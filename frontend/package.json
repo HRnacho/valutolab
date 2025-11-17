@@ -19,9 +19,9 @@
     "@supabase/supabase-js": "^2.38.4",
     "@supabase/auth-helpers-nextjs": "^0.8.7",
     "recharts": "^2.10.3",
-    "qrcode": "^1.5.3"
+    "qrcode": "^1.5.3",
     "jspdf": "^2.5.1",
-     "html2canvas"
+    "html2canvas": "^1.4.1"
   },
   "devDependencies": {
     "typescript": "^5.3.3",
