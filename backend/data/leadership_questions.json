@@ -1,0 +1,586 @@
+{
+  "leadership_assessment": {
+    "title": "Leadership Deep Dive Assessment",
+    "description": "Valutazione avanzata delle competenze di leadership attraverso scenari realistici",
+    "total_questions": 30,
+    "dimensions": 6,
+    "questions": [
+      
+      {
+        "id": "ld_001",
+        "dimension": "visione_strategica",
+        "domanda": "La tua azienda sta perdendo quote di mercato. Il management ti chiede una strategia per i prossimi 3 anni. Come procedi?",
+        "opzioni": {
+          "A": "Analizzo i competitor, identifico trend di mercato e propongo una visione chiara con obiettivi misurabili e roadmap realistica",
+          "B": "Chiedo al team di brainstormare idee e poi scelgo le migliori",
+          "C": "Copio le strategie dei competitor di successo e le adatto alla nostra realtà",
+          "D": "Mi concentro sul ridurre i costi operativi a breve termine"
+        },
+        "pesi": {
+          "A": 5,
+          "B": 3,
+          "C": 2,
+          "D": 1
+        }
+      },
+      
+      {
+        "id": "ld_002",
+        "dimension": "visione_strategica",
+        "domanda": "Devi comunicare un cambio di direzione strategica che impatterà tutto il team. Come lo presenti?",
+        "opzioni": {
+          "A": "Invio una email dettagliata con i nuovi obiettivi",
+          "B": "Organizzo un meeting, spiego il 'perché' del cambiamento, mostro la visione futura e come ogni ruolo contribuisce",
+          "C": "Comunico solo ai manager diretti e delego la cascata comunicativa",
+          "D": "Implemento gradualmente i cambiamenti senza annunci formali"
+        },
+        "pesi": {
+          "A": 2,
+          "B": 5,
+          "C": 3,
+          "D": 1
+        }
+      },
+      
+      {
+        "id": "ld_003",
+        "dimension": "visione_strategica",
+        "domanda": "Ti viene proposta un'opportunità di business innovativa ma rischiosa. Come valuti la decisione?",
+        "opzioni": {
+          "A": "La rifiuto perché troppo rischiosa",
+          "B": "La accetto immediatamente per non perdere l'opportunità",
+          "C": "Faccio un'analisi rischi/benefici, valuto l'allineamento con la visione aziendale e decido con dati concreti",
+          "D": "Metto ai voti la decisione con il team"
+        },
+        "pesi": {
+          "A": 1,
+          "B": 2,
+          "C": 5,
+          "D": 3
+        }
+      },
+      
+      {
+        "id": "ld_004",
+        "dimension": "visione_strategica",
+        "domanda": "Il tuo settore sta vivendo una disruption tecnologica. Come ti posizioni?",
+        "opzioni": {
+          "A": "Studio la tecnologia emergente, valuto impatto sul business e creo un piano di adattamento proattivo",
+          "B": "Aspetto di vedere come si evolve la situazione prima di agire",
+          "C": "Mi concentro su quello che sappiamo fare bene ignorando le novità",
+          "D": "Assumo consulenti esterni per gestire la transizione"
+        },
+        "pesi": {
+          "A": 5,
+          "B": 2,
+          "C": 1,
+          "D": 3
+        }
+      },
+      
+      {
+        "id": "ld_005",
+        "dimension": "visione_strategica",
+        "domanda": "Come bilanci obiettivi a breve termine con visione a lungo termine?",
+        "opzioni": {
+          "A": "Mi concentro solo sui risultati trimestrali",
+          "B": "Ignoro il breve termine e mi focalizzo sulla visione futura",
+          "C": "Creo una strategia integrata con milestone intermedie che servono la visione finale",
+          "D": "Gestisco i due aspetti separatamente con team diversi"
+        },
+        "pesi": {
+          "A": 1,
+          "B": 2,
+          "C": 5,
+          "D": 3
+        }
+      },
+      
+      {
+        "id": "ld_006",
+        "dimension": "people_management",
+        "domanda": "Un talento chiave del tuo team riceve un'offerta esterna molto competitiva. Come gestisci?",
+        "opzioni": {
+          "A": "Controffro immediatamente con uno stipendio più alto",
+          "B": "Lo lascio andare, nessuno è indispensabile",
+          "C": "Parlo con lui per capire le reali motivazioni, valuto percorso di crescita, responsabilità e compensation complessivo",
+          "D": "Chiedo all'HR di gestire la situazione"
+        },
+        "pesi": {
+          "A": 2,
+          "B": 1,
+          "C": 5,
+          "D": 2
+        }
+      },
+      
+      {
+        "id": "ld_007",
+        "dimension": "people_management",
+        "domanda": "Noti che un membro del team è demotivato e le sue performance calano. Cosa fai?",
+        "opzioni": {
+          "A": "Organizzo un one-on-one per capire la causa, offro supporto e creiamo insieme un piano di recupero",
+          "B": "Gli do un warning formale sulle performance",
+          "C": "Aspetto che si riprenda da solo",
+          "D": "Lo trasferisco ad un altro progetto"
+        },
+        "pesi": {
+          "A": 5,
+          "B": 2,
+          "C": 1,
+          "D": 3
+        }
+      },
+      
+      {
+        "id": "ld_008",
+        "dimension": "people_management",
+        "domanda": "Come gestisci il feedback negativo verso un collaboratore senior?",
+        "opzioni": {
+          "A": "Evito il confronto per non creare tensioni",
+          "B": "Glielo dico pubblicamente durante un meeting per dare l'esempio",
+          "C": "Organizzo un incontro privato, uso esempi specifici, spiego l'impatto e co-creo un piano di miglioramento",
+          "D": "Invio un'email formale documentando i problemi"
+        },
+        "pesi": {
+          "A": 1,
+          "B": 1,
+          "C": 5,
+          "D": 2
+        }
+      },
+      
+      {
+        "id": "ld_009",
+        "dimension": "people_management",
+        "domanda": "Hai due membri del team in conflitto che impatta la produttività. Come intervieni?",
+        "opzioni": {
+          "A": "Li separo assegnandoli a progetti diversi",
+          "B": "Ignoro la situazione sperando si risolvano tra loro",
+          "C": "Li incontro separatamente per capire le prospettive, poi facilito una mediazione costruttiva",
+          "D": "Prendo una decisione unilaterale su chi ha ragione"
+        },
+        "pesi": {
+          "A": 2,
+          "B": 1,
+          "C": 5,
+          "D": 2
+        }
+      },
+      
+      {
+        "id": "ld_010",
+        "dimension": "people_management",
+        "domanda": "Un collaboratore junior mostra grande potenziale ma fa errori frequenti. Che approccio usi?",
+        "opzioni": {
+          "A": "Lo critico ogni volta per fargli capire gli standard richiesti",
+          "B": "Creo un piano di mentoring, celebro i successi e uso gli errori come opportunità di apprendimento",
+          "C": "Lo lascio lavorare autonomamente per sviluppare indipendenza",
+          "D": "Lo affianco ad un senior per supervisionarlo costantemente"
+        },
+        "pesi": {
+          "A": 1,
+          "B": 5,
+          "C": 2,
+          "D": 3
+        }
+      },
+      
+      {
+        "id": "ld_011",
+        "dimension": "decisionalita",
+        "domanda": "Devi prendere una decisione strategica ma hai solo il 70% delle informazioni necessarie. Come procedi?",
+        "opzioni": {
+          "A": "Aspetto di avere tutte le informazioni prima di decidere",
+          "B": "Decido subito con i dati disponibili, consapevole dei rischi, e predispongo piani di contingenza",
+          "C": "Delego la decisione al team",
+          "D": "Chiedo consiglio al mio superiore"
+        },
+        "pesi": {
+          "A": 2,
+          "B": 5,
+          "C": 1,
+          "D": 3
+        }
+      },
+      
+      {
+        "id": "ld_012",
+        "dimension": "decisionalita",
+        "domanda": "Hai preso una decisione che si rivela sbagliata. Come reagisci?",
+        "opzioni": {
+          "A": "Insisto sulla decisione per non mostrare debolezza",
+          "B": "Biasimo il team per non avermi dato le informazioni corrette",
+          "C": "Ammetto l'errore pubblicamente, spiego cosa ho imparato e correggo la rotta rapidamente",
+          "D": "Cambio direzione silenziosamente senza commentare"
+        },
+        "pesi": {
+          "A": 1,
+          "B": 1,
+          "C": 5,
+          "D": 2
+        }
+      },
+      
+      {
+        "id": "ld_013",
+        "dimension": "decisionalita",
+        "domanda": "Due opzioni strategiche sono entrambe valide ma incompatibili. Come scegli?",
+        "opzioni": {
+          "A": "Scelgo quella con il ROI maggiore, valuto l'allineamento alla visione e comunico chiaramente il razionale",
+          "B": "Cerco un compromesso che includa elementi di entrambe",
+          "C": "Metto ai voti la decisione",
+          "D": "Implemento prima una opzione come test"
+        },
+        "pesi": {
+          "A": 5,
+          "B": 3,
+          "C": 2,
+          "D": 3
+        }
+      },
+      
+      {
+        "id": "ld_014",
+        "dimension": "decisionalita",
+        "domanda": "Una decisione impopolare è necessaria per il bene dell'azienda. Come la gestisci?",
+        "opzioni": {
+          "A": "La rimando sperando che la situazione migliori",
+          "B": "La implemento immediatamente senza spiegazioni",
+          "C": "La prendo, spiego le ragioni in modo trasparente, ascolto le preoccupazioni e mantengo la rotta",
+          "D": "Delego la decisione ai manager di linea"
+        },
+        "pesi": {
+          "A": 1,
+          "B": 2,
+          "C": 5,
+          "D": 2
+        }
+      },
+      
+      {
+        "id": "ld_015",
+        "dimension": "decisionalita",
+        "domanda": "Emergono nuove informazioni che contraddicono una tua decisione recente. Cosa fai?",
+        "opzioni": {
+          "A": "Ignoro le nuove informazioni per non creare confusione",
+          "B": "Rivaluto la decisione con dati aggiornati e cambio direzione se necessario",
+          "C": "Chiedo un'analisi approfondita che richiederà settimane",
+          "D": "Mantengo la decisione originale per coerenza"
+        },
+        "pesi": {
+          "A": 1,
+          "B": 5,
+          "C": 2,
+          "D": 2
+        }
+      },
+      
+      {
+        "id": "ld_016",
+        "dimension": "change_management",
+        "domanda": "Devi implementare un processo che cambierà radicalmente il modo di lavorare del team. Come lo introduci?",
+        "opzioni": {
+          "A": "Lo impongo dall'alto con email e procedure scritte",
+          "B": "Coinvolgo il team nel design del cambiamento, spiego i benefici, creo ambassador e supporto attivamente la transizione",
+          "C": "Lo introduco gradualmente senza annunci formali",
+          "D": "Assumo un change manager esterno"
+        },
+        "pesi": {
+          "A": 2,
+          "B": 5,
+          "C": 2,
+          "D": 3
+        }
+      },
+      
+      {
+        "id": "ld_017",
+        "dimension": "change_management",
+        "domanda": "Incontri forte resistenza al cambiamento da parte di alcuni senior del team. Come gestisci?",
+        "opzioni": {
+          "A": "Li forzo ad adeguarsi minacciando conseguenze",
+          "B": "Ascolto le loro preoccupazioni, indirizzo le paure legittime, mostro quick wins e li coinvolgo come champion del cambiamento",
+          "C": "Li escludo dal progetto di cambiamento",
+          "D": "Accetto la loro resistenza e rallento il cambiamento"
+        },
+        "pesi": {
+          "A": 1,
+          "B": 5,
+          "C": 2,
+          "D": 2
+        }
+      },
+      
+      {
+        "id": "ld_018",
+        "dimension": "change_management",
+        "domanda": "Durante un cambiamento organizzativo, la produttività cala temporaneamente. Come reagisci?",
+        "opzioni": {
+          "A": "Torno immediatamente ai vecchi processi",
+          "B": "Riconosco che è normale, rinforzo la visione, fornisco supporto extra e celebro i piccoli progressi",
+          "C": "Critico il team per la perdita di produttività",
+          "D": "Accelero il cambiamento per finire prima"
+        },
+        "pesi": {
+          "A": 1,
+          "B": 5,
+          "C": 1,
+          "D": 2
+        }
+      },
+      
+      {
+        "id": "ld_019",
+        "dimension": "change_management",
+        "domanda": "Come misuri il successo di un'iniziativa di cambiamento?",
+        "opzioni": {
+          "A": "Aspetto i feedback spontanei del team",
+          "B": "Definisco KPI chiari pre-cambiamento, monitoro metriche quantitative e qualitative, e itero basandomi sui dati",
+          "C": "Se non ci sono lamentele, considero il cambiamento riuscito",
+          "D": "Chiedo una survey dopo 6 mesi"
+        },
+        "pesi": {
+          "A": 2,
+          "B": 5,
+          "C": 1,
+          "D": 3
+        }
+      },
+      
+      {
+        "id": "ld_020",
+        "dimension": "change_management",
+        "domanda": "Un cambiamento che hai sponsorizzato non sta funzionando come previsto. Cosa fai?",
+        "opzioni": {
+          "A": "Insisto perché 'ci vuole tempo'",
+          "B": "Analizzo i gap, raccolgo feedback, adatto l'approccio e comunico gli aggiustamenti in modo trasparente",
+          "C": "Abbandono l'iniziativa silenziosamente",
+          "D": "Biasimo il team per la cattiva esecuzione"
+        },
+        "pesi": {
+          "A": 2,
+          "B": 5,
+          "C": 1,
+          "D": 1
+        }
+      },
+      
+      {
+        "id": "ld_021",
+        "dimension": "influenza_persuasione",
+        "domanda": "Devi convincere il C-level ad approvare un budget significativo per il tuo progetto. Come lo presenti?",
+        "opzioni": {
+          "A": "Preparo una presentazione con ROI chiaro, casi studio, mitigazione rischi e rispondo proattivamente alle obiezioni",
+          "B": "Chiedo il budget evidenziando quanto il team ha lavorato duramente",
+          "C": "Presento solo i benefici senza menzionare costi e rischi",
+          "D": "Chiedo ad un collega influente di supportarmi"
+        },
+        "pesi": {
+          "A": 5,
+          "B": 1,
+          "C": 2,
+          "D": 3
+        }
+      },
+      
+      {
+        "id": "ld_022",
+        "dimension": "influenza_persuasione",
+        "domanda": "Come motivi un team demotivato dopo un fallimento progettuale?",
+        "opzioni": {
+          "A": "Riconosco le emozioni, estraggo i learning, mostro come questo ci avvicina al successo futuro e celebro lo sforzo",
+          "B": "Dico loro di superarlo e andare avanti",
+          "C": "Organizzo un team building per distrarli",
+          "D": "Prometto bonus se il prossimo progetto va bene"
+        },
+        "pesi": {
+          "A": 5,
+          "B": 1,
+          "C": 2,
+          "D": 2
+        }
+      },
+      
+      {
+        "id": "ld_023",
+        "dimension": "influenza_persuasione",
+        "domanda": "Un collega di pari livello si oppone sistematicamente alle tue proposte. Come gestisci?",
+        "opzioni": {
+          "A": "Lo ignoro e vado avanti con le mie decisioni",
+          "B": "Lo confronto pubblicamente durante i meeting",
+          "C": "Cerco di capire le sue preoccupazioni, trovo terreno comune e costruisco una relazione di fiducia",
+          "D": "Mi lamento con il nostro capo comune"
+        },
+        "pesi": {
+          "A": 1,
+          "B": 1,
+          "C": 5,
+          "D": 2
+        }
+      },
+      
+      {
+        "id": "ld_024",
+        "dimension": "influenza_persuasione",
+        "domanda": "Come comunichi una visione ambiziosa che richiede sforzo extra dal team?",
+        "opzioni": {
+          "A": "Ordino di lavorare di più perché è necessario",
+          "B": "Dipingo un futuro inspiring, mostro come il loro contributo è essenziale e riconosco pubblicamente gli sforzi",
+          "C": "Offro incentivi economici per chi lavora di più",
+          "D": "Assumo persone extra per distribuire il carico"
+        },
+        "pesi": {
+          "A": 1,
+          "B": 5,
+          "C": 2,
+          "D": 3
+        }
+      },
+      
+      {
+        "id": "ld_025",
+        "dimension": "influenza_persuasione",
+        "domanda": "Devi ottenere collaborazione da un team che non riporta a te. Come procedi?",
+        "opzioni": {
+          "A": "Faccio pressione sul loro manager",
+          "B": "Mostro come la collaborazione beneficia i loro obiettivi, costruisco relazioni personali e rendo facile aiutarmi",
+          "C": "Offro qualcosa in cambio (quid pro quo)",
+          "D": "Escalate al management per forzare la collaborazione"
+        },
+        "pesi": {
+          "A": 2,
+          "B": 5,
+          "C": 3,
+          "D": 1
+        }
+      },
+      
+      {
+        "id": "ld_026",
+        "dimension": "orientamento_risultati",
+        "domanda": "Il tuo team sta per non rispettare una scadenza critica. Come gestisci?",
+        "opzioni": {
+          "A": "Ridefinisco le priorità, identifico il minimo viable product, mobilito risorse e comunico proattivamente agli stakeholder",
+          "B": "Chiedo al team di fare straordinari fino al completamento",
+          "C": "Nego la responsabilità e biasimo fattori esterni",
+          "D": "Richiedo estensione della deadline senza proporre alternative"
+        },
+        "pesi": {
+          "A": 5,
+          "B": 2,
+          "C": 1,
+          "D": 2
+        }
+      },
+      
+      {
+        "id": "ld_027",
+        "dimension": "orientamento_risultati",
+        "domanda": "Come gestisci un membro del team che consegna sempre in ritardo?",
+        "opzioni": {
+          "A": "Lo ignoro se il lavoro è di qualità",
+          "B": "Invio warning formali",
+          "C": "Analizzo le cause, stabilisco aspettative chiare, fornisco supporto e monitoro i progressi con checkpoint regolari",
+          "D": "Lo riassegno a compiti meno critici"
+        },
+        "pesi": {
+          "A": 1,
+          "B": 2,
+          "C": 5,
+          "D": 2
+        }
+      },
+      
+      {
+        "id": "ld_028",
+        "dimension": "orientamento_risultati",
+        "domanda": "Stai superando tutti i KPI ma percepisci che il team è vicino al burnout. Cosa fai?",
+        "opzioni": {
+          "A": "Continuo così perché i risultati sono ottimi",
+          "B": "Rallento il ritmo, ridistribuisco il carico e creo spazi di recupero anche se impatta i KPI temporaneamente",
+          "C": "Offro bonus economici per compensare lo stress",
+          "D": "Assumo altre persone per distribuire il lavoro"
+        },
+        "pesi": {
+          "A": 1,
+          "B": 5,
+          "C": 2,
+          "D": 3
+        }
+      },
+      
+      {
+        "id": "ld_029",
+        "dimension": "orientamento_risultati",
+        "domanda": "Come bilanci qualità e velocità quando sono in conflitto?",
+        "opzioni": {
+          "A": "Privilegio sempre la velocità",
+          "B": "Privilegio sempre la qualità",
+          "C": "Valuto il contesto, definisco il livello di qualità necessario per l'obiettivo specifico e ottimizzo di conseguenza",
+          "D": "Lascio decidere al team caso per caso"
+        },
+        "pesi": {
+          "A": 2,
+          "B": 2,
+          "C": 5,
+          "D": 3
+        }
+      },
+      
+      {
+        "id": "ld_030",
+        "dimension": "orientamento_risultati",
+        "domanda": "Hai raggiunto un grande risultato con il team. Come lo celebri e mantieni il momentum?",
+        "opzioni": {
+          "A": "Invio una email di congratulazioni e passo subito al prossimo progetto",
+          "B": "Celebro pubblicamente i successi individuali e di team, analizzo cosa ha funzionato e uso i learning per il futuro",
+          "C": "Organizzo una festa aziendale",
+          "D": "Propongo bonus economici"
+        },
+        "pesi": {
+          "A": 2,
+          "B": 5,
+          "C": 3,
+          "D": 3
+        }
+      }
+      
+    ],
+    
+    "scoring": {
+      "dimensioni": {
+        "visione_strategica": {
+          "nome": "Visione Strategica",
+          "descrizione": "Capacità di definire direzione, anticipare trend e allineare le azioni quotidiane agli obiettivi a lungo termine",
+          "peso": 1
+        },
+        "people_management": {
+          "nome": "People Management",
+          "descrizione": "Capacità di sviluppare talenti, gestire performance e creare un ambiente di lavoro motivante",
+          "peso": 1
+        },
+        "decisionalita": {
+          "nome": "Decisionalità",
+          "descrizione": "Capacità di prendere decisioni tempestive ed efficaci anche in condizioni di incertezza",
+          "peso": 1
+        },
+        "change_management": {
+          "nome": "Change Management",
+          "descrizione": "Capacità di guidare trasformazioni organizzative gestendo resistenze e mantenendo la motivazione",
+          "peso": 1
+        },
+        "influenza_persuasione": {
+          "nome": "Influenza & Persuasione",
+          "descrizione": "Capacità di ispirare, motivare e ottenere consenso anche senza autorità formale",
+          "peso": 1
+        },
+        "orientamento_risultati": {
+          "nome": "Orientamento ai Risultati",
+          "descrizione": "Capacità di mantenere focus sugli obiettivi bilanciando qualità, velocità e sostenibilità",
+          "peso": 1
+        }
+      }
+    }
+  }
+}
