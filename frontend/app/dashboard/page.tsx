@@ -175,8 +175,24 @@ export default function DashboardPage() {
         decision_making: 'Decision Making'
       }
 
+      const categoryIcons: Record<string, string> = {
+        communication: '💬',
+        leadership: '👑',
+        problem_solving: '🧩',
+        teamwork: '🤝',
+        time_management: '⏰',
+        adaptability: '🔄',
+        creativity: '🎨',
+        critical_thinking: '🧠',
+        empathy: '❤️',
+        resilience: '💪',
+        negotiation: '🤝',
+        decision_making: '⚖️'
+      }
+
       const topSkills = (results || []).slice(0, 3).map(r => ({
         category: categoryLabels[r.skill_category] || r.skill_category,
+        icon: categoryIcons[r.skill_category] || '⭐',
         score: parseFloat(r.final_score)
       }))
 
@@ -201,97 +217,109 @@ export default function DashboardPage() {
       certificateElement.style.padding = '20mm'
       certificateElement.style.backgroundColor = 'white'
       certificateElement.style.fontFamily = 'Arial, sans-serif'
+      certificateElement.style.position = 'relative'
       
       certificateElement.innerHTML = `
-        <div style="text-align: center; border-bottom: 4px solid #9333EA; padding-bottom: 30px; margin-bottom: 30px;">
-          <h1 style="font-size: 48px; font-weight: bold; background: linear-gradient(to right, #9333EA, #3B82F6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 15px;">ValutoLab</h1>
-          <h2 style="font-size: 28px; font-weight: bold; color: #1F2937; margin-bottom: 10px;">Certificato di Valutazione Professionale</h2>
-          <p style="color: #6B7280; font-size: 16px;">Soft Skills Assessment</p>
+        <!-- Watermark -->
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 120px; font-weight: bold; color: rgba(147, 51, 234, 0.05); white-space: nowrap; z-index: 0; pointer-events: none;">
+          ValutoLab
         </div>
 
-        <div style="background: linear-gradient(to right, #F3E8FF, #DBEAFE); padding: 25px; border-radius: 10px; margin-bottom: 30px;">
-          <h3 style="font-size: 24px; font-weight: bold; color: #1F2937; margin-bottom: 15px;">${profile?.full_name || 'Utente ValutoLab'}</h3>
-          <div style="display: flex; justify-content: space-between;">
-            <div>
-              <p style="font-weight: 600; color: #374151; margin-bottom: 5px;">Data Valutazione:</p>
-              <p style="color: #6B7280;">${new Date(assessment?.completed_at || '').toLocaleDateString('it-IT')}</p>
+        <!-- Content -->
+        <div style="position: relative; z-index: 1;">
+          <div style="text-align: center; border-bottom: 4px solid #9333EA; padding-bottom: 30px; margin-bottom: 30px;">
+            <div style="width: 100px; height: 100px; margin: 0 auto 20px; background: linear-gradient(135deg, #9333EA, #3B82F6); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+              <span style="font-size: 48px; font-weight: bold; color: white;">VL</span>
             </div>
-            <div>
-              <p style="font-weight: 600; color: #374151; margin-bottom: 5px;">Punteggio Generale:</p>
-              <p style="font-size: 28px; font-weight: bold; color: #9333EA;">${assessment?.total_score?.toFixed(1)}/5.0</p>
+            <h1 style="font-size: 42px; font-weight: bold; color: #1F2937; margin-bottom: 15px; letter-spacing: -1px;">ValutoLab</h1>
+            <h2 style="font-size: 24px; font-weight: 600; color: #4B5563; margin-bottom: 10px;">Certificato di Valutazione Professionale</h2>
+            <p style="color: #6B7280; font-size: 16px;">Soft Skills Assessment</p>
+          </div>
+
+          <div style="background: linear-gradient(to right, #F3E8FF, #DBEAFE); padding: 25px; border-radius: 10px; margin-bottom: 30px;">
+            <h3 style="font-size: 26px; font-weight: bold; color: #1F2937; margin-bottom: 15px;">${profile?.full_name || 'Utente ValutoLab'}</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <p style="font-weight: 600; color: #374151; margin-bottom: 5px; font-size: 14px;">Data Valutazione:</p>
+                <p style="color: #6B7280; font-size: 14px;">${new Date(assessment?.completed_at || '').toLocaleDateString('it-IT')}</p>
+              </div>
+              <div style="text-align: right;">
+                <p style="font-weight: 600; color: #374151; margin-bottom: 5px; font-size: 14px;">Punteggio Generale:</p>
+                <p style="font-size: 32px; font-weight: bold; color: #9333EA;">${assessment?.total_score?.toFixed(1)}<span style="font-size: 20px; color: #6B7280;">/5.0</span></p>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div style="margin-bottom: 30px;">
-          <h3 style="font-size: 20px; font-weight: bold; color: #1F2937; margin-bottom: 15px; display: flex; align-items: center;">
-            <span style="font-size: 24px; margin-right: 10px;">🎯</span>
-            Profilo Professionale
-          </h3>
-          <div style="background-color: #F3E8FF; padding: 20px; border-radius: 10px; border-left: 4px solid #9333EA;">
-            <p style="font-size: 22px; font-weight: bold; color: #7C3AED;">${qualitativeReport?.profile_insights?.suggested_profile || 'N/A'}</p>
+          <div style="margin-bottom: 30px;">
+            <h3 style="font-size: 20px; font-weight: bold; color: #1F2937; margin-bottom: 15px; display: flex; align-items: center;">
+              <span style="font-size: 28px; margin-right: 10px;">🎯</span>
+              Profilo Professionale
+            </h3>
+            <div style="background-color: #F3E8FF; padding: 20px; border-radius: 10px; border-left: 4px solid #9333EA;">
+              <p style="font-size: 22px; font-weight: bold; color: #7C3AED; margin: 0;">${qualitativeReport?.profile_insights?.suggested_profile || 'N/A'}</p>
+            </div>
           </div>
-        </div>
 
-        <div style="margin-bottom: 30px;">
-          <h3 style="font-size: 20px; font-weight: bold; color: #1F2937; margin-bottom: 15px; display: flex; align-items: center;">
-            <span style="font-size: 24px; margin-right: 10px;">✨</span>
-            La Tua Unicità
-          </h3>
-          <div style="background-color: #DBEAFE; padding: 20px; border-radius: 10px; border-left: 4px solid #3B82F6;">
-            <p style="color: #374151; line-height: 1.6;">${qualitativeReport?.profile_insights?.unique_strengths || 'N/A'}</p>
+          <div style="margin-bottom: 30px;">
+            <h3 style="font-size: 20px; font-weight: bold; color: #1F2937; margin-bottom: 15px; display: flex; align-items: center;">
+              <span style="font-size: 28px; margin-right: 10px;">✨</span>
+              La Tua Unicità
+            </h3>
+            <div style="background-color: #DBEAFE; padding: 20px; border-radius: 10px; border-left: 4px solid #3B82F6;">
+              <p style="color: #374151; line-height: 1.6; margin: 0;">${qualitativeReport?.profile_insights?.unique_strengths || 'N/A'}</p>
+            </div>
           </div>
-        </div>
 
-        <div style="margin-bottom: 30px;">
-          <h3 style="font-size: 20px; font-weight: bold; color: #1F2937; margin-bottom: 20px; display: flex; align-items: center;">
-            <span style="font-size: 24px; margin-right: 10px;">🏆</span>
-            Top 3 Competenze
-          </h3>
-          <div style="display: flex; gap: 15px; justify-content: space-between;">
-            ${topSkills.map((skill, index) => `
-              <div style="flex: 1; text-align: center; padding: 20px; border-radius: 10px; background: linear-gradient(135deg, #F3E8FF, #DBEAFE);">
-                <div style="font-size: 36px; font-weight: bold; color: #9333EA; margin-bottom: 10px;">#${index + 1}</div>
-                <div style="font-weight: 600; color: #1F2937; margin-bottom: 10px;">${skill.category}</div>
-                <div style="font-size: 24px; font-weight: bold; color: #7C3AED;">${skill.score.toFixed(1)}/5.0</div>
+          <div style="margin-bottom: 30px;">
+            <h3 style="font-size: 20px; font-weight: bold; color: #1F2937; margin-bottom: 20px; display: flex; align-items: center;">
+              <span style="font-size: 28px; margin-right: 10px;">🏆</span>
+              Top 3 Competenze
+            </h3>
+            <div style="display: flex; gap: 15px; justify-content: space-between;">
+              ${topSkills.map((skill, index) => `
+                <div style="flex: 1; text-align: center; padding: 20px; border-radius: 10px; background: linear-gradient(135deg, #F3E8FF, #DBEAFE);">
+                  <div style="font-size: 48px; margin-bottom: 10px;">${skill.icon}</div>
+                  <div style="font-weight: 600; color: #1F2937; margin-bottom: 10px; font-size: 15px;">${skill.category}</div>
+                  <div style="font-size: 24px; font-weight: bold; color: #7C3AED;">${skill.score.toFixed(1)}<span style="font-size: 16px; color: #6B7280;">/5.0</span></div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <div style="margin-bottom: 30px;">
+            <h3 style="font-size: 20px; font-weight: bold; color: #1F2937; margin-bottom: 20px; display: flex; align-items: center;">
+              <span style="font-size: 28px; margin-right: 10px;">📊</span>
+              Profilo Completo delle Competenze
+            </h3>
+            ${allSkills.map(skill => `
+              <div style="margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                  <span style="font-size: 14px; font-weight: 500; color: #374151;">${skill.category}</span>
+                  <span style="font-size: 14px; font-weight: bold; color: #9333EA;">${skill.score.toFixed(1)}</span>
+                </div>
+                <div style="width: 100%; height: 24px; background-color: #E5E7EB; border-radius: 12px; overflow: hidden;">
+                  <div style="height: 100%; background: linear-gradient(to right, #9333EA, #3B82F6); border-radius: 12px; width: ${(skill.score / 5) * 100}%; display: flex; align-items: center; justify-content: flex-end; padding-right: 10px;">
+                    <span style="color: white; font-size: 11px; font-weight: bold;">${skill.score >= 2.5 ? `${((skill.score / 5) * 100).toFixed(0)}%` : ''}</span>
+                  </div>
+                </div>
               </div>
             `).join('')}
           </div>
-        </div>
 
-        <div style="margin-bottom: 30px;">
-          <h3 style="font-size: 20px; font-weight: bold; color: #1F2937; margin-bottom: 20px; display: flex; align-items: center;">
-            <span style="font-size: 24px; margin-right: 10px;">📊</span>
-            Profilo Completo delle Competenze
-          </h3>
-          ${allSkills.map(skill => `
-            <div style="margin-bottom: 15px;">
-              <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                <span style="font-size: 14px; font-weight: 500; color: #374151;">${skill.category}</span>
-                <span style="font-size: 14px; font-weight: bold; color: #9333EA;">${skill.score.toFixed(1)}</span>
+          <div style="margin-top: 50px; padding-top: 30px; border-top: 2px solid #D1D5DB;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <p style="font-weight: 600; font-size: 14px; color: #6B7280; margin-bottom: 5px;">Certificato Verificabile</p>
+                <p style="font-size: 16px; font-weight: bold; color: #9333EA; margin-bottom: 10px;">valutolab.com</p>
+                <p style="font-size: 11px; color: #9CA3AF; margin: 0;">ID: ${assessmentId.substring(0, 8)}</p>
               </div>
-              <div style="width: 100%; height: 24px; background-color: #E5E7EB; border-radius: 12px; overflow: hidden;">
-                <div style="height: 100%; background: linear-gradient(to right, #9333EA, #3B82F6); border-radius: 12px; width: ${(skill.score / 5) * 100}%; display: flex; align-items: center; justify-content: flex-end; padding-right: 10px;">
-                  <span style="color: white; font-size: 12px; font-weight: bold;">${skill.score >= 2.5 ? `${((skill.score / 5) * 100).toFixed(0)}%` : ''}</span>
+              ${qrCodeUrl ? `
+                <div style="text-align: center;">
+                  <img src="${qrCodeUrl}" alt="QR Code" style="width: 100px; height: 100px; border: 2px solid #D1D5DB; border-radius: 8px;" />
+                  <p style="font-size: 11px; color: #6B7280; margin-top: 5px;">Scansiona per verificare</p>
                 </div>
-              </div>
+              ` : ''}
             </div>
-          `).join('')}
-        </div>
-
-        <div style="margin-top: 50px; padding-top: 30px; border-top: 2px solid #D1D5DB;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <p style="font-weight: 600; font-size: 14px; color: #6B7280;">Certificato Verificabile</p>
-              <p style="font-size: 14px; color: #6B7280;">valutolab.com</p>
-              <p style="font-size: 12px; color: #9CA3AF; margin-top: 10px;">ID Assessment: ${assessmentId}</p>
-            </div>
-            ${qrCodeUrl ? `
-              <div style="text-align: center;">
-                <img src="${qrCodeUrl}" alt="QR Code" style="width: 100px; height: 100px; border: 2px solid #D1D5DB; border-radius: 5px;" />
-                <p style="font-size: 12px; color: #6B7280; margin-top: 5px;">Scansiona per verificare</p>
-              </div>
-            ` : ''}
           </div>
         </div>
       `
@@ -302,7 +330,8 @@ export default function DashboardPage() {
       const canvas = await html2canvas(certificateElement, {
         scale: 2,
         useCORS: true,
-        logging: false
+        logging: false,
+        backgroundColor: '#ffffff'
       })
 
       const imgData = canvas.toDataURL('image/png')
