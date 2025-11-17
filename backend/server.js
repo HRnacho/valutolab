@@ -7,6 +7,7 @@ import aiReportsRouter from './routes/ai-reports.js';
 import situationalRouter from './routes/situational.js';
 import adminRoutes from './routes/admin.js';
 import shareRoutes from './routes/share.js';
+import leadershipRoutes from './routes/leadership.js';
 
 dotenv.config();
 
@@ -41,6 +42,7 @@ app.use('/api/ai-reports', aiReportsRouter);
 app.use('/api', situationalRouter);
 app.use('/api/admin', adminRoutes);
 app.use('/api/share', shareRoutes);
+app.use('/api/leadership', leadershipRoutes);
 
 app.listen(PORT, () => {
   console.log(`ValutoLab Backend running on port ${PORT}`);
@@ -48,4 +50,5 @@ app.listen(PORT, () => {
   console.log(`AI Reports: http://localhost:${PORT}/api/ai-reports`);
   console.log(`Situational Questions: http://localhost:${PORT}/api/situational-questions`);
   console.log(`Admin Dashboard: http://localhost:${PORT}/api/admin`);
+  console.log(`Leadership Assessment: http://localhost:${PORT}/api/leadership`);
 });
