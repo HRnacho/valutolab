@@ -1,21 +1,26 @@
-const express = require('express');
+import express from 'express';
+import { createClient } from '@supabase/supabase-js';
+import Anthropic from '@anthropic-ai/sdk';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
 const router = express.Router();
-const { supabase } = require('../config/supabase');
-const Anthropic = require('@anthropic-ai/sdk');
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_ANON_KEY
+);
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY
 });
 
-// ============================================
-// GET /api/leadership/questions
-// Restituisce le 30 domande del Leadership Assessment
-// ============================================
 router.get('/questions', async (req, res) => {
   try {
-    const fs = require('fs');
-    const path = require('path');
-    
     const questionsPath = path.join(__dirname, '../data/leadership_questions.json');
     const questionsData = JSON.parse(fs.readFileSync(questionsPath, 'utf8'));
     
@@ -32,10 +37,6 @@ router.get('/questions', async (req, res) => {
   }
 });
 
-// ============================================
-// POST /api/leadership/start
-// Crea un nuovo Leadership Assessment
-// ============================================
 router.post('/start', async (req, res) => {
   try {
     const { userId } = req.body;
@@ -47,7 +48,6 @@ router.post('/start', async (req, res) => {
       });
     }
 
-    // Crea nuovo assessment
     const { data: assessment, error } = await supabase
       .from('leadership_assessments')
       .insert({
@@ -72,16 +72,11 @@ router.post('/start', async (req, res) => {
   }
 });
 
-// ============================================
-// POST /api/leadership/:assessmentId/response
-// Salva una risposta
-// ============================================
 router.post('/:assessmentId/response', async (req, res) => {
   try {
     const { assessmentId } = req.params;
     const { questionId, dimension, answer, score } = req.body;
 
-    // Validazione
     if (!questionId || !dimension || !answer || !score) {
       return res.status(400).json({
         success: false,
@@ -89,7 +84,6 @@ router.post('/:assessmentId/response', async (req, res) => {
       });
     }
 
-    // Salva risposta (upsert per permettere modifica)
     const { data, error } = await supabase
       .from('leadership_responses')
       .upsert({
@@ -119,15 +113,10 @@ router.post('/:assessmentId/response', async (req, res) => {
   }
 });
 
-// ============================================
-// GET /api/leadership/:assessmentId/progress
-// Restituisce il progresso dell'assessment
-// ============================================
 router.get('/:assessmentId/progress', async (req, res) => {
   try {
     const { assessmentId } = req.params;
 
-    // Conta risposte salvate
     const { count, error } = await supabase
       .from('leadership_responses')
       .select('*', { count: 'exact', head: true })
@@ -156,15 +145,10 @@ router.get('/:assessmentId/progress', async (req, res) => {
   }
 });
 
-// ============================================
-// POST /api/leadership/:assessmentId/calculate
-// Calcola i risultati e genera report AI
-// ============================================
 router.post('/:assessmentId/calculate', async (req, res) => {
   try {
     const { assessmentId } = req.params;
 
-    // 1. Recupera tutte le risposte
     const { data: responses, error: responsesError } = await supabase
       .from('leadership_responses')
       .select('*')
@@ -179,7 +163,6 @@ router.post('/:assessmentId/calculate', async (req, res) => {
       });
     }
 
-    // 2. Calcola score per dimensione
     const dimensions = [
       'visione_strategica',
       'people_management',
@@ -216,7 +199,6 @@ router.post('/:assessmentId/calculate', async (req, res) => {
 
     const averageScore = (totalScore / dimensions.length).toFixed(2);
 
-    // 3. Salva risultati nel database
     for (const result of results) {
       await supabase
         .from('leadership_results')
@@ -230,10 +212,8 @@ router.post('/:assessmentId/calculate', async (req, res) => {
         });
     }
 
-    // 4. Genera report AI con Claude
     const aiReport = await generateLeadershipReport(assessmentId, results, responses);
 
-    // 5. Aggiorna assessment status
     await supabase
       .from('leadership_assessments')
       .update({
@@ -260,12 +240,8 @@ router.post('/:assessmentId/calculate', async (req, res) => {
   }
 });
 
-// ============================================
-// FUNZIONE: Genera Report AI Leadership
-// ============================================
 async function generateLeadershipReport(assessmentId, results, responses) {
   try {
-    // Prepara dati per Claude
     const dimensionsText = results
       .map(r => `${r.dimension_name}: ${r.score}/5.0`)
       .join('\n');
@@ -316,7 +292,6 @@ FORMATO RISPOSTA (JSON):
       }]
     });
 
-    // Parse risposta JSON da Claude
     const responseText = message.content[0].text;
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
     const aiData = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
@@ -325,7 +300,6 @@ FORMATO RISPOSTA (JSON):
       throw new Error('Invalid AI response format');
     }
 
-    // Salva report AI nel database
     const { data: report, error } = await supabase
       .from('leadership_ai_reports')
       .insert({
@@ -348,15 +322,10 @@ FORMATO RISPOSTA (JSON):
   }
 }
 
-// ============================================
-// GET /api/leadership/:assessmentId/results
-// Recupera i risultati completi
-// ============================================
 router.get('/:assessmentId/results', async (req, res) => {
   try {
     const { assessmentId } = req.params;
 
-    // Recupera assessment
     const { data: assessment, error: assessmentError } = await supabase
       .from('leadership_assessments')
       .select('*')
@@ -365,7 +334,6 @@ router.get('/:assessmentId/results', async (req, res) => {
 
     if (assessmentError) throw assessmentError;
 
-    // Recupera risultati dimensioni
     const { data: results, error: resultsError } = await supabase
       .from('leadership_results')
       .select('*')
@@ -374,14 +342,11 @@ router.get('/:assessmentId/results', async (req, res) => {
 
     if (resultsError) throw resultsError;
 
-    // Recupera report AI
-    const { data: aiReport, error: reportError } = await supabase
+    const { data: aiReport } = await supabase
       .from('leadership_ai_reports')
       .select('*')
       .eq('assessment_id', assessmentId)
       .single();
-
-    // Non lanciare errore se report non esiste (potrebbe essere in generazione)
 
     res.json({
       success: true,
@@ -400,4 +365,4 @@ router.get('/:assessmentId/results', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;
