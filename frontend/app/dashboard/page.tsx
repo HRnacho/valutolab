@@ -211,28 +211,37 @@ export default function DashboardPage() {
           })
         : ''
 
-      // 3. Crea elemento HTML per il certificato
-      const certificateElement = document.createElement('div')
-      certificateElement.style.width = '210mm'
-      certificateElement.style.padding = '20mm'
-      certificateElement.style.backgroundColor = 'white'
-      certificateElement.style.fontFamily = 'Arial, sans-serif'
-      certificateElement.style.position = 'relative'
+      // 3. Inizializza PDF
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      })
+
+      // PAGINA 1
+      const page1Element = document.createElement('div')
+      page1Element.style.width = '210mm'
+      page1Element.style.height = '297mm'
+      page1Element.style.padding = '20mm'
+      page1Element.style.backgroundColor = 'white'
+      page1Element.style.fontFamily = 'Arial, sans-serif'
+      page1Element.style.position = 'relative'
+      page1Element.style.boxSizing = 'border-box'
       
-      certificateElement.innerHTML = `
+      page1Element.innerHTML = `
         <!-- Watermark -->
-        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 100px; font-weight: bold; color: rgba(147, 51, 234, 0.03); white-space: nowrap; z-index: 0; pointer-events: none;">
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 100px; font-weight: bold; color: rgba(147, 51, 234, 0.08); white-space: nowrap; z-index: 0; pointer-events: none;">
           ValutoLab
         </div>
 
         <!-- Content -->
         <div style="position: relative; z-index: 1;">
-          <!-- Header con Logo -->
+          <!-- Header -->
           <div style="text-align: center; border-bottom: 4px solid #9333EA; padding-bottom: 25px; margin-bottom: 25px;">
             <div style="width: 80px; height: 80px; margin: 0 auto 15px; background: linear-gradient(135deg, #EC4899, #8B5CF6, #3B82F6); border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(147, 51, 234, 0.3);">
-              <span style="font-size: 48px; font-weight: 900; color: white; font-family: Arial, sans-serif;">V</span>
+              <span style="font-size: 48px; font-weight: 900; color: white;">V</span>
             </div>
-            <h1 style="font-size: 36px; font-weight: bold; color: #1F2937; margin: 10px 0 8px 0; letter-spacing: -0.5px;">ValutoLab</h1>
+            <h1 style="font-size: 36px; font-weight: bold; color: #1F2937; margin: 10px 0 8px 0;">ValutoLab</h1>
             <h2 style="font-size: 20px; font-weight: 600; color: #6B7280; margin: 0 0 5px 0;">Certificato di Valutazione Professionale</h2>
             <p style="color: #9CA3AF; font-size: 14px; margin: 0;">Soft Skills Assessment</p>
           </div>
@@ -245,7 +254,7 @@ export default function DashboardPage() {
                 <p style="font-weight: 600; color: #6B7280; margin: 0 0 3px 0; font-size: 13px;">Data Valutazione:</p>
                 <p style="color: #9CA3AF; font-size: 13px; margin: 0;">${new Date(assessment?.completed_at || '').toLocaleDateString('it-IT')}</p>
               </div>
-              <div style="text-align: right; padding-left: 20px;">
+              <div style="text-align: right;">
                 <p style="font-weight: 600; color: #6B7280; margin: 0 0 3px 0; font-size: 13px;">Punteggio Generale:</p>
                 <p style="font-size: 36px; font-weight: bold; color: #9333EA; margin: 0; line-height: 1;">${assessment?.total_score?.toFixed(1)}<span style="font-size: 20px; color: #9CA3AF;">/5.0</span></p>
               </div>
@@ -275,7 +284,7 @@ export default function DashboardPage() {
           </div>
 
           <!-- Top 3 Competenze -->
-          <div style="margin-bottom: 25px;">
+          <div style="margin-bottom: 0;">
             <h3 style="font-size: 18px; font-weight: bold; color: #1F2937; margin: 0 0 15px 0; display: flex; align-items: center;">
               <span style="font-size: 24px; margin-right: 8px;">🏆</span>
               Top 3 Competenze
@@ -290,9 +299,47 @@ export default function DashboardPage() {
               `).join('')}
             </div>
           </div>
+        </div>
+      `
 
+      document.body.appendChild(page1Element)
+
+      const canvas1 = await html2canvas(page1Element, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      })
+
+      const imgData1 = canvas1.toDataURL('image/png')
+      const imgWidth = 210
+      const imgHeight = 297
+
+      pdf.addImage(imgData1, 'PNG', 0, 0, imgWidth, imgHeight)
+      document.body.removeChild(page1Element)
+
+      // PAGINA 2
+      pdf.addPage()
+
+      const page2Element = document.createElement('div')
+      page2Element.style.width = '210mm'
+      page2Element.style.height = '297mm'
+      page2Element.style.padding = '20mm'
+      page2Element.style.backgroundColor = 'white'
+      page2Element.style.fontFamily = 'Arial, sans-serif'
+      page2Element.style.position = 'relative'
+      page2Element.style.boxSizing = 'border-box'
+      
+      page2Element.innerHTML = `
+        <!-- Watermark -->
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 100px; font-weight: bold; color: rgba(147, 51, 234, 0.08); white-space: nowrap; z-index: 0; pointer-events: none;">
+          ValutoLab
+        </div>
+
+        <!-- Content -->
+        <div style="position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column;">
           <!-- Profilo Completo -->
-          <div style="margin-bottom: 25px;">
+          <div style="flex: 1;">
             <h3 style="font-size: 18px; font-weight: bold; color: #1F2937; margin: 0 0 15px 0; display: flex; align-items: center;">
               <span style="font-size: 24px; margin-right: 8px;">📊</span>
               Profilo Completo delle Competenze
@@ -313,7 +360,7 @@ export default function DashboardPage() {
           </div>
 
           <!-- Footer -->
-          <div style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #D1D5DB;">
+          <div style="margin-top: auto; padding-top: 20px; border-top: 2px solid #D1D5DB;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <div>
                 <p style="font-weight: 600; font-size: 13px; color: #6B7280; margin: 0 0 3px 0;">Certificato Verificabile</p>
@@ -331,31 +378,21 @@ export default function DashboardPage() {
         </div>
       `
 
-      document.body.appendChild(certificateElement)
+      document.body.appendChild(page2Element)
 
-      // 4. Converti in PDF
-      const canvas = await html2canvas(certificateElement, {
+      const canvas2 = await html2canvas(page2Element, {
         scale: 2,
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff'
       })
 
-      const imgData = canvas.toDataURL('image/png')
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      })
+      const imgData2 = canvas2.toDataURL('image/png')
+      pdf.addImage(imgData2, 'PNG', 0, 0, imgWidth, imgHeight)
+      document.body.removeChild(page2Element)
 
-      const imgWidth = 210
-      const imgHeight = (canvas.height * imgWidth) / canvas.width
-
-      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight)
+      // Salva PDF
       pdf.save(`ValutoLab_Certificato_${profile?.full_name || 'Utente'}.pdf`)
-
-      // 5. Rimuovi elemento temporaneo
-      document.body.removeChild(certificateElement)
 
       showMessage('success', 'PDF scaricato con successo!')
     } catch (error) {
