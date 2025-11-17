@@ -5,6 +5,9 @@ import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import BadgeGenerator from '@/components/BadgeGenerator'
 import QRCodeGenerator from '@/components/QRCodeGenerator'
+import jsPDF from 'jspdf'
+import html2canvas from 'html2canvas'
+import QRCode from 'qrcode'
 
 interface Assessment {
   id: string
@@ -31,6 +34,7 @@ export default function DashboardPage() {
   const [shareData, setShareData] = useState<Record<string, ShareData>>({})
   const [creatingShare, setCreatingShare] = useState<string | null>(null)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [generatingPDF, setGeneratingPDF] = useState<string | null>(null)
   const [badgeModal, setBadgeModal] = useState<{
     open: boolean;
     assessmentId: string | null;
@@ -88,7 +92,6 @@ export default function DashboardPage() {
       }
       setResponsesCount(counts)
 
-      // Carica dati di condivisione per assessment completati
       const completedIds = (assessmentsData || [])
         .filter(a => a.status === 'completed')
         .map(a => a.id)
@@ -128,6 +131,204 @@ export default function DashboardPage() {
 
     fetchData()
   }, [router])
+
+  const handleGeneratePDF = async (assessmentId: string) => {
+    setGeneratingPDF(assessmentId)
+    try {
+      // 1. Carica tutti i dati necessari
+      const { data: assessment } = await supabase
+        .from('assessments')
+        .select('total_score, completed_at')
+        .eq('id', assessmentId)
+        .single()
+
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single()
+
+      const { data: qualitativeReport } = await supabase
+        .from('qualitative_reports')
+        .select('profile_insights')
+        .eq('assessment_id', assessmentId)
+        .single()
+
+      const { data: results } = await supabase
+        .from('combined_assessment_results')
+        .select('skill_category, final_score')
+        .eq('assessment_id', assessmentId)
+        .order('final_score', { ascending: false })
+
+      const categoryLabels: Record<string, string> = {
+        communication: 'Comunicazione',
+        leadership: 'Leadership',
+        problem_solving: 'Problem Solving',
+        teamwork: 'Lavoro di Squadra',
+        time_management: 'Gestione del Tempo',
+        adaptability: 'Adattabilità',
+        creativity: 'Creatività',
+        critical_thinking: 'Pensiero Critico',
+        empathy: 'Empatia',
+        resilience: 'Resilienza',
+        negotiation: 'Negoziazione',
+        decision_making: 'Decision Making'
+      }
+
+      const topSkills = (results || []).slice(0, 3).map(r => ({
+        category: categoryLabels[r.skill_category] || r.skill_category,
+        score: parseFloat(r.final_score)
+      }))
+
+      const allSkills = (results || []).map(r => ({
+        category: categoryLabels[r.skill_category] || r.skill_category,
+        score: parseFloat(r.final_score)
+      }))
+
+      // 2. Genera QR Code
+      const shareToken = shareData[assessmentId]?.share_token
+      const qrCodeUrl = shareToken 
+        ? await QRCode.toDataURL(`https://valutolab.com/profile/${shareToken}`, {
+            width: 200,
+            margin: 2,
+            color: { dark: '#8B5CF6', light: '#FFFFFF' }
+          })
+        : ''
+
+      // 3. Crea elemento HTML per il certificato
+      const certificateElement = document.createElement('div')
+      certificateElement.style.width = '210mm'
+      certificateElement.style.padding = '20mm'
+      certificateElement.style.backgroundColor = 'white'
+      certificateElement.style.fontFamily = 'Arial, sans-serif'
+      
+      certificateElement.innerHTML = `
+        <div style="text-align: center; border-bottom: 4px solid #9333EA; padding-bottom: 30px; margin-bottom: 30px;">
+          <h1 style="font-size: 48px; font-weight: bold; background: linear-gradient(to right, #9333EA, #3B82F6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 15px;">ValutoLab</h1>
+          <h2 style="font-size: 28px; font-weight: bold; color: #1F2937; margin-bottom: 10px;">Certificato di Valutazione Professionale</h2>
+          <p style="color: #6B7280; font-size: 16px;">Soft Skills Assessment</p>
+        </div>
+
+        <div style="background: linear-gradient(to right, #F3E8FF, #DBEAFE); padding: 25px; border-radius: 10px; margin-bottom: 30px;">
+          <h3 style="font-size: 24px; font-weight: bold; color: #1F2937; margin-bottom: 15px;">${profile?.full_name || 'Utente ValutoLab'}</h3>
+          <div style="display: flex; justify-content: space-between;">
+            <div>
+              <p style="font-weight: 600; color: #374151; margin-bottom: 5px;">Data Valutazione:</p>
+              <p style="color: #6B7280;">${new Date(assessment?.completed_at || '').toLocaleDateString('it-IT')}</p>
+            </div>
+            <div>
+              <p style="font-weight: 600; color: #374151; margin-bottom: 5px;">Punteggio Generale:</p>
+              <p style="font-size: 28px; font-weight: bold; color: #9333EA;">${assessment?.total_score?.toFixed(1)}/5.0</p>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 30px;">
+          <h3 style="font-size: 20px; font-weight: bold; color: #1F2937; margin-bottom: 15px; display: flex; align-items: center;">
+            <span style="font-size: 24px; margin-right: 10px;">🎯</span>
+            Profilo Professionale
+          </h3>
+          <div style="background-color: #F3E8FF; padding: 20px; border-radius: 10px; border-left: 4px solid #9333EA;">
+            <p style="font-size: 22px; font-weight: bold; color: #7C3AED;">${qualitativeReport?.profile_insights?.suggested_profile || 'N/A'}</p>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 30px;">
+          <h3 style="font-size: 20px; font-weight: bold; color: #1F2937; margin-bottom: 15px; display: flex; align-items: center;">
+            <span style="font-size: 24px; margin-right: 10px;">✨</span>
+            La Tua Unicità
+          </h3>
+          <div style="background-color: #DBEAFE; padding: 20px; border-radius: 10px; border-left: 4px solid #3B82F6;">
+            <p style="color: #374151; line-height: 1.6;">${qualitativeReport?.profile_insights?.unique_strengths || 'N/A'}</p>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 30px;">
+          <h3 style="font-size: 20px; font-weight: bold; color: #1F2937; margin-bottom: 20px; display: flex; align-items: center;">
+            <span style="font-size: 24px; margin-right: 10px;">🏆</span>
+            Top 3 Competenze
+          </h3>
+          <div style="display: flex; gap: 15px; justify-content: space-between;">
+            ${topSkills.map((skill, index) => `
+              <div style="flex: 1; text-align: center; padding: 20px; border-radius: 10px; background: linear-gradient(135deg, #F3E8FF, #DBEAFE);">
+                <div style="font-size: 36px; font-weight: bold; color: #9333EA; margin-bottom: 10px;">#${index + 1}</div>
+                <div style="font-weight: 600; color: #1F2937; margin-bottom: 10px;">${skill.category}</div>
+                <div style="font-size: 24px; font-weight: bold; color: #7C3AED;">${skill.score.toFixed(1)}/5.0</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <div style="margin-bottom: 30px;">
+          <h3 style="font-size: 20px; font-weight: bold; color: #1F2937; margin-bottom: 20px; display: flex; align-items: center;">
+            <span style="font-size: 24px; margin-right: 10px;">📊</span>
+            Profilo Completo delle Competenze
+          </h3>
+          ${allSkills.map(skill => `
+            <div style="margin-bottom: 15px;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                <span style="font-size: 14px; font-weight: 500; color: #374151;">${skill.category}</span>
+                <span style="font-size: 14px; font-weight: bold; color: #9333EA;">${skill.score.toFixed(1)}</span>
+              </div>
+              <div style="width: 100%; height: 24px; background-color: #E5E7EB; border-radius: 12px; overflow: hidden;">
+                <div style="height: 100%; background: linear-gradient(to right, #9333EA, #3B82F6); border-radius: 12px; width: ${(skill.score / 5) * 100}%; display: flex; align-items: center; justify-content: flex-end; padding-right: 10px;">
+                  <span style="color: white; font-size: 12px; font-weight: bold;">${skill.score >= 2.5 ? `${((skill.score / 5) * 100).toFixed(0)}%` : ''}</span>
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        <div style="margin-top: 50px; padding-top: 30px; border-top: 2px solid #D1D5DB;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <p style="font-weight: 600; font-size: 14px; color: #6B7280;">Certificato Verificabile</p>
+              <p style="font-size: 14px; color: #6B7280;">valutolab.com</p>
+              <p style="font-size: 12px; color: #9CA3AF; margin-top: 10px;">ID Assessment: ${assessmentId}</p>
+            </div>
+            ${qrCodeUrl ? `
+              <div style="text-align: center;">
+                <img src="${qrCodeUrl}" alt="QR Code" style="width: 100px; height: 100px; border: 2px solid #D1D5DB; border-radius: 5px;" />
+                <p style="font-size: 12px; color: #6B7280; margin-top: 5px;">Scansiona per verificare</p>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      `
+
+      document.body.appendChild(certificateElement)
+
+      // 4. Converti in PDF
+      const canvas = await html2canvas(certificateElement, {
+        scale: 2,
+        useCORS: true,
+        logging: false
+      })
+
+      const imgData = canvas.toDataURL('image/png')
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      })
+
+      const imgWidth = 210
+      const imgHeight = (canvas.height * imgWidth) / canvas.width
+
+      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight)
+      pdf.save(`ValutoLab_Certificato_${profile?.full_name || 'Utente'}.pdf`)
+
+      // 5. Rimuovi elemento temporaneo
+      document.body.removeChild(certificateElement)
+
+      showMessage('success', 'PDF scaricato con successo!')
+    } catch (error) {
+      console.error('Error generating PDF:', error)
+      showMessage('error', 'Errore nella generazione del PDF')
+    } finally {
+      setGeneratingPDF(null)
+    }
+  }
 
   const handleToggleShare = async (assessmentId: string) => {
     if (!user || !shareData[assessmentId]) return
@@ -550,11 +751,11 @@ export default function DashboardPage() {
                                   📄 QR
                                 </button>
                                 <button
-                                  disabled
-                                  className="px-2 py-1 border border-gray-300 text-gray-400 rounded text-xs font-semibold cursor-not-allowed opacity-50"
-                                  title="Coming Soon"
+                                  onClick={() => handleGeneratePDF(assessment.id)}
+                                  disabled={generatingPDF === assessment.id}
+                                  className="px-2 py-1 border border-purple-300 text-purple-700 rounded text-xs font-semibold hover:bg-purple-50 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                  📋 PDF
+                                  {generatingPDF === assessment.id ? '⏳' : '📋'} PDF
                                 </button>
                               </div>
                             </div>
