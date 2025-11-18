@@ -15,29 +15,34 @@ router.post('/create', async (req, res) => {
   try {
     const { userId, name, partitaIva, referentName, referentRole, contactEmail } = req.body;
 
-    if (!userId || !name || !partitaIva || !referentName || !referentRole || !contactEmail) {
+    if (!userId || !name || !contactEmail) {
       return res.status(400).json({
         success: false,
-        message: 'Campi obbligatori: userId, name (ragione sociale), partitaIva, referentName, referentRole, contactEmail'
+        message: 'Campi obbligatori: userId, name, contactEmail'
       });
     }
 
-    // Crea organizzazione
+    // Crea organizzazione con TUTTI i campi
     const { data: org, error: orgError } = await supabase
       .from('organizations')
       .insert({
-        name,
+        name: name,
+        contact_email: contactEmail,
         partita_iva: partitaIva,
         referent_name: referentName,
         referent_role: referentRole,
-        contact_email: contactEmail,
-        subscription_tier: 'free',
-        assessment_quota: 5
+        subscription_tier: 'starter',
+        subscription_status: 'active',
+        assessment_quota: 20,
+        used_assessments: 0
       })
       .select()
       .single();
 
-    if (orgError) throw orgError;
+    if (orgError) {
+      console.error('Supabase error:', orgError);
+      throw orgError;
+    }
 
     // Aggiungi utente come owner
     const { error: memberError } = await supabase
@@ -51,7 +56,10 @@ router.post('/create', async (req, res) => {
         can_manage_members: true
       });
 
-    if (memberError) throw memberError;
+    if (memberError) {
+      console.error('Member error:', memberError);
+      throw memberError;
+    }
 
     res.json({
       success: true,
