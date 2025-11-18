@@ -10,10 +10,11 @@ export default function AziendeCreatePage() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   
   const [formData, setFormData] = useState({
-    name: '',
-    type: 'company' as 'company' | 'agency',
-    contactEmail: '',
-    billingEmail: ''
+    ragioneSociale: '',
+    partitaIva: '',
+    nomeReferente: '',
+    ruoloReferente: '',
+    email: ''
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -31,6 +32,16 @@ export default function AziendeCreatePage() {
         return
       }
 
+      // Validazione email personale (no info@, admin@, etc)
+      const emailLowercase = formData.email.toLowerCase()
+      const forbiddenPrefixes = ['info@', 'admin@', 'contact@', 'sales@', 'support@']
+      
+      if (forbiddenPrefixes.some(prefix => emailLowercase.startsWith(prefix))) {
+        setMessage({ type: 'error', text: 'Utilizza un indirizzo email personale, non generico aziendale' })
+        setLoading(false)
+        return
+      }
+
       // Chiama API per creare organizzazione
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://valutolab-backend.onrender.com'
       
@@ -39,10 +50,11 @@ export default function AziendeCreatePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: user.id,
-          name: formData.name,
-          type: formData.type,
-          contactEmail: formData.contactEmail,
-          billingEmail: formData.billingEmail || formData.contactEmail
+          name: formData.ragioneSociale,
+          partitaIva: formData.partitaIva,
+          referentName: formData.nomeReferente,
+          referentRole: formData.ruoloReferente,
+          contactEmail: formData.email
         })
       })
 
@@ -271,64 +283,82 @@ export default function AziendeCreatePage() {
         <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-xl p-8">
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-gray-900 mb-2">Crea la Tua Organizzazione</h2>
-            <p className="text-gray-600">Inizia subito e gestisci il tuo team</p>
+            <p className="text-gray-600">Compila il form per iniziare</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Nome Azienda *
+                Ragione Sociale *
               </label>
               <input
                 type="text"
                 required
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                value={formData.ragioneSociale}
+                onChange={(e) => setFormData({ ...formData, ragioneSociale: e.target.value })}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:outline-none"
-                placeholder="Es. Acme SRL"
+                placeholder="Es. Acme S.r.l."
               />
             </div>
 
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Tipo Organizzazione *
+                Partita IVA *
               </label>
-              <select
-                value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value as 'company' | 'agency' })}
+              <input
+                type="text"
+                required
+                value={formData.partitaIva}
+                onChange={(e) => setFormData({ ...formData, partitaIva: e.target.value })}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:outline-none"
-              >
-                <option value="company">Azienda</option>
-                <option value="agency">Agenzia di Recruiting</option>
-              </select>
+                placeholder="IT12345678901"
+                maxLength={16}
+              />
             </div>
 
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Email Contatto *
+                Nome Referente *
+              </label>
+              <input
+                type="text"
+                required
+                value={formData.nomeReferente}
+                onChange={(e) => setFormData({ ...formData, nomeReferente: e.target.value })}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:outline-none"
+                placeholder="Mario Rossi"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Ruolo Referente *
+              </label>
+              <input
+                type="text"
+                required
+                value={formData.ruoloReferente}
+                onChange={(e) => setFormData({ ...formData, ruoloReferente: e.target.value })}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:outline-none"
+                placeholder="Es. HR Manager, CEO, Responsabile Risorse Umane"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Email *
               </label>
               <input
                 type="email"
                 required
-                value={formData.contactEmail}
-                onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:outline-none"
-                placeholder="nome@azienda.it"
+                placeholder="mario.rossi@azienda.it"
               />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Email Fatturazione (opzionale)
-              </label>
-              <input
-                type="email"
-                value={formData.billingEmail}
-                onChange={(e) => setFormData({ ...formData, billingEmail: e.target.value })}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:outline-none"
-                placeholder="amministrazione@azienda.it"
-              />
-              <p className="text-sm text-gray-500 mt-1">Se vuoto, useremo l'email di contatto</p>
+              <p className="text-sm text-gray-500 mt-1">
+                ⚠️ Utilizza un indirizzo email personale (non info@, admin@, etc.)
+              </p>
             </div>
 
             <button
