@@ -74,6 +74,15 @@ export default function HomePage() {
 
       {/* HERO SECTION */}
       <section className="relative py-20 lg:py-32 overflow-hidden">
+        {/* Immagine di sfondo in trasparenza */}
+        <div className="absolute inset-0 opacity-10">
+          <img 
+            src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=1600&q=80" 
+            alt="Team collaboration" 
+            className="w-full h-full object-cover"
+          />
+        </div>
+        
         <div className="absolute inset-0 bg-gradient-to-r from-purple-600/10 to-blue-600/10"></div>
         
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -86,9 +95,9 @@ export default function HomePage() {
             </h1>
             
             <p className="text-xl md:text-2xl text-gray-700 mb-12 leading-relaxed">
-              Assessment professionale delle competenze trasversali con intelligenza artificiale.
+              Assessment professionale delle competenze trasversali.
               <br />
-              Risultati immediati, certificati e badge per LinkedIn.
+              Risultati immediati, certificati verificabili e badge per LinkedIn.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -108,7 +117,7 @@ export default function HomePage() {
             </div>
 
             <p className="mt-8 text-sm text-gray-600">
-              ✨ Report AI • 📊 Certificati PDF • 🎯 Badge LinkedIn • 📱 QR Code
+              ✨ Report Personalizzati • 📊 Certificati PDF • 🎯 Badge LinkedIn • 📱 QR Code
             </p>
           </div>
         </div>
@@ -129,11 +138,11 @@ export default function HomePage() {
           <div className="grid md:grid-cols-3 gap-8">
             <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-2xl p-8 hover:shadow-xl transition">
               <div className="w-16 h-16 bg-gradient-to-br from-purple-600 to-blue-600 rounded-xl flex items-center justify-center mb-6">
-                <span className="text-3xl">🤖</span>
+                <span className="text-3xl">📋</span>
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Report AI Personalizzati</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">Report Personalizzati</h3>
               <p className="text-gray-700 leading-relaxed">
-                Analisi avanzata con Claude AI di Anthropic. Ogni report è unico e costruito sulle tue risposte.
+                Analisi dettagliata delle tue competenze con suggerimenti concreti per la crescita professionale. Ogni report è unico e costruito sulle tue risposte.
               </p>
             </div>
 
@@ -143,7 +152,7 @@ export default function HomePage() {
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-4">Risultati Immediati</h3>
               <p className="text-gray-700 leading-relaxed">
-                15 minuti per completare l'assessment, report disponibile istantaneamente con badge e certificati.
+                15 minuti per completare l'assessment, report disponibile istantaneamente con badge professionali e certificati scaricabili.
               </p>
             </div>
 
@@ -151,9 +160,9 @@ export default function HomePage() {
               <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center mb-6">
                 <span className="text-3xl">🎯</span>
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Validato Scientificamente</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">Metodologia Rigorosa</h3>
               <p className="text-gray-700 leading-relaxed">
-                Metodologia basata su framework riconosciuti e validati dalla ricerca in psicologia organizzativa.
+                Framework validato e basato su standard internazionali di valutazione delle competenze trasversali e comportamentali.
               </p>
             </div>
           </div>
@@ -198,7 +207,7 @@ export default function HomePage() {
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="text-purple-600 mt-1">✓</span>
-                  <span className="text-gray-700">Report AI completo</span>
+                  <span className="text-gray-700">Report completo personalizzato</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="text-purple-600 mt-1">✓</span>
@@ -335,8 +344,8 @@ export default function HomePage() {
                 <div className="flex items-start gap-3">
                   <span className="text-purple-600 text-xl mt-1">✓</span>
                   <div>
-                    <p className="font-semibold text-gray-900">Report AI personalizzato</p>
-                    <p className="text-gray-600 text-sm">con profilo professionale suggerito e analisi dettagliata</p>
+                    <p className="font-semibold text-gray-900">Report personalizzato dettagliato</p>
+                    <p className="text-gray-600 text-sm">con profilo professionale suggerito e analisi approfondita</p>
                   </div>
                 </div>
 
@@ -344,7 +353,7 @@ export default function HomePage() {
                   <span className="text-purple-600 text-xl mt-1">✓</span>
                   <div>
                     <p className="font-semibold text-gray-900">Badge LinkedIn</p>
-                    <p className="text-gray-600 text-sm">per valorizzare immediatamente il tuo profilo social</p>
+                    <p className="text-gray-600 text-sm">per valorizzare immediatamente il tuo profilo professionale</p>
                   </div>
                 </div>
 
@@ -352,7 +361,7 @@ export default function HomePage() {
                   <span className="text-purple-600 text-xl mt-1">✓</span>
                   <div>
                     <p className="font-semibold text-gray-900">QR Code dinamico</p>
-                    <p className="text-gray-600 text-sm">da inserire nel CV e biglietto da visita per networking</p>
+                    <p className="text-gray-600 text-sm">da inserire nel CV e biglietto da visita per networking efficace</p>
                   </div>
                 </div>
 
@@ -360,7 +369,7 @@ export default function HomePage() {
                   <span className="text-purple-600 text-xl mt-1">✓</span>
                   <div>
                     <p className="font-semibold text-gray-900">Certificato PDF professionale</p>
-                    <p className="text-gray-600 text-sm">scaricabile e stampabile con watermark di autenticità</p>
+                    <p className="text-gray-600 text-sm">scaricabile e stampabile con codice di verifica</p>
                   </div>
                 </div>
 
@@ -396,7 +405,7 @@ export default function HomePage() {
                   <span className="text-yellow-600 text-xl mt-1">✓</span>
                   <div>
                     <p className="font-semibold text-gray-900">Identificazione stile di leadership</p>
-                    <p className="text-gray-600 text-sm">Trasformazionale, Servant Leader, Coaching e altri</p>
+                    <p className="text-gray-600 text-sm">Trasformazionale, Servant Leader, Coaching e altri profili</p>
                   </div>
                 </div>
 
@@ -420,7 +429,7 @@ export default function HomePage() {
                   <span className="text-yellow-600 text-xl mt-1">✓</span>
                   <div>
                     <p className="font-semibold text-gray-900">Risorse consigliate</p>
-                    <p className="text-gray-600 text-sm">libri, corsi e strumenti per crescita manageriale</p>
+                    <p className="text-gray-600 text-sm">libri, corsi e strumenti per crescita manageriale continua</p>
                   </div>
                 </div>
 
@@ -428,7 +437,7 @@ export default function HomePage() {
                   <span className="text-yellow-600 text-xl mt-1">✓</span>
                   <div>
                     <p className="font-semibold text-gray-900">Report premium scaricabile</p>
-                    <p className="text-gray-600 text-sm">con analisi approfondita delle 6 dimensioni</p>
+                    <p className="text-gray-600 text-sm">con analisi approfondita delle 6 dimensioni di leadership</p>
                   </div>
                 </div>
               </div>
@@ -528,7 +537,7 @@ export default function HomePage() {
                 <span className="text-xl font-bold">ValutoLab</span>
               </div>
               <p className="text-gray-400">
-                Piattaforma professionale per l'assessment delle soft skills con intelligenza artificiale.
+                Piattaforma professionale per l'assessment delle soft skills e competenze di leadership.
               </p>
             </div>
 
