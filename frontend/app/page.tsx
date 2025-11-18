@@ -43,11 +43,11 @@ export default function HomePage() {
               </a>
             </nav>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               {user ? (
                 <button
                   onClick={() => router.push('/dashboard')}
-                  className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:shadow-lg transition"
+                  className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg font-semibold hover:shadow-lg transition text-sm sm:text-base"
                 >
                   Dashboard
                 </button>
@@ -55,21 +55,27 @@ export default function HomePage() {
                 <>
                   <button
                     onClick={() => router.push('/login')}
-                    className="hidden sm:block text-gray-700 hover:text-purple-600 font-semibold transition"
+                    className="text-gray-700 hover:text-purple-600 font-semibold transition text-sm sm:text-base"
                   >
                     Accedi
                   </button>
                   <button
-                    onClick={() => router.push('/servizi')}
-                    className="hidden md:block bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:shadow-lg transition"
+                    onClick={() => router.push('/register')}
+                    className="text-gray-700 hover:text-purple-600 font-semibold transition text-sm sm:text-base"
                   >
-                    Per Privati
+                    Registrati
+                  </button>
+                  <button
+                    onClick={() => router.push('/servizi')}
+                    className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-3 sm:px-6 py-2 sm:py-2.5 rounded-lg font-semibold hover:shadow-lg transition text-sm sm:text-base"
+                  >
+                    Privati
                   </button>
                   <button
                     onClick={() => router.push('/aziende/create')}
-                    className="bg-gradient-to-r from-orange-500 to-pink-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:shadow-lg transition"
+                    className="bg-gradient-to-r from-orange-500 to-pink-600 text-white px-3 sm:px-6 py-2 sm:py-2.5 rounded-lg font-semibold hover:shadow-lg transition text-sm sm:text-base"
                   >
-                    Per Aziende
+                    Aziende
                   </button>
                 </>
               )}
