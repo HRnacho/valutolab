@@ -571,6 +571,7 @@ export default function DashboardPage() {
                       onClick={() => {
                         if (window.confirm('Sei sicuro di voler eliminare questo assessment?')) {
                           handleDeleteLeadership(assessment.id)
+                        }
                         }}
                         disabled={deleting === assessment.id}
                         className="w-full px-4 py-2 border-2 border-red-300 text-red-600 rounded-lg font-semibold hover:bg-red-50 transition disabled:opacity-50"
@@ -605,3 +606,4 @@ export default function DashboardPage() {
     </div>
   )
 }
+
