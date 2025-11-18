@@ -13,12 +13,12 @@ const supabase = createClient(
 // ============================================
 router.post('/create', async (req, res) => {
   try {
-    const { userId, name, type, contactEmail, billingEmail } = req.body;
+    const { userId, name, partitaIva, referentName, referentRole, contactEmail } = req.body;
 
-    if (!userId || !name || !contactEmail) {
+    if (!userId || !name || !partitaIva || !referentName || !referentRole || !contactEmail) {
       return res.status(400).json({
         success: false,
-        message: 'Campi obbligatori: userId, name, contactEmail'
+        message: 'Campi obbligatori: userId, name (ragione sociale), partitaIva, referentName, referentRole, contactEmail'
       });
     }
 
@@ -27,9 +27,10 @@ router.post('/create', async (req, res) => {
       .from('organizations')
       .insert({
         name,
-        type: type || 'company',
+        partita_iva: partitaIva,
+        referent_name: referentName,
+        referent_role: referentRole,
         contact_email: contactEmail,
-        billing_email: billingEmail || contactEmail,
         subscription_tier: 'free',
         assessment_quota: 5
       })
@@ -301,7 +302,7 @@ router.get('/invite/:token/validate', async (req, res) => {
       .from('candidate_invites')
       .select(`
         *,
-        organizations (name, type)
+        organizations (name)
       `)
       .eq('invite_token', token)
       .single();
