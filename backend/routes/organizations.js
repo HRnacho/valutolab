@@ -1,6 +1,7 @@
-const express = require('express');
+import express from 'express';
+import { createClient } from '@supabase/supabase-js';
+
 const router = express.Router();
-const { createClient } = require('@supabase/supabase-js');
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -361,11 +362,16 @@ router.post('/invite/:token/complete', async (req, res) => {
       .eq('invite_token', token)
       .single();
 
-    await supabase.rpc('increment', {
-      table_name: 'organizations',
-      column_name: 'used_assessments',
-      row_id: invite.organization_id
-    });
+    const { data: org } = await supabase
+      .from('organizations')
+      .select('used_assessments')
+      .eq('id', invite.organization_id)
+      .single();
+
+    await supabase
+      .from('organizations')
+      .update({ used_assessments: org.used_assessments + 1 })
+      .eq('id', invite.organization_id);
 
     res.json({
       success: true,
@@ -415,4 +421,4 @@ router.get('/:orgId/members', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;
