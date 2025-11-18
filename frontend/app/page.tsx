@@ -54,8 +54,14 @@ export default function HomePage() {
               ) : (
                 <>
                   <button
+                    onClick={() => router.push('/login')}
+                    className="hidden sm:block text-gray-700 hover:text-purple-600 font-semibold transition"
+                  >
+                    Accedi
+                  </button>
+                  <button
                     onClick={() => router.push('/servizi')}
-                    className="hidden sm:block bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:shadow-lg transition"
+                    className="hidden md:block bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:shadow-lg transition"
                   >
                     Per Privati
                   </button>
