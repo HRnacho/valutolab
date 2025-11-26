@@ -248,6 +248,7 @@ export default function DashboardPage() {
 
       const allSkills = (results || []).map(r => ({
         category: categoryLabels[r.skill_category] || r.skill_category,
+        name: r.skill_category,
         score: parseFloat(r.final_score)
       }))
 
@@ -375,7 +376,7 @@ export default function DashboardPage() {
       pdf.addImage(imgData1, 'PNG', 0, 0, imgWidth, imgHeight)
       document.body.removeChild(page1Element)
 
-      // PAGINA 2 - MODIFICATA CON BAR CHART VERTICALE
+      // PAGINA 2 - ⭐ MODIFICATA CON BAR CHART OTTIMIZZATO
       pdf.addPage()
 
       const page2Element = document.createElement('div')
@@ -395,7 +396,7 @@ export default function DashboardPage() {
 
         <!-- Content -->
         <div style="position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column;">
-          <!-- Profilo Completo - MODIFICATO CON BAR CHART -->
+          <!-- Profilo Completo - ⭐ MODIFICATO CON BAR CHART OTTIMIZZATO -->
           <div style="flex: 1; display: flex; flex-direction: column;">
             <h3 style="font-size: 18px; font-weight: bold; color: #1F2937; margin: 0 0 20px 0; display: flex; align-items: center;">
               <span style="font-size: 24px; margin-right: 8px;">📊</span>
@@ -405,15 +406,15 @@ export default function DashboardPage() {
             <!-- Container Bar Chart -->
             <div style="flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
               
-              <!-- Grafico a Barre Verticali -->
-              <div style="display: flex; align-items: flex-end; justify-content: space-between; height: 200px; padding: 0 10px; margin-bottom: 15px; border-bottom: 2px solid #D1D5DB; position: relative;">
+              <!-- ⭐ MODIFICA 1: Grafico a Barre Verticali OTTIMIZZATO (più alto, barre strette, gap) -->
+              <div style="display: flex; align-items: flex-end; justify-content: space-around; height: 280px; padding: 0 10px; margin-bottom: 15px; border-bottom: 2px solid #D1D5DB; position: relative; gap: 8px;">
                 ${allSkills.map(skill => {
                   const heightPercent = (skill.score / 5) * 100;
-                  const categoryKey = Object.keys(categoryLabels).find(key => categoryLabels[key] === skill.category);
-                  const color = categoryKey ? (skillColors[categoryKey] || '#8B5CF6') : '#8B5CF6';
+                  const categoryKey = skill.name;
+                  const color = skillColors[categoryKey] || '#8B5CF6';
                   
                   return `
-                    <div style="display: flex; flex-direction: column; align-items: center; width: 7%; position: relative;">
+                    <div style="display: flex; flex-direction: column; align-items: center; width: 5%; position: relative;">
                       <!-- Valore Score sopra barra -->
                       <div style="margin-bottom: 4px; min-height: 20px;">
                         <span style="font-size: 10px; font-weight: bold; color: ${color};">
@@ -436,34 +437,38 @@ export default function DashboardPage() {
               </div>
               
               <!-- Labels sotto il grafico -->
-              <div style="display: flex; justify-content: space-between; padding: 0 10px; margin-bottom: 20px;">
+              <div style="display: flex; justify-content: space-around; align-items: flex-start; height: 60px; padding: 0 10px; gap: 8px;">
                 ${allSkills.map(skill => {
-                  const categoryKey = Object.keys(categoryLabels).find(key => categoryLabels[key] === skill.category);
-                  const color = categoryKey ? (skillColors[categoryKey] || '#8B5CF6') : '#8B5CF6';
+                  const categoryKey = skill.name;
+                  const color = skillColors[categoryKey] || '#8B5CF6';
+                  const displayName = skill.category.length > 12 ? skill.category.substring(0, 10) + '.' : skill.category;
                   
                   return `
-                    <div style="width: 7%; display: flex; flex-direction: column; align-items: center;">
+                    <div style="width: 5%; display: flex; flex-direction: column; align-items: center;">
                       <!-- Pallino colorato -->
                       <div style="width: 8px; height: 8px; border-radius: 50%; background-color: ${color}; margin-bottom: 4px;"></div>
                       <!-- Label ruotata -->
-                      <div style="transform: rotate(-45deg); transform-origin: top center; margin-top: 15px; white-space: nowrap;">
-                        <span style="font-size: 8px; color: #374151; font-weight: 600; line-height: 1;">
-                          ${skill.category.length > 12 ? skill.category.substring(0, 10) + '.' : skill.category}
-                        </span>
-                      </div>
+                      <span style="font-size: 8px; color: #6B7280; transform: rotate(-45deg); transform-origin: top center; white-space: nowrap; margin-top: 15px;">
+                        ${displayName}
+                      </span>
                     </div>
                   `;
                 }).join('')}
               </div>
               
-              <!-- Legenda Colori compatta (2 righe) -->
-              <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; padding: 15px 20px; background-color: #F9FAFB; border-radius: 10px; border: 1px solid #E5E7EB;">
-                ${Object.entries(categoryLabels).map(([key, label]) => `
-                  <div style="display: flex; align-items: center; gap: 6px;">
-                    <div style="width: 12px; height: 12px; border-radius: 3px; background-color: ${skillColors[key]}; flex-shrink: 0;"></div>
-                    <span style="font-size: 9px; color: #374151; font-weight: 500; line-height: 1.2;">${label}</span>
-                  </div>
-                `).join('')}
+              <!-- ⭐ MODIFICA 2: Legenda con PUNTEGGI (grid 6x2) -->
+              <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-top: 15px; padding: 0 10px;">
+                ${Object.keys(categoryLabels).map(key => {
+                  const color = skillColors[key] || '#8B5CF6';
+                  const skillData = allSkills.find(s => s.name === key);
+                  const scoreText = skillData ? `(${skillData.score.toFixed(1)}/5.0)` : '';
+                  return `
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                      <div style="width: 8px; height: 8px; border-radius: 50%; background-color: ${color};"></div>
+                      <span style="font-size: 9px; color: #6B7280;">${categoryLabels[key]} ${scoreText}</span>
+                    </div>
+                  `;
+                }).join('')}
               </div>
             </div>
           </div>
