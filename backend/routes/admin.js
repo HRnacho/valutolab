@@ -547,26 +547,47 @@ router.post('/emails/send', async (req, res) => {
     const { Resend } = await import('resend');
     const resend = new Resend(process.env.RESEND_API_KEY);
 
+    // Get all auth users per trovare match email -> user_id
+    const { data: { users: allAuthUsers } } = await supabase.auth.admin.listUsers();
+    
+    // Crea mappa email -> user_id
+    const emailToUserId = {};
+    allAuthUsers.forEach(user => {
+      if (user.email) {
+        emailToUserId[user.email.toLowerCase()] = user.id;
+      }
+    });
+
+    // Get tutti i profili in un colpo solo (performance)
+    const userIds = Object.values(emailToUserId);
+    const { data: profiles } = await supabase
+      .from('user_profiles')
+      .select('id, full_name')
+      .in('id', userIds);
+    
+    // Crea mappa user_id -> full_name
+    const userIdToName = {};
+    if (profiles) {
+      profiles.forEach(profile => {
+        userIdToName[profile.id] = profile.full_name;
+      });
+    }
+
     // Invia email
     const emailPromises = recipients.map(async (email) => {
       try {
-        // Cerca profilo utente per personalizzare
-        const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('full_name')
-          .eq('id', (await supabase.auth.admin.getUserByEmail(email)).data?.user?.id)
-          .single();
-
-        const userName = profile?.full_name || 'Utente';
+        // Trova nome utente dalla mappa
+        const userId = emailToUserId[email.toLowerCase()];
+        const userName = userId ? (userIdToName[userId] || 'Utente') : 'Utente';
         
         // Sostituisci placeholders
         const personalizedBody = body
           .replace(/{name}/g, userName)
           .replace(/{email}/g, email);
 
-        // Invia
+        // Invia (usa dominio test Resend per ora)
         const { data, error } = await resend.emails.send({
-          from: 'ValutoLab <noreply@valutolab.com>',
+          from: 'ValutoLab <onboarding@resend.dev>',
           to: [email],
           subject: subject,
           html: personalizedBody.replace(/\n/g, '<br>')
