@@ -269,7 +269,7 @@ export default function DashboardPage() {
         format: 'a4'
       })
 
-      // PAGINA 1 - MODIFICATA CON DESCRIZIONE PROFILO
+      // PAGINA 1
       const page1Element = document.createElement('div')
       page1Element.style.width = '210mm'
       page1Element.style.height = '297mm'
@@ -312,7 +312,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <!-- Profilo Professionale - MODIFICATO -->
+          <!-- Profilo Professionale -->
           <div style="margin-bottom: 25px;">
             <h3 style="font-size: 18px; font-weight: bold; color: #1F2937; margin: 0 0 12px 0; display: flex; align-items: center;">
               <span style="font-size: 24px; margin-right: 8px;">🎯</span>
@@ -324,7 +324,7 @@ export default function DashboardPage() {
               <p style="font-size: 20px; font-weight: bold; color: #7C3AED; margin: 0; line-height: 1.3;">${qualitativeReport?.profile_insights?.suggested_profile || 'N/A'}</p>
             </div>
             
-            <!-- ⭐ NUOVO: Descrizione Completa -->
+            <!-- Descrizione Completa -->
             <div style="background-color: #F9FAFB; padding: 16px 20px; border-radius: 10px; border: 1px solid #E5E7EB;">
               <p style="color: #374151; line-height: 1.7; margin: 0; font-size: 13px; text-align: justify;">${qualitativeReport?.profile_insights?.summary || 'Descrizione del profilo professionale non disponibile.'}</p>
             </div>
@@ -376,7 +376,7 @@ export default function DashboardPage() {
       pdf.addImage(imgData1, 'PNG', 0, 0, imgWidth, imgHeight)
       document.body.removeChild(page1Element)
 
-      // PAGINA 2 - ⭐ MODIFICATA CON BAR CHART OTTIMIZZATO
+      // PAGINA 2 - ⭐ CON SCALA PERCENTILE CORRETTA
       pdf.addPage()
 
       const page2Element = document.createElement('div')
@@ -396,7 +396,7 @@ export default function DashboardPage() {
 
         <!-- Content -->
         <div style="position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column;">
-          <!-- Profilo Completo - ⭐ MODIFICATO CON BAR CHART OTTIMIZZATO -->
+          <!-- Profilo Completo -->
           <div style="flex: 1; display: flex; flex-direction: column;">
             <h3 style="font-size: 18px; font-weight: bold; color: #1F2937; margin: 0 0 20px 0; display: flex; align-items: center;">
               <span style="font-size: 24px; margin-right: 8px;">📊</span>
@@ -406,34 +406,46 @@ export default function DashboardPage() {
             <!-- Container Bar Chart -->
             <div style="flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
               
-              <!-- ⭐ MODIFICA 1: Grafico a Barre Verticali OTTIMIZZATO (più alto, barre strette, gap) -->
+              <!-- ⭐ GRAFICO A BARRE CON SCALA PERCENTILE -->
               <div style="display: flex; align-items: flex-end; justify-content: space-around; height: 280px; padding: 0 10px; margin-bottom: 15px; border-bottom: 2px solid #D1D5DB; position: relative; gap: 8px;">
-                ${allSkills.map(skill => {
-                  const heightPercent = (skill.score / 5) * 100;
-                  const categoryKey = skill.name;
-                  const color = skillColors[categoryKey] || '#8B5CF6';
+                ${(() => {
+                  // Calcola min e max score per scala percentile
+                  const scores = allSkills.map(s => s.score);
+                  const minScore = Math.min(...scores);
+                  const maxScore = Math.max(...scores);
+                  const range = maxScore - minScore;
                   
-                  return `
-                    <div style="display: flex; flex-direction: column; align-items: center; width: 5%; position: relative;">
-                      <!-- Valore Score sopra barra -->
-                      <div style="margin-bottom: 4px; min-height: 20px;">
-                        <span style="font-size: 10px; font-weight: bold; color: ${color};">
-                          ${heightPercent >= 40 ? skill.score.toFixed(1) : ''}
-                        </span>
+                  return allSkills.map(skill => {
+                    // ⭐ FORMULA PERCENTILE: normalizza tra 20% e 100%
+                    const heightPercent = range > 0 
+                      ? ((skill.score - minScore) / range) * 80 + 20 
+                      : 50;
+                    
+                    const categoryKey = skill.name;
+                    const color = skillColors[categoryKey] || '#8B5CF6';
+                    
+                    return `
+                      <div style="display: flex; flex-direction: column; align-items: center; width: 5%; position: relative;">
+                        <!-- Valore Score sopra barra -->
+                        <div style="margin-bottom: 4px; min-height: 20px;">
+                          <span style="font-size: 10px; font-weight: bold; color: ${color};">
+                            ${heightPercent >= 40 ? skill.score.toFixed(1) : ''}
+                          </span>
+                        </div>
+                        
+                        <!-- Barra Verticale -->
+                        <div style="width: 100%; height: ${heightPercent}%; background: linear-gradient(to top, ${color}, ${color}dd); border-radius: 6px 6px 0 0; position: relative; box-shadow: 0 2px 4px rgba(0,0,0,0.1); min-height: 10px;">
+                          <!-- Score dentro barra se troppo bassa -->
+                          ${heightPercent < 40 ? `
+                            <div style="position: absolute; top: 4px; left: 50%; transform: translateX(-50%); font-size: 8px; font-weight: bold; color: white;">
+                              ${skill.score.toFixed(1)}
+                            </div>
+                          ` : ''}
+                        </div>
                       </div>
-                      
-                      <!-- Barra Verticale -->
-                      <div style="width: 100%; height: ${heightPercent}%; background: linear-gradient(to top, ${color}, ${color}dd); border-radius: 6px 6px 0 0; position: relative; box-shadow: 0 2px 4px rgba(0,0,0,0.1); min-height: 10px;">
-                        <!-- Score dentro barra se troppo bassa -->
-                        ${heightPercent < 40 ? `
-                          <div style="position: absolute; top: 4px; left: 50%; transform: translateX(-50%); font-size: 8px; font-weight: bold; color: white;">
-                            ${skill.score.toFixed(1)}
-                          </div>
-                        ` : ''}
-                      </div>
-                    </div>
-                  `;
-                }).join('')}
+                    `;
+                  }).join('');
+                })()}
               </div>
               
               <!-- Labels sotto il grafico -->
@@ -456,7 +468,7 @@ export default function DashboardPage() {
                 }).join('')}
               </div>
               
-              <!-- ⭐ MODIFICA 2: Legenda con PUNTEGGI (grid 6x2) -->
+              <!-- Legenda con PUNTEGGI (grid 6x2) -->
               <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-top: 15px; padding: 0 10px;">
                 ${Object.keys(categoryLabels).map(key => {
                   const color = skillColors[key] || '#8B5CF6';
