@@ -585,9 +585,9 @@ router.post('/emails/send', async (req, res) => {
           .replace(/{name}/g, userName)
           .replace(/{email}/g, email);
 
-        // Invia (usa dominio test Resend per ora)
+        // Invia con dominio valutolab.com
         const { data, error } = await resend.emails.send({
-          from: 'ValutoLab <onboarding@resend.dev>',
+          from: 'ValutoLab <noreply@valutolab.com>',
           to: [email],
           subject: subject,
           html: personalizedBody.replace(/\n/g, '<br>')
