@@ -287,12 +287,18 @@ export default function DashboardPage() {
 
         <!-- Content -->
         <div style="position: relative; z-index: 1;">
-          <!-- Header -->
-          <div style="text-align: center; border-bottom: 4px solid #9333EA; padding-bottom: 25px; margin-bottom: 25px;">
-            <div style="width: 80px; height: 80px; margin: 0 auto 15px; background: linear-gradient(135deg, #EC4899, #8B5CF6, #3B82F6); border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(147, 51, 234, 0.3);">
-              <span style="font-size: 48px; font-weight: 900; color: white;">V</span>
+          <!-- Header Inline -->
+          <div style="text-align: center; border-bottom: 4px solid #9333EA; padding-bottom: 20px; margin-bottom: 25px;">
+            <!-- Container flex: logo + testo affiancati -->
+            <div style="display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 8px;">
+              <!-- Logo -->
+              <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #EC4899, #8B5CF6, #3B82F6); border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(147, 51, 234, 0.3); flex-shrink: 0;">
+                <span style="font-size: 36px; font-weight: 900; color: white; line-height: 1;">V</span>
+              </div>
+              <!-- Testo ValutoLab -->
+              <h1 style="font-size: 36px; font-weight: bold; color: #1F2937; margin: 0; line-height: 1;">ValutoLab</h1>
             </div>
-            <h1 style="font-size: 36px; font-weight: bold; color: #1F2937; margin: 10px 0 8px 0;">ValutoLab</h1>
+            <!-- Sottotitolo -->
             <h2 style="font-size: 20px; font-weight: 600; color: #6B7280; margin: 0 0 5px 0;">Certificato di Valutazione Professionale</h2>
             <p style="color: #9CA3AF; font-size: 14px; margin: 0;">Soft Skills Assessment</p>
           </div>
@@ -349,8 +355,8 @@ export default function DashboardPage() {
             </h3>
             <div style="display: flex; gap: 12px; justify-content: space-between;">
               ${topSkills.map((skill) => `
-                <div style="flex: 1; text-align: center; padding: 22px 15px 24px 15px; border-radius: 10px; background: linear-gradient(135deg, #F3E8FF, #DBEAFE); min-height: 145px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
-                  <div style="font-size: 44px; margin-bottom: 14px; line-height: 1.4; display: flex; align-items: center; justify-content: center; min-height: 55px;">${skill.icon}</div>
+                <div style="flex: 1; text-align: center; padding: 28px 15px 26px 15px; border-radius: 10px; background: linear-gradient(135deg, #F3E8FF, #DBEAFE); min-height: 165px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                  <div style="font-size: 44px; margin-bottom: 16px; line-height: 1.5; display: flex; align-items: center; justify-content: center; min-height: 70px;">${skill.icon}</div>
                   <div style="font-weight: 600; color: #1F2937; margin-bottom: 10px; font-size: 14px; line-height: 1.4;">${skill.category}</div>
                   <div style="font-size: 24px; font-weight: bold; color: #7C3AED; line-height: 1.3;">${skill.score.toFixed(1)}<span style="font-size: 15px; color: #9CA3AF;">/5.0</span></div>
                 </div>
@@ -403,17 +409,18 @@ export default function DashboardPage() {
               Profilo Completo delle Competenze
             </h3>
             
-            <!-- 🆕 PROGRESS BARS ORIZZONTALI - Design Professionale -->
-            <div style="flex: 1; display: flex; flex-direction: column; gap: 10px; padding: 0 5px;">
-              ${allSkills.map(skill => {
+            <!-- 🆕 PROGRESS BARS ORIZZONTALI CON DIVISORI -->
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 0; padding: 0 5px;">
+              ${allSkills.map((skill, index) => {
                 const categoryKey = skill.name;
                 const color = skillColors[categoryKey] || '#8B5CF6';
                 const percentage = (skill.score / 5) * 100;
                 const categoryIcon = categoryIcons[categoryKey] || '⭐';
+                const isLast = index === allSkills.length - 1;
                 
                 return `
-                  <!-- Card singola competenza -->
-                  <div style="background: white; border-left: 4px solid ${color}; border-radius: 8px; padding: 12px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); display: flex; align-items: center; gap: 12px;">
+                  <!-- Card singola competenza con divisore -->
+                  <div style="background: white; border-left: 4px solid ${color}; border-radius: 8px; padding: 12px 16px; ${isLast ? '' : 'border-bottom: 1px solid #F3F4F6;'} margin-bottom: ${isLast ? '0' : '8px'}; box-shadow: 0 1px 3px rgba(0,0,0,0.08); display: flex; align-items: center; gap: 12px;">
                     
                     <!-- Emoji + Nome -->
                     <div style="display: flex; align-items: center; gap: 10px; width: 180px; flex-shrink: 0;">
