@@ -349,10 +349,10 @@ export default function DashboardPage() {
             </h3>
             <div style="display: flex; gap: 12px; justify-content: space-between;">
               ${topSkills.map((skill) => `
-                <div style="flex: 1; text-align: center; padding: 18px 15px; border-radius: 10px; background: linear-gradient(135deg, #F3E8FF, #DBEAFE);">
-                  <div style="font-size: 42px; margin-bottom: 8px; line-height: 1;">${skill.icon}</div>
-                  <div style="font-weight: 600; color: #1F2937; margin-bottom: 8px; font-size: 14px; line-height: 1.2;">${skill.category}</div>
-                  <div style="font-size: 22px; font-weight: bold; color: #7C3AED; line-height: 1;">${skill.score.toFixed(1)}<span style="font-size: 14px; color: #9CA3AF;">/5.0</span></div>
+                <div style="flex: 1; text-align: center; padding: 22px 15px 24px 15px; border-radius: 10px; background: linear-gradient(135deg, #F3E8FF, #DBEAFE); min-height: 145px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                  <div style="font-size: 44px; margin-bottom: 14px; line-height: 1.4; display: flex; align-items: center; justify-content: center; min-height: 55px;">${skill.icon}</div>
+                  <div style="font-weight: 600; color: #1F2937; margin-bottom: 10px; font-size: 14px; line-height: 1.4;">${skill.category}</div>
+                  <div style="font-size: 24px; font-weight: bold; color: #7C3AED; line-height: 1.3;">${skill.score.toFixed(1)}<span style="font-size: 15px; color: #9CA3AF;">/5.0</span></div>
                 </div>
               `).join('')}
             </div>
@@ -403,85 +403,42 @@ export default function DashboardPage() {
               Profilo Completo delle Competenze
             </h3>
             
-            <!-- Container Bar Chart -->
-            <div style="flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
-              
-              <!-- ⭐ GRAFICO A BARRE OTTIMIZZATO: PIÙ ALTO (280px) + BARRE STRETTE (5%) + SPACE-AROUND + GAP -->
-              <div style="display: flex; align-items: flex-end; justify-content: space-around; height: 280px; padding: 0 10px; margin-bottom: 15px; border-bottom: 2px solid #D1D5DB; position: relative; gap: 8px;">
-                ${(() => {
-                  // Calcola min e max score per scala percentile
-                  const scores = allSkills.map(s => s.score);
-                  const minScore = Math.min(...scores);
-                  const maxScore = Math.max(...scores);
-                  const range = maxScore - minScore;
-                  
-                  return allSkills.map(skill => {
-                    // ⭐ FORMULA PERCENTILE: normalizza tra 20% e 100%
-                    const heightPercent = range > 0 
-                      ? ((skill.score - minScore) / range) * 80 + 20 
-                      : 50;
+            <!-- 🆕 PROGRESS BARS ORIZZONTALI - Design Professionale -->
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 10px; padding: 0 5px;">
+              ${allSkills.map(skill => {
+                const categoryKey = skill.name;
+                const color = skillColors[categoryKey] || '#8B5CF6';
+                const percentage = (skill.score / 5) * 100;
+                const categoryIcon = categoryIcons[categoryKey] || '⭐';
+                
+                return `
+                  <!-- Card singola competenza -->
+                  <div style="background: white; border-left: 4px solid ${color}; border-radius: 8px; padding: 12px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); display: flex; align-items: center; gap: 12px;">
                     
-                    const categoryKey = skill.name;
-                    const color = skillColors[categoryKey] || '#8B5CF6';
+                    <!-- Emoji + Nome -->
+                    <div style="display: flex; align-items: center; gap: 10px; width: 180px; flex-shrink: 0;">
+                      <span style="font-size: 22px; line-height: 1;">${categoryIcon}</span>
+                      <span style="font-size: 13px; font-weight: 600; color: #1F2937; line-height: 1.2;">${skill.category}</span>
+                    </div>
                     
-                    return `
-                      <div style="display: flex; flex-direction: column; align-items: center; width: 5%; position: relative;">
-                        <!-- Valore Score sopra barra -->
-                        <div style="margin-bottom: 4px; min-height: 20px;">
-                          <span style="font-size: 10px; font-weight: bold; color: ${color};">
-                            ${heightPercent >= 40 ? skill.score.toFixed(1) : ''}
-                          </span>
-                        </div>
-                        
-                        <!-- Barra Verticale -->
-                        <div style="width: 100%; height: ${heightPercent}%; background: linear-gradient(to top, ${color}, ${color}dd); border-radius: 6px 6px 0 0; position: relative; box-shadow: 0 2px 4px rgba(0,0,0,0.1); min-height: 10px;">
-                          <!-- Score dentro barra se troppo bassa -->
-                          ${heightPercent < 40 ? `
-                            <div style="position: absolute; top: 4px; left: 50%; transform: translateX(-50%); font-size: 8px; font-weight: bold; color: white;">
-                              ${skill.score.toFixed(1)}
-                            </div>
-                          ` : ''}
-                        </div>
+                    <!-- Progress Bar Container -->
+                    <div style="flex: 1; background: #F3F4F6; height: 20px; border-radius: 10px; overflow: hidden; position: relative;">
+                      <!-- Barra colorata -->
+                      <div style="height: 100%; background: linear-gradient(90deg, ${color}, ${color}dd); border-radius: 10px; width: ${percentage}%; transition: width 0.3s ease; box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);"></div>
+                    </div>
+                    
+                    <!-- Score numerico + percentuale -->
+                    <div style="text-align: right; width: 85px; flex-shrink: 0;">
+                      <div style="font-size: 16px; font-weight: bold; color: ${color}; line-height: 1.2;">
+                        ${skill.score.toFixed(1)}<span style="font-size: 11px; color: #9CA3AF;">/5.0</span>
                       </div>
-                    `;
-                  }).join('');
-                })()}
-              </div>
-              
-              <!-- Labels sotto il grafico -->
-              <div style="display: flex; justify-content: space-around; align-items: flex-start; height: 60px; padding: 0 10px; gap: 8px;">
-                ${allSkills.map(skill => {
-                  const categoryKey = skill.name;
-                  const color = skillColors[categoryKey] || '#8B5CF6';
-                  const displayName = skill.category.length > 12 ? skill.category.substring(0, 10) + '.' : skill.category;
-                  
-                  return `
-                    <div style="width: 5%; display: flex; flex-direction: column; align-items: center;">
-                      <!-- Pallino colorato -->
-                      <div style="width: 8px; height: 8px; border-radius: 50%; background-color: ${color}; margin-bottom: 4px;"></div>
-                      <!-- Label ruotata -->
-                      <span style="font-size: 8px; color: #6B7280; transform: rotate(-45deg); transform-origin: top center; white-space: nowrap; margin-top: 15px;">
-                        ${displayName}
-                      </span>
+                      <div style="font-size: 10px; color: #6B7280; margin-top: 2px;">
+                        ${Math.round(percentage)}%
+                      </div>
                     </div>
-                  `;
-                }).join('')}
-              </div>
-              
-              <!-- ⭐ LEGENDA CON PUNTEGGI (es: "Comunicazione (3.9/5.0)") -->
-              <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-top: 15px; padding: 0 10px;">
-                ${Object.keys(categoryLabels).map(key => {
-                  const color = skillColors[key] || '#8B5CF6';
-                  const skillData = allSkills.find(s => s.name === key);
-                  const scoreText = skillData ? ` (${skillData.score.toFixed(1)}/5.0)` : '';
-                  return `
-                    <div style="display: flex; align-items: center; gap: 4px;">
-                      <div style="width: 8px; height: 8px; border-radius: 50%; background-color: ${color}; flex-shrink: 0;"></div>
-                      <span style="font-size: 9px; color: #6B7280; line-height: 1.2;">${categoryLabels[key]}${scoreText}</span>
-                    </div>
-                  `;
-                }).join('')}
-              </div>
+                  </div>
+                `;
+              }).join('')}
             </div>
           </div>
 
