@@ -376,7 +376,7 @@ export default function DashboardPage() {
       pdf.addImage(imgData1, 'PNG', 0, 0, imgWidth, imgHeight)
       document.body.removeChild(page1Element)
 
-      // PAGINA 2 - ⭐ CON SCALA PERCENTILE CORRETTA
+      // PAGINA 2 - ⭐ OTTIMIZZATA CON BAR CHART PERFETTO
       pdf.addPage()
 
       const page2Element = document.createElement('div')
@@ -406,7 +406,7 @@ export default function DashboardPage() {
             <!-- Container Bar Chart -->
             <div style="flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
               
-              <!-- ⭐ GRAFICO A BARRE CON SCALA PERCENTILE -->
+              <!-- ⭐ GRAFICO A BARRE OTTIMIZZATO: PIÙ ALTO (280px) + BARRE STRETTE (5%) + SPACE-AROUND + GAP -->
               <div style="display: flex; align-items: flex-end; justify-content: space-around; height: 280px; padding: 0 10px; margin-bottom: 15px; border-bottom: 2px solid #D1D5DB; position: relative; gap: 8px;">
                 ${(() => {
                   // Calcola min e max score per scala percentile
@@ -468,16 +468,16 @@ export default function DashboardPage() {
                 }).join('')}
               </div>
               
-              <!-- Legenda con PUNTEGGI (grid 6x2) -->
+              <!-- ⭐ LEGENDA CON PUNTEGGI (es: "Comunicazione (3.9/5.0)") -->
               <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-top: 15px; padding: 0 10px;">
                 ${Object.keys(categoryLabels).map(key => {
                   const color = skillColors[key] || '#8B5CF6';
                   const skillData = allSkills.find(s => s.name === key);
-                  const scoreText = skillData ? `(${skillData.score.toFixed(1)}/5.0)` : '';
+                  const scoreText = skillData ? ` (${skillData.score.toFixed(1)}/5.0)` : '';
                   return `
                     <div style="display: flex; align-items: center; gap: 4px;">
-                      <div style="width: 8px; height: 8px; border-radius: 50%; background-color: ${color};"></div>
-                      <span style="font-size: 9px; color: #6B7280;">${categoryLabels[key]} ${scoreText}</span>
+                      <div style="width: 8px; height: 8px; border-radius: 50%; background-color: ${color}; flex-shrink: 0;"></div>
+                      <span style="font-size: 9px; color: #6B7280; line-height: 1.2;">${categoryLabels[key]}${scoreText}</span>
                     </div>
                   `;
                 }).join('')}
