@@ -685,5 +685,422 @@ router.get('/emails/logs', async (req, res) => {
     });
   }
 });
+// ==================== QUESTIONS MANAGEMENT ENDPOINTS ====================
+
+// GET /api/admin/questions - Lista tutte le domande
+router.get('/questions', async (req, res) => {
+  try {
+    const { data: questions, error } = await supabase
+      .from('assessment_questions')
+      .select('*')
+      .order('category', { ascending: true })
+      .order('question_order', { ascending: true })
+
+    if (error) throw error
+
+    // Raggruppa per categoria
+    const groupedByCategory = questions.reduce((acc, question) => {
+      if (!acc[question.category]) {
+        acc[question.category] = []
+      }
+      acc[question.category].push(question)
+      return acc
+    }, {})
+
+    res.json({
+      success: true,
+      questions,
+      groupedByCategory,
+      totalQuestions: questions.length,
+      activeQuestions: questions.filter(q => q.is_active).length
+    })
+  } catch (error) {
+    console.error('Error fetching questions:', error)
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
+// GET /api/admin/questions/category/:category - Domande per categoria specifica
+router.get('/questions/category/:category', async (req, res) => {
+  try {
+    const { category } = req.params
+
+    const { data: questions, error } = await supabase
+      .from('assessment_questions')
+      .select('*')
+      .eq('category', category)
+      .order('question_order', { ascending: true })
+
+    if (error) throw error
+
+    res.json({
+      success: true,
+      category,
+      questions,
+      activeCount: questions.filter(q => q.is_active).length,
+      totalCount: questions.length
+    })
+  } catch (error) {
+    console.error('Error fetching category questions:', error)
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
+// GET /api/admin/questions/validate - Valida configurazione assessment
+router.get('/questions/validate', async (req, res) => {
+  try {
+    const { data: questions, error } = await supabase
+      .from('assessment_questions')
+      .select('category, is_active')
+      .eq('is_active', true)
+
+    if (error) throw error
+
+    // Conta domande attive per categoria
+    const categoryCounts = questions.reduce((acc, q) => {
+      acc[q.category] = (acc[q.category] || 0) + 1
+      return acc
+    }, {})
+
+    // Verifica che ogni categoria abbia esattamente 6 domande attive
+    const categories = [
+      'communication', 'leadership', 'problem_solving', 'teamwork',
+      'time_management', 'adaptability', 'creativity', 'critical_thinking',
+      'empathy', 'resilience', 'negotiation', 'decision_making'
+    ]
+
+    const validation = {}
+    let isValid = true
+
+    categories.forEach(category => {
+      const count = categoryCounts[category] || 0
+      validation[category] = {
+        activeQuestions: count,
+        isValid: count === 6,
+        message: count === 6 
+          ? 'OK' 
+          : count < 6 
+            ? `Mancano ${6 - count} domande` 
+            : `${count - 6} domande in eccesso`
+      }
+      if (count !== 6) isValid = false
+    })
+
+    res.json({
+      success: true,
+      isValid,
+      validation,
+      totalActiveQuestions: questions.length,
+      expectedTotal: 72 // 12 categorie × 6 domande
+    })
+  } catch (error) {
+    console.error('Error validating questions:', error)
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
+// POST /api/admin/questions - Crea nuova domanda
+router.post('/questions', async (req, res) => {
+  try {
+    const { category, question_text, question_order, is_active = true } = req.body
+
+    // Validazione
+    if (!category || !question_text) {
+      return res.status(400).json({
+        success: false,
+        message: 'Categoria e testo domanda sono obbligatori'
+      })
+    }
+
+    // Se question_order non specificato, mettila alla fine
+    let order = question_order
+    if (!order) {
+      const { data: lastQuestion } = await supabase
+        .from('assessment_questions')
+        .select('question_order')
+        .eq('category', category)
+        .order('question_order', { ascending: false })
+        .limit(1)
+        .single()
+
+      order = lastQuestion ? lastQuestion.question_order + 1 : 1
+    }
+
+    const { data: newQuestion, error } = await supabase
+      .from('assessment_questions')
+      .insert([{
+        category,
+        question_text,
+        question_order: order,
+        is_active
+      }])
+      .select()
+      .single()
+
+    if (error) throw error
+
+    res.json({
+      success: true,
+      message: 'Domanda creata con successo',
+      question: newQuestion
+    })
+  } catch (error) {
+    console.error('Error creating question:', error)
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
+// PUT /api/admin/questions/:id - Modifica domanda
+router.put('/questions/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { question_text, category, question_order } = req.body
+
+    const updates = {}
+    if (question_text) updates.question_text = question_text
+    if (category) updates.category = category
+    if (question_order !== undefined) updates.question_order = question_order
+
+    const { data: updatedQuestion, error } = await supabase
+      .from('assessment_questions')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) throw error
+
+    res.json({
+      success: true,
+      message: 'Domanda aggiornata con successo',
+      question: updatedQuestion
+    })
+  } catch (error) {
+    console.error('Error updating question:', error)
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
+// PUT /api/admin/questions/:id/toggle - Attiva/Disattiva domanda
+router.put('/questions/:id/toggle', async (req, res) => {
+  try {
+    const { id } = req.params
+
+    // Get current state
+    const { data: currentQuestion } = await supabase
+      .from('assessment_questions')
+      .select('is_active, category')
+      .eq('id', id)
+      .single()
+
+    if (!currentQuestion) {
+      return res.status(404).json({
+        success: false,
+        message: 'Domanda non trovata'
+      })
+    }
+
+    const newState = !currentQuestion.is_active
+
+    // Se stiamo disattivando, verifica che rimangano almeno 6 domande attive
+    if (!newState) {
+      const { data: activeQuestions } = await supabase
+        .from('assessment_questions')
+        .select('id')
+        .eq('category', currentQuestion.category)
+        .eq('is_active', true)
+
+      if (activeQuestions.length <= 6) {
+        return res.status(400).json({
+          success: false,
+          message: 'Non puoi disattivare questa domanda: servono minimo 6 domande attive per categoria'
+        })
+      }
+    }
+
+    // Update
+    const { data: updatedQuestion, error } = await supabase
+      .from('assessment_questions')
+      .update({ is_active: newState })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) throw error
+
+    res.json({
+      success: true,
+      message: newState ? 'Domanda attivata' : 'Domanda disattivata',
+      question: updatedQuestion
+    })
+  } catch (error) {
+    console.error('Error toggling question:', error)
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
+// PUT /api/admin/questions/:id/reorder - Cambia ordine domanda
+router.put('/questions/:id/reorder', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { newOrder } = req.body
+
+    if (typeof newOrder !== 'number' || newOrder < 1) {
+      return res.status(400).json({
+        success: false,
+        message: 'Nuovo ordine non valido'
+      })
+    }
+
+    // Get question info
+    const { data: question } = await supabase
+      .from('assessment_questions')
+      .select('category, question_order')
+      .eq('id', id)
+      .single()
+
+    if (!question) {
+      return res.status(404).json({
+        success: false,
+        message: 'Domanda non trovata'
+      })
+    }
+
+    const oldOrder = question.question_order
+    const category = question.category
+
+    // Se l'ordine non cambia, non fare nulla
+    if (oldOrder === newOrder) {
+      return res.json({ success: true, message: 'Ordine invariato' })
+    }
+
+    // Ottieni tutte le domande della categoria ordinate
+    const { data: allQuestions } = await supabase
+      .from('assessment_questions')
+      .select('id, question_order')
+      .eq('category', category)
+      .order('question_order', { ascending: true })
+
+    // Rimuovi la domanda corrente dalla lista
+    const otherQuestions = allQuestions.filter(q => q.id !== id)
+
+    // Inserisci la domanda nella nuova posizione (newOrder - 1 perché array è 0-based)
+    otherQuestions.splice(newOrder - 1, 0, { id, question_order: newOrder })
+
+    // Aggiorna gli ordini di tutte le domande
+    const updates = otherQuestions.map((q, index) => ({
+      id: q.id,
+      question_order: index + 1
+    }))
+
+    // Esegui update in batch
+    for (const update of updates) {
+      await supabase
+        .from('assessment_questions')
+        .update({ question_order: update.question_order })
+        .eq('id', update.id)
+    }
+
+    res.json({
+      success: true,
+      message: 'Ordine aggiornato con successo'
+    })
+  } catch (error) {
+    console.error('Error reordering question:', error)
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
+// DELETE /api/admin/questions/:id - Elimina domanda
+router.delete('/questions/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+
+    // Get question info per verificare vincoli
+    const { data: question } = await supabase
+      .from('assessment_questions')
+      .select('category, is_active')
+      .eq('id', id)
+      .single()
+
+    if (!question) {
+      return res.status(404).json({
+        success: false,
+        message: 'Domanda non trovata'
+      })
+    }
+
+    // Se è attiva, verifica che ci siano più di 6 domande attive nella categoria
+    if (question.is_active) {
+      const { data: activeQuestions } = await supabase
+        .from('assessment_questions')
+        .select('id')
+        .eq('category', question.category)
+        .eq('is_active', true)
+
+      if (activeQuestions.length <= 6) {
+        return res.status(400).json({
+          success: false,
+          message: 'Non puoi eliminare questa domanda: servono minimo 6 domande attive per categoria'
+        })
+      }
+    }
+
+    const { error } = await supabase
+      .from('assessment_questions')
+      .delete()
+      .eq('id', id)
+
+    if (error) throw error
+
+    res.json({
+      success: true,
+      message: 'Domanda eliminata con successo'
+    })
+  } catch (error) {
+    console.error('Error deleting question:', error)
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
+
+// GET /api/admin/questions/stats - Statistiche domande
+router.get('/questions/stats', async (req, res) => {
+  try {
+    const { data: questions, error } = await supabase
+      .from('assessment_questions')
+      .select('category, is_active')
+
+    if (error) throw error
+
+    const stats = {
+      total: questions.length,
+      active: questions.filter(q => q.is_active).length,
+      inactive: questions.filter(q => !q.is_active).length,
+      byCategory: {}
+    }
+
+    // Conta per categoria
+    questions.forEach(q => {
+      if (!stats.byCategory[q.category]) {
+        stats.byCategory[q.category] = { total: 0, active: 0, inactive: 0 }
+      }
+      stats.byCategory[q.category].total++
+      if (q.is_active) {
+        stats.byCategory[q.category].active++
+      } else {
+        stats.byCategory[q.category].inactive++
+      }
+    })
+
+    res.json({
+      success: true,
+      stats
+    })
+  } catch (error) {
+    console.error('Error fetching question stats:', error)
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
 
 export default router;
+
