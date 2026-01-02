@@ -1,1080 +1,559 @@
-'use client'
+'use client';
 
-import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
+import axios from 'axios';
 
-// ==================== INTERFACES ====================
-interface Stats {
-  totalUsers: number
-  totalAssessments: number
-  completedAssessments: number
-  inProgressAssessments: number
-  abandonedAssessments: number
-  avgCompletionTime: number
-  categoryAverages: Record<string, string>
-  newUsersLast7Days: number
-  completedLast7Days: number
-}
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
-interface User {
-  id: string
-  full_name: string
-  email: string
-  created_at: string
-  assessmentCount: number
-  last_assessment_date: string | null
-  is_blocked: boolean
-}
-
-interface Assessment {
-  id: string
-  user_id: string
-  status: string
-  total_score: number | null
-  created_at: string
-  completed_at: string | null
-  userName: string
-  userEmail: string
-}
-
-interface EmailLog {
-  id: string
-  recipient: string
-  subject: string
-  sent_at: string
-  status: 'sent' | 'failed'
-}
-
-// ==================== CONSTANTS ====================
-const categoryLabels: Record<string, string> = {
-  communication: 'Comunicazione',
-  leadership: 'Leadership',
-  problem_solving: 'Problem Solving',
-  teamwork: 'Lavoro di Squadra',
-  time_management: 'Gestione del Tempo',
-  adaptability: 'Adattabilità',
-  creativity: 'Creatività',
-  critical_thinking: 'Pensiero Critico',
-  empathy: 'Empatia',
-  resilience: 'Resilienza',
-  negotiation: 'Negoziazione',
-  decision_making: 'Decision Making'
-}
-
-const emailTemplates = {
-  welcome: {
-    subject: 'Benvenuto su ValutoLab! 🚀',
-    body: `Ciao {name},
-
-Benvenuto su ValutoLab, la piattaforma per valutare le tue soft skills professionali.
-
-Inizia subito il tuo primo assessment per scoprire i tuoi punti di forza!
-
-🔗 Accedi alla dashboard: https://valutolab.com/dashboard
-
-Un saluto,
-Il Team ValutoLab`
-  },
-  reminder: {
-    subject: 'Completa il tuo Assessment su ValutoLab ⏰',
-    body: `Ciao {name},
-
-Abbiamo notato che hai iniziato un assessment ma non l'hai ancora completato.
-
-Bastano solo 10-15 minuti per terminarlo e scoprire il tuo profilo professionale!
-
-🔗 Riprendi l'assessment: https://valutolab.com/dashboard
-
-Ti aspettiamo!
-Il Team ValutoLab`
-  },
-  congrats: {
-    subject: 'Ottimi risultati! 🎉',
-    body: `Ciao {name},
-
-Complimenti per l'eccellente punteggio nel tuo assessment!
-
-Il tuo profilo mostra competenze professionali di alto livello.
-
-🔗 Visualizza i tuoi risultati: https://valutolab.com/dashboard
-📱 Scarica il badge LinkedIn per condividere il tuo successo!
-
-Continua così!
-Il Team ValutoLab`
-  },
-  custom: {
-    subject: '',
-    body: ''
-  }
-}
-
-// ==================== MAIN COMPONENT ====================
 export default function AdminDashboard() {
-  const router = useRouter()
-  const [loading, setLoading] = useState(true)
-  const [isAdmin, setIsAdmin] = useState(false)
-  const [currentAdminEmail, setCurrentAdminEmail] = useState('')
-  
-  // Data states
-  const [stats, setStats] = useState<Stats | null>(null)
-  const [users, setUsers] = useState<User[]>([])
-  const [assessments, setAssessments] = useState<Assessment[]>([])
-  const [emailLogs, setEmailLogs] = useState<EmailLog[]>([])
-  
-  // UI states
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'assessments' | 'email'>('overview')
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-  
-  // User Management states
-  const [showCreateUserModal, setShowCreateUserModal] = useState(false)
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
-  const [selectedUsers, setSelectedUsers] = useState<string[]>([])
-  const [userSearchTerm, setUserSearchTerm] = useState('')
-  const [userFilter, setUserFilter] = useState<'all' | 'active' | 'blocked'>('all')
-  const [creatingUser, setCreatingUser] = useState(false)
-  const [blockingUser, setBlockingUser] = useState<string | null>(null)
-  
-  // Create User form
-  const [newUserForm, setNewUserForm] = useState({
-    email: '',
-    fullName: '',
-    password: ''
-  })
-  
-  // Email states
-  const [showEmailModal, setShowEmailModal] = useState(false)
-  const [emailForm, setEmailForm] = useState({
-    recipients: 'all' as 'all' | 'completed' | 'incomplete' | 'selected' | 'custom',
-    customEmails: '',
-    template: 'custom' as keyof typeof emailTemplates,
-    subject: '',
-    body: ''
-  })
-  const [sendingEmail, setSendingEmail] = useState(false)
-  
-  // Assessment filter states
-  const [assessmentFilter, setAssessmentFilter] = useState<'all' | 'completed' | 'in_progress'>('all')
-  const [assessmentSearchTerm, setAssessmentSearchTerm] = useState('')
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('overview');
 
-  // ==================== EFFECTS ====================
+  // States esistenti
+  const [stats, setStats] = useState<any>(null);
+  const [users, setUsers] = useState<any[]>([]);
+  const [assessments, setAssessments] = useState<any[]>([]);
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
+  const [searchTerm, setSearchTerm] = useState('');
+  const [assessmentFilter, setAssessmentFilter] = useState('all');
+
+  // States email
+  const [emailTemplate, setEmailTemplate] = useState('welcome');
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailBody, setEmailBody] = useState('');
+  const [emailRecipients, setEmailRecipients] = useState<string[]>([]);
+  const [sendingEmail, setSendingEmail] = useState(false);
+
+  // States modals
+  const [showCreateUserModal, setShowCreateUserModal] = useState(false);
+  const [newUserData, setNewUserData] = useState({ email: '', fullName: '', password: '' });
+
+  // 🆕 STATES PER CONTENUTI/QUESTIONS
+  const [questions, setQuestions] = useState<any[]>([]);
+  const [questionsLoading, setQuestionsLoading] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [validationStatus, setValidationStatus] = useState<any>(null);
+  const [showQuestionModal, setShowQuestionModal] = useState(false);
+  const [editingQuestion, setEditingQuestion] = useState<any>(null);
+  const [questionFormData, setQuestionFormData] = useState({
+    category: '',
+    question_text: '',
+    question_order: 1,
+    is_active: true
+  });
+
+  const categories = [
+    { value: 'communication', label: 'Comunicazione' },
+    { value: 'leadership', label: 'Leadership' },
+    { value: 'problem_solving', label: 'Problem Solving' },
+    { value: 'teamwork', label: 'Lavoro di Squadra' },
+    { value: 'time_management', label: 'Gestione del Tempo' },
+    { value: 'adaptability', label: 'Adattabilità' },
+    { value: 'creativity', label: 'Creatività' },
+    { value: 'critical_thinking', label: 'Pensiero Critico' },
+    { value: 'empathy', label: 'Empatia' },
+    { value: 'resilience', label: 'Resilienza' },
+    { value: 'negotiation', label: 'Negoziazione' },
+    { value: 'decision_making', label: 'Decision Making' }
+  ];
+
+  // Check admin on mount
   useEffect(() => {
-    const checkAdmin = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
+    checkAdminStatus();
+  }, []);
 
+  const checkAdminStatus = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
       if (!user) {
-        router.push('/login')
-        return
+        router.push('/login');
+        return;
       }
 
       const { data: profile } = await supabase
         .from('user_profiles')
-        .select('is_admin, full_name')
+        .select('is_admin')
         .eq('id', user.id)
-        .single()
+        .single();
 
       if (!profile?.is_admin) {
-        router.push('/dashboard')
-        return
+        router.push('/dashboard');
+        return;
       }
 
-      setIsAdmin(true)
-      setCurrentAdminEmail(user.email || '')
-      await loadData()
-      setLoading(false)
-    }
-
-    checkAdmin()
-  }, [router])
-
-  useEffect(() => {
-    if (message) {
-      const timer = setTimeout(() => setMessage(null), 4000)
-      return () => clearTimeout(timer)
-    }
-  }, [message])
-
-  // ==================== DATA LOADING ====================
-  const loadData = async () => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://valutolab-backend.onrender.com'
-
-    try {
-      // Load stats
-      const statsResponse = await fetch(`${apiUrl}/api/admin/stats`)
-      const statsData = await statsResponse.json()
-      if (statsData.success) setStats(statsData.stats)
-
-      // Load users
-      const usersResponse = await fetch(`${apiUrl}/api/admin/users`)
-      const usersData = await usersResponse.json()
-      if (usersData.success) setUsers(usersData.users)
-
-      // Load assessments
-      const assessmentsResponse = await fetch(`${apiUrl}/api/admin/assessments`)
-      const assessmentsData = await assessmentsResponse.json()
-      if (assessmentsData.success) setAssessments(assessmentsData.assessments)
-
-      // Load email logs (se endpoint disponibile)
-      // const emailResponse = await fetch(`${apiUrl}/api/admin/emails/logs`)
-      // const emailData = await emailResponse.json()
-      // if (emailData.success) setEmailLogs(emailData.logs)
+      setLoading(false);
+      fetchStats();
+      fetchUsers();
+      fetchAssessments();
     } catch (error) {
-      console.error('Error loading admin data:', error)
-      showMessage('error', 'Errore nel caricamento dei dati')
+      console.error('Error checking admin status:', error);
+      router.push('/login');
     }
-  }
+  };
 
-  // ==================== HELPER FUNCTIONS ====================
-  const showMessage = (type: 'success' | 'error', text: string) => {
-    setMessage({ type, text })
-  }
-
-  const exportToCSV = (data: any[], filename: string) => {
-    if (data.length === 0) return
-
-    const headers = Object.keys(data[0])
-    const csvContent = [
-      headers.join(','),
-      ...data.map(row => headers.map(header => JSON.stringify(row[header] || '')).join(','))
-    ].join('\n')
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    link.href = URL.createObjectURL(blob)
-    link.download = `${filename}_${new Date().toISOString().split('T')[0]}.csv`
-    link.click()
-  }
-
-  // ==================== USER MANAGEMENT HANDLERS ====================
-  const handleCreateUser = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setCreatingUser(true)
-
+  // Fetch functions esistenti
+  const fetchStats = async () => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://valutolab-backend.onrender.com'
+      const response = await axios.get(`${API_URL}/admin/stats`);
+      setStats(response.data.stats);
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/admin/users`);
+      setUsers(response.data.users);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    }
+  };
+
+  const fetchAssessments = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/admin/assessments`);
+      setAssessments(response.data.assessments);
+    } catch (error) {
+      console.error('Error fetching assessments:', error);
+    }
+  };
+
+  // 🆕 FETCH QUESTIONS
+  const fetchQuestions = async () => {
+    setQuestionsLoading(true);
+    try {
+      const response = await axios.get(`${API_URL}/admin/questions`);
+      setQuestions(response.data.questions || []);
       
-      const response = await fetch(`${apiUrl}/api/admin/users/create`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: newUserForm.email,
-          fullName: newUserForm.fullName,
-          password: newUserForm.password
-        })
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
-        showMessage('success', 'Utente creato con successo!')
-        setShowCreateUserModal(false)
-        setNewUserForm({ email: '', fullName: '', password: '' })
-        await loadData()
-      } else {
-        showMessage('error', data.message || 'Errore nella creazione utente')
-      }
+      // Fetch validation status
+      const validationResponse = await axios.get(`${API_URL}/admin/questions/validate`);
+      setValidationStatus(validationResponse.data);
     } catch (error) {
-      console.error('Error creating user:', error)
-      showMessage('error', 'Errore nella creazione utente')
+      console.error('Error fetching questions:', error);
+      alert('Errore nel caricamento delle domande');
     } finally {
-      setCreatingUser(false)
+      setQuestionsLoading(false);
     }
-  }
+  };
 
-  const handleBlockUser = async (userId: string, currentlyBlocked: boolean) => {
-    setBlockingUser(userId)
+  // 🆕 CREATE/UPDATE QUESTION
+  const handleSaveQuestion = async () => {
+    try {
+      if (!questionFormData.category || !questionFormData.question_text) {
+        alert('Categoria e testo domanda sono obbligatori');
+        return;
+      }
+
+      if (editingQuestion) {
+        // Update
+        await axios.put(`${API_URL}/admin/questions/${editingQuestion.id}`, questionFormData);
+        alert('Domanda aggiornata!');
+      } else {
+        // Create
+        await axios.post(`${API_URL}/admin/questions`, questionFormData);
+        alert('Domanda creata!');
+      }
+
+      setShowQuestionModal(false);
+      setEditingQuestion(null);
+      setQuestionFormData({ category: '', question_text: '', question_order: 1, is_active: true });
+      fetchQuestions();
+    } catch (error: any) {
+      console.error('Error saving question:', error);
+      alert(error.response?.data?.message || 'Errore nel salvataggio');
+    }
+  };
+
+  // 🆕 TOGGLE QUESTION ACTIVE/INACTIVE
+  const handleToggleQuestion = async (questionId: string) => {
+    try {
+      await axios.put(`${API_URL}/admin/questions/${questionId}/toggle`);
+      fetchQuestions();
+    } catch (error: any) {
+      console.error('Error toggling question:', error);
+      alert(error.response?.data?.message || 'Errore nel cambio stato');
+    }
+  };
+
+  // 🆕 DELETE QUESTION
+  const handleDeleteQuestion = async (questionId: string) => {
+    if (!confirm('Sei sicuro di voler eliminare questa domanda?')) return;
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://valutolab-backend.onrender.com'
-      
-      const response = await fetch(`${apiUrl}/api/admin/users/${userId}/block`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ blocked: !currentlyBlocked })
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
-        showMessage('success', currentlyBlocked ? 'Utente sbloccato!' : 'Utente bloccato!')
-        await loadData()
-      } else {
-        showMessage('error', 'Errore nell\'operazione')
-      }
-    } catch (error) {
-      console.error('Error blocking user:', error)
-      showMessage('error', 'Errore nell\'operazione')
-    } finally {
-      setBlockingUser(null)
+      await axios.delete(`${API_URL}/admin/questions/${questionId}`);
+      alert('Domanda eliminata!');
+      fetchQuestions();
+    } catch (error: any) {
+      console.error('Error deleting question:', error);
+      alert(error.response?.data?.message || 'Errore nell\'eliminazione');
     }
-  }
+  };
+
+  // 🆕 REORDER QUESTION (move up/down)
+  const handleReorderQuestion = async (questionId: string, currentOrder: number, direction: 'up' | 'down') => {
+    const newOrder = direction === 'up' ? currentOrder - 1 : currentOrder + 1;
+    
+    if (newOrder < 1) return; // Non può andare sotto 1
+
+    try {
+      await axios.put(`${API_URL}/admin/questions/${questionId}/reorder`, {
+        newOrder
+      });
+      fetchQuestions();
+    } catch (error: any) {
+      console.error('Error reordering question:', error);
+      alert(error.response?.data?.message || 'Errore nel riordino');
+    }
+  };
+
+  // User management functions (esistenti)
+  const handleCreateUser = async () => {
+    try {
+      await axios.post(`${API_URL}/admin/users/create`, newUserData);
+      alert('Utente creato con successo!');
+      setShowCreateUserModal(false);
+      setNewUserData({ email: '', fullName: '', password: '' });
+      fetchUsers();
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Errore nella creazione utente');
+    }
+  };
+
+  const handleBlockUser = async (userId: string, currentBlocked: boolean) => {
+    try {
+      await axios.put(`${API_URL}/admin/users/${userId}/block`, {
+        blocked: !currentBlocked
+      });
+      alert(currentBlocked ? 'Utente sbloccato!' : 'Utente bloccato!');
+      fetchUsers();
+    } catch (error) {
+      alert('Errore nell\'operazione');
+    }
+  };
 
   const handleDeleteUser = async (userId: string) => {
+    if (!confirm('Sei sicuro? Tutti i dati dell\'utente verranno eliminati.')) return;
+    
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://valutolab-backend.onrender.com'
-      
-      const response = await fetch(`${apiUrl}/api/admin/users/${userId}`, {
-        method: 'DELETE'
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
-        showMessage('success', 'Utente eliminato con successo')
-        setShowDeleteConfirm(null)
-        await loadData()
-      } else {
-        showMessage('error', 'Errore nell\'eliminazione')
-      }
-    } catch (error) {
-      console.error('Error deleting user:', error)
-      showMessage('error', 'Errore nell\'eliminazione')
+      await axios.delete(`${API_URL}/admin/users/${userId}`);
+      alert('Utente eliminato!');
+      fetchUsers();
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Errore nell\'eliminazione');
     }
-  }
+  };
 
   const handleDeleteAssessment = async (assessmentId: string) => {
-    if (!confirm('Sei sicuro di voler eliminare questo assessment?')) return
+    if (!confirm('Sei sicuro di voler eliminare questo assessment?')) return;
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://valutolab-backend.onrender.com'
-      
-      const response = await fetch(`${apiUrl}/api/admin/assessments/${assessmentId}`, {
-        method: 'DELETE'
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
-        showMessage('success', 'Assessment eliminato')
-        await loadData()
-      } else {
-        showMessage('error', 'Errore nell\'eliminazione')
-      }
+      await axios.delete(`${API_URL}/admin/assessments/${assessmentId}`);
+      alert('Assessment eliminato!');
+      fetchAssessments();
     } catch (error) {
-      console.error('Error deleting assessment:', error)
-      showMessage('error', 'Errore nell\'eliminazione')
+      alert('Errore nell\'eliminazione');
     }
-  }
+  };
 
-  // ==================== EMAIL HANDLERS ====================
-  const handleSendEmail = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSendingEmail(true)
+  // Email functions
+  const emailTemplates = {
+    welcome: {
+      subject: 'Benvenuto su ValutoLab! 🎉',
+      body: `Ciao {name},\n\nBenvenuto su ValutoLab!\n\nSiamo felici di averti con noi. Inizia subito il tuo primo assessment per scoprire le tue soft skills.\n\nBuona valutazione!\nIl Team ValutoLab`
+    },
+    reminder: {
+      subject: 'Completa il tuo Assessment ⏰',
+      body: `Ciao {name},\n\nHai un assessment in sospeso su ValutoLab.\n\nBastano solo 15 minuti per completarlo e ricevere il tuo report personalizzato!\n\nA presto,\nIl Team ValutoLab`
+    },
+    congratulations: {
+      subject: 'Assessment Completato! 🎊',
+      body: `Ciao {name},\n\nComplimenti! Hai completato il tuo assessment su ValutoLab.\n\nIl tuo report è pronto. Accedi alla dashboard per visualizzarlo e scaricarlo.\n\nGrazie,\nIl Team ValutoLab`
+    }
+  };
 
+  const handleTemplateChange = (template: string) => {
+    setEmailTemplate(template);
+    const t = emailTemplates[template as keyof typeof emailTemplates];
+    setEmailSubject(t.subject);
+    setEmailBody(t.body);
+  };
+
+  const handleSelectRecipients = (group: string) => {
+    let recipients: string[] = [];
+    
+    if (group === 'all') {
+      recipients = users.map(u => u.email);
+    } else if (group === 'completed') {
+      const completedUserIds = assessments
+        .filter(a => a.status === 'completed')
+        .map(a => a.user_id);
+      recipients = users
+        .filter(u => completedUserIds.includes(u.id))
+        .map(u => u.email);
+    } else if (group === 'incomplete') {
+      const incompleteUserIds = assessments
+        .filter(a => a.status === 'in_progress')
+        .map(a => a.user_id);
+      recipients = users
+        .filter(u => incompleteUserIds.includes(u.id))
+        .map(u => u.email);
+    } else if (group === 'selected') {
+      recipients = users
+        .filter(u => selectedUsers.has(u.id))
+        .map(u => u.email);
+    }
+
+    setEmailRecipients(recipients);
+  };
+
+  const handleSendEmail = async () => {
+    if (emailRecipients.length === 0) {
+      alert('Seleziona almeno un destinatario');
+      return;
+    }
+
+    if (!emailSubject || !emailBody) {
+      alert('Oggetto e messaggio sono obbligatori');
+      return;
+    }
+
+    if (!confirm(`Inviare email a ${emailRecipients.length} destinatari?`)) return;
+
+    setSendingEmail(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://valutolab-backend.onrender.com'
-      
-      // Determina destinatari
-      let recipients: string[] = []
-      
-      if (emailForm.recipients === 'all') {
-        recipients = users.map(u => u.email)
-      } else if (emailForm.recipients === 'completed') {
-        const completedUsers = users.filter(u => u.assessmentCount > 0)
-        recipients = completedUsers.map(u => u.email)
-      } else if (emailForm.recipients === 'incomplete') {
-        const incompleteUsers = users.filter(u => u.assessmentCount === 0)
-        recipients = incompleteUsers.map(u => u.email)
-      } else if (emailForm.recipients === 'selected') {
-        recipients = users.filter(u => selectedUsers.includes(u.id)).map(u => u.email)
-      } else if (emailForm.recipients === 'custom') {
-        recipients = emailForm.customEmails.split(',').map(e => e.trim()).filter(e => e)
-      }
+      const response = await axios.post(`${API_URL}/admin/emails/send`, {
+        recipients: emailRecipients,
+        subject: emailSubject,
+        body: emailBody
+      });
 
-      const response = await fetch(`${apiUrl}/api/admin/emails/send`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          recipients,
-          subject: emailForm.subject,
-          body: emailForm.body
-        })
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
-        showMessage('success', `Email inviata a ${recipients.length} destinatari!`)
-        setShowEmailModal(false)
-        setEmailForm({
-          recipients: 'all',
-          customEmails: '',
-          template: 'custom',
-          subject: '',
-          body: ''
-        })
-      } else {
-        showMessage('error', 'Errore nell\'invio email')
-      }
-    } catch (error) {
-      console.error('Error sending email:', error)
-      showMessage('error', 'Errore nell\'invio email')
+      alert(response.data.message);
+      setEmailRecipients([]);
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Errore nell\'invio email');
     } finally {
-      setSendingEmail(false)
+      setSendingEmail(false);
     }
-  }
+  };
 
-  const handleTemplateChange = (template: keyof typeof emailTemplates) => {
-    setEmailForm({
-      ...emailForm,
-      template,
-      subject: emailTemplates[template].subject,
-      body: emailTemplates[template].body
-    })
-  }
-
-  // ==================== EXPORT HANDLERS ====================
+  // Export CSV
   const handleExportUsers = () => {
-    const exportData = filteredUsers.map(u => ({
-      Email: u.email,
-      Nome: u.full_name || 'N/A',
-      'Assessment Completati': u.assessmentCount,
-      'Data Registrazione': new Date(u.created_at).toLocaleDateString('it-IT'),
-      Status: u.is_blocked ? 'Bloccato' : 'Attivo'
-    }))
-    exportToCSV(exportData, 'valutolab_utenti')
-  }
+    const csv = [
+      ['Email', 'Nome', 'Data Registrazione', 'Assessment Completati', 'Stato'].join(','),
+      ...users.map(u => [
+        u.email,
+        u.full_name,
+        new Date(u.created_at).toLocaleDateString('it-IT'),
+        u.assessmentCount,
+        u.is_blocked ? 'Bloccato' : 'Attivo'
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `valutolab-users-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+  };
 
   const handleExportAssessments = () => {
-    const exportData = filteredAssessments.map(a => ({
-      Utente: a.userName,
-      Email: a.userEmail,
-      Status: a.status === 'completed' ? 'Completato' : 'In corso',
-      Punteggio: a.total_score?.toFixed(1) || '-',
-      'Data Creazione': new Date(a.created_at).toLocaleDateString('it-IT'),
-      'Data Completamento': a.completed_at ? new Date(a.completed_at).toLocaleDateString('it-IT') : '-'
-    }))
-    exportToCSV(exportData, 'valutolab_assessments')
-  }
+    const csv = [
+      ['ID', 'Utente', 'Email', 'Status', 'Score', 'Data Inizio', 'Data Completamento'].join(','),
+      ...assessments.map(a => [
+        a.id,
+        a.userName,
+        a.userEmail,
+        a.status,
+        a.total_score || 'N/A',
+        new Date(a.created_at).toLocaleDateString('it-IT'),
+        a.completed_at ? new Date(a.completed_at).toLocaleDateString('it-IT') : 'N/A'
+      ].join(','))
+    ].join('\n');
 
-  // ==================== FILTERING ====================
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = user.email.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-                         (user.full_name || '').toLowerCase().includes(userSearchTerm.toLowerCase())
-    
-    const matchesFilter = userFilter === 'all' ||
-                         (userFilter === 'blocked' && user.is_blocked) ||
-                         (userFilter === 'active' && !user.is_blocked)
-    
-    return matchesSearch && matchesFilter
-  })
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `valutolab-assessments-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+  };
 
-  const filteredAssessments = assessments.filter(assessment => {
-    const matchesSearch = assessment.userName.toLowerCase().includes(assessmentSearchTerm.toLowerCase()) ||
-                         assessment.userEmail.toLowerCase().includes(assessmentSearchTerm.toLowerCase())
-    
-    const matchesFilter = assessmentFilter === 'all' ||
-                         (assessmentFilter === 'completed' && assessment.status === 'completed') ||
-                         (assessmentFilter === 'in_progress' && assessment.status === 'in_progress')
-    
-    return matchesSearch && matchesFilter
-  })
+  // Filtered data
+  const filteredUsers = users.filter(u =>
+    u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    u.full_name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    router.push('/login')
-  }
+  const filteredAssessments = assessments.filter(a => {
+    if (assessmentFilter === 'all') return true;
+    return a.status === assessmentFilter;
+  });
 
-  // ==================== RENDER ====================
+  // 🆕 Filtered questions by category
+  const filteredQuestions = selectedCategory === 'all'
+    ? questions
+    : questions.filter(q => q.category === selectedCategory);
+
+  // Logout
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Caricamento dashboard admin...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Caricamento dashboard admin...</p>
         </div>
       </div>
-    )
+    );
   }
-
-  if (!isAdmin) {
-    return null
-  }
-
-  const completionRate = stats ? Math.round((stats.completedAssessments / stats.totalAssessments) * 100) : 0
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Message Toast */}
-      {message && (
-        <div className={`fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg ${
-          message.type === 'success' ? 'bg-green-500' : 'bg-red-500'
-        } text-white font-semibold animate-slide-in`}>
-          {message.text}
-        </div>
-      )}
-
-      {/* Navigation */}
-      <nav className="bg-white shadow-sm">
+      {/* Header */}
+      <div className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-4">
-              <h1 className="text-2xl font-bold text-gray-900">ValutoLab Admin</h1>
-              <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-semibold">
-                🔒 Admin Dashboard
-              </span>
+          <div className="flex justify-between items-center py-6">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+              <p className="text-gray-500 mt-1">Gestione piattaforma ValutoLab</p>
             </div>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600">{currentAdminEmail}</span>
-              <button
-                onClick={() => router.push('/dashboard')}
-                className="text-gray-600 hover:text-gray-900"
-              >
-                Dashboard Utente
-              </button>
-              <button
-                onClick={handleSignOut}
-                className="text-gray-600 hover:text-gray-900"
-              >
-                Esci
-              </button>
-            </div>
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+            >
+              Logout
+            </button>
+          </div>
+
+          {/* Tabs */}
+          <div className="flex space-x-4 border-b">
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`px-4 py-2 font-medium ${
+                activeTab === 'overview'
+                  ? 'border-b-2 border-purple-600 text-purple-600'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              📊 Panoramica
+            </button>
+            <button
+              onClick={() => setActiveTab('users')}
+              className={`px-4 py-2 font-medium ${
+                activeTab === 'users'
+                  ? 'border-b-2 border-purple-600 text-purple-600'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              👥 Utenti
+            </button>
+            <button
+              onClick={() => setActiveTab('assessments')}
+              className={`px-4 py-2 font-medium ${
+                activeTab === 'assessments'
+                  ? 'border-b-2 border-purple-600 text-purple-600'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              📝 Assessment
+            </button>
+            <button
+              onClick={() => setActiveTab('email')}
+              className={`px-4 py-2 font-medium ${
+                activeTab === 'email'
+                  ? 'border-b-2 border-purple-600 text-purple-600'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              ✉️ Email
+            </button>
+            {/* 🆕 TAB CONTENUTI */}
+            <button
+              onClick={() => {
+                setActiveTab('contenuti');
+                fetchQuestions();
+              }}
+              className={`px-4 py-2 font-medium ${
+                activeTab === 'contenuti'
+                  ? 'border-b-2 border-purple-600 text-purple-600'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              📚 Contenuti
+            </button>
           </div>
         </div>
-      </nav>
+      </div>
 
-      <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        {/* Tabs */}
-        <div className="mb-6">
-          <div className="border-b border-gray-200">
-            <nav className="flex gap-8">
-              <button
-                onClick={() => setActiveTab('overview')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'overview'
-                    ? 'border-purple-600 text-purple-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                📊 Panoramica
-              </button>
-              <button
-                onClick={() => setActiveTab('users')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'users'
-                    ? 'border-purple-600 text-purple-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                👥 Utenti ({users.length})
-              </button>
-              <button
-                onClick={() => setActiveTab('assessments')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'assessments'
-                    ? 'border-purple-600 text-purple-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                📋 Assessment ({assessments.length})
-              </button>
-              <button
-                onClick={() => setActiveTab('email')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'email'
-                    ? 'border-purple-600 text-purple-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                📧 Email
-              </button>
-            </nav>
-          </div>
-        </div>
-
-        {/* ==================== OVERVIEW TAB ==================== */}
+      {/* Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* OVERVIEW TAB */}
         {activeTab === 'overview' && stats && (
           <div className="space-y-6">
-            {/* Stats Cards */}
+            {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="bg-white rounded-xl shadow-lg p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Utenti Totali</p>
-                    <p className="text-3xl font-bold text-gray-900">{stats.totalUsers}</p>
-                    <p className="text-xs text-green-600 mt-1">+{stats.newUsersLast7Days} ultimi 7gg</p>
-                  </div>
-                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                    </svg>
-                  </div>
+              <div className="bg-white p-6 rounded-lg shadow">
+                <div className="text-sm text-gray-500">Utenti Totali</div>
+                <div className="text-3xl font-bold text-gray-900 mt-2">{stats.totalUsers}</div>
+                <div className="text-xs text-green-600 mt-1">+{stats.newUsersLast7Days} ultimi 7gg</div>
+              </div>
+
+              <div className="bg-white p-6 rounded-lg shadow">
+                <div className="text-sm text-gray-500">Assessment Totali</div>
+                <div className="text-3xl font-bold text-gray-900 mt-2">{stats.totalAssessments}</div>
+                <div className="text-xs text-blue-600 mt-1">+{stats.completedLast7Days} completati (7gg)</div>
+              </div>
+
+              <div className="bg-white p-6 rounded-lg shadow">
+                <div className="text-sm text-gray-500">Assessment Completati</div>
+                <div className="text-3xl font-bold text-green-600 mt-2">{stats.completedAssessments}</div>
+                <div className="text-xs text-gray-500 mt-1">
+                  {((stats.completedAssessments / stats.totalAssessments) * 100).toFixed(1)}% completion rate
                 </div>
               </div>
 
-              <div className="bg-white rounded-xl shadow-lg p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Assessment Totali</p>
-                    <p className="text-3xl font-bold text-gray-900">{stats.totalAssessments}</p>
-                    <p className="text-xs text-blue-600 mt-1">+{stats.completedLast7Days} completati/7gg</p>
-                  </div>
-                  <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-xl shadow-lg p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Completati</p>
-                    <p className="text-3xl font-bold text-green-600">{stats.completedAssessments}</p>
-                    <p className="text-xs text-gray-600 mt-1">{stats.inProgressAssessments} in corso</p>
-                  </div>
-                  <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                    <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-xl shadow-lg p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Tasso Completamento</p>
-                    <p className="text-3xl font-bold text-gray-900">{completionRate}%</p>
-                    <p className="text-xs text-orange-600 mt-1">{stats.abandonedAssessments} abbandonati</p>
-                  </div>
-                  <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                    <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                    </svg>
-                  </div>
-                </div>
+              <div className="bg-white p-6 rounded-lg shadow">
+                <div className="text-sm text-gray-500">In Corso</div>
+                <div className="text-3xl font-bold text-orange-600 mt-2">{stats.inProgressAssessments}</div>
+                <div className="text-xs text-gray-500 mt-1">{stats.abandonedAssessments} abbandonati</div>
               </div>
             </div>
 
-            {/* Quick Actions */}
-            <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl shadow-lg p-6 text-white">
-              <h3 className="text-lg font-bold mb-4">⚡ Azioni Rapide</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <button
-                  onClick={() => {
-                    setActiveTab('users')
-                    setShowCreateUserModal(true)
-                  }}
-                  className="bg-white/20 hover:bg-white/30 backdrop-blur rounded-lg p-4 text-center transition"
-                >
-                  <div className="text-2xl mb-2">👤</div>
-                  <div className="font-semibold">Crea Utente</div>
-                </button>
-                <button
-                  onClick={() => {
-                    setActiveTab('email')
-                    setShowEmailModal(true)
-                  }}
-                  className="bg-white/20 hover:bg-white/30 backdrop-blur rounded-lg p-4 text-center transition"
-                >
-                  <div className="text-2xl mb-2">📧</div>
-                  <div className="font-semibold">Invia Email</div>
-                </button>
-                <button
-                  onClick={handleExportUsers}
-                  className="bg-white/20 hover:bg-white/30 backdrop-blur rounded-lg p-4 text-center transition"
-                >
-                  <div className="text-2xl mb-2">📊</div>
-                  <div className="font-semibold">Export Utenti</div>
-                </button>
-                <button
-                  onClick={handleExportAssessments}
-                  className="bg-white/20 hover:bg-white/30 backdrop-blur rounded-lg p-4 text-center transition"
-                >
-                  <div className="text-2xl mb-2">📋</div>
-                  <div className="font-semibold">Export Assessment</div>
-                </button>
-              </div>
-            </div>
-
-            {/* Category Averages */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-6">Punteggi Medi per Competenza</h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {Object.entries(stats.categoryAverages).map(([category, score]) => (
-                  <div key={category} className="bg-gray-50 rounded-lg p-4">
-                    <p className="text-sm text-gray-600 mb-1">{categoryLabels[category]}</p>
-                    <div className="flex items-baseline gap-1">
-                      <p className="text-2xl font-bold text-gray-900">{score}</p>
-                      <p className="text-sm text-gray-500">/5.0</p>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                      <div
-                        className="bg-gradient-to-r from-purple-600 to-blue-600 h-2 rounded-full"
-                        style={{ width: `${(parseFloat(score) / 5) * 100}%` }}
-                      ></div>
-                    </div>
+            {/* Additional Stats */}
+            <div className="bg-white p-6 rounded-lg shadow">
+              <h3 className="text-lg font-semibold mb-4">Statistiche Dettagliate</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-sm text-gray-500">Tempo Medio Completamento</div>
+                  <div className="text-2xl font-bold text-gray-900">{stats.avgCompletionTime} min</div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500">Score Medio Generale</div>
+                  <div className="text-2xl font-bold text-gray-900">
+                    {Object.keys(stats.categoryAverages).length > 0
+                      ? (Object.values(stats.categoryAverages).reduce((a: any, b: any) => parseFloat(a) + parseFloat(b), 0) / Object.keys(stats.categoryAverages).length).toFixed(2)
+                      : 'N/A'}
                   </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ==================== USERS TAB ==================== */}
-        {activeTab === 'users' && (
-          <div className="space-y-4">
-            {/* Toolbar */}
-            <div className="bg-white rounded-xl shadow-lg p-4">
-              <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-                <div className="flex gap-2 flex-1 w-full md:w-auto">
-                  <input
-                    type="text"
-                    placeholder="🔍 Cerca per email o nome..."
-                    value={userSearchTerm}
-                    onChange={(e) => setUserSearchTerm(e.target.value)}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  />
-                  <select
-                    value={userFilter}
-                    onChange={(e) => setUserFilter(e.target.value as any)}
-                    className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  >
-                    <option value="all">Tutti</option>
-                    <option value="active">Attivi</option>
-                    <option value="blocked">Bloccati</option>
-                  </select>
-                </div>
-                
-                <div className="flex gap-2">
-                  {selectedUsers.length > 0 && (
-                    <button
-                      onClick={() => {
-                        setEmailForm({ ...emailForm, recipients: 'selected' })
-                        setShowEmailModal(true)
-                      }}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold"
-                    >
-                      📧 Email a {selectedUsers.length}
-                    </button>
-                  )}
-                  <button
-                    onClick={handleExportUsers}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold"
-                  >
-                    📊 Export CSV
-                  </button>
-                  <button
-                    onClick={() => setShowCreateUserModal(true)}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-semibold"
-                  >
-                    ➕ Crea Utente
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Users Table */}
-            <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left">
-                        <input
-                          type="checkbox"
-                          checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedUsers(filteredUsers.map(u => u.id))
-                            } else {
-                              setSelectedUsers([])
-                            }
-                          }}
-                          className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-                        />
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Nome
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Email
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Assessment
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Ultimo Assessment
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Registrato
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Azioni
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredUsers.map((user) => (
-                      <tr key={user.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4">
-                          <input
-                            type="checkbox"
-                            checked={selectedUsers.includes(user.id)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedUsers([...selectedUsers, user.id])
-                              } else {
-                                setSelectedUsers(selectedUsers.filter(id => id !== user.id))
-                              }
-                            }}
-                            className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-                          />
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">
-                            {user.full_name || 'N/A'}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-600">{user.email}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                            {user.assessmentCount} assessment
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                          {user.last_assessment_date 
-                            ? new Date(user.last_assessment_date).toLocaleDateString('it-IT')
-                            : '-'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                          {new Date(user.created_at).toLocaleDateString('it-IT')}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            user.is_blocked 
-                              ? 'bg-red-100 text-red-800' 
-                              : 'bg-green-100 text-green-800'
-                          }`}>
-                            {user.is_blocked ? '🔒 Bloccato' : '✅ Attivo'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => handleBlockUser(user.id, user.is_blocked)}
-                              disabled={blockingUser === user.id}
-                              className={`px-3 py-1 rounded font-semibold transition ${
-                                user.is_blocked
-                                  ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                                  : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
-                              } disabled:opacity-50`}
-                            >
-                              {blockingUser === user.id ? '...' : (user.is_blocked ? 'Sblocca' : 'Blocca')}
-                            </button>
-                            <button
-                              onClick={() => setShowDeleteConfirm(user.id)}
-                              className="px-3 py-1 bg-red-100 text-red-700 rounded font-semibold hover:bg-red-200 transition"
-                            >
-                              Elimina
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              
-              {filteredUsers.length === 0 && (
-                <div className="text-center py-12 text-gray-500">
-                  Nessun utente trovato
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ==================== ASSESSMENTS TAB ==================== */}
-        {activeTab === 'assessments' && (
-          <div className="space-y-4">
-            {/* Toolbar */}
-            <div className="bg-white rounded-xl shadow-lg p-4">
-              <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-                <div className="flex gap-2 flex-1 w-full md:w-auto">
-                  <input
-                    type="text"
-                    placeholder="🔍 Cerca per utente o email..."
-                    value={assessmentSearchTerm}
-                    onChange={(e) => setAssessmentSearchTerm(e.target.value)}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  />
-                  <select
-                    value={assessmentFilter}
-                    onChange={(e) => setAssessmentFilter(e.target.value as any)}
-                    className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  >
-                    <option value="all">Tutti</option>
-                    <option value="completed">Completati</option>
-                    <option value="in_progress">In Corso</option>
-                  </select>
-                </div>
-                
-                <button
-                  onClick={handleExportAssessments}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold"
-                >
-                  📊 Export CSV
-                </button>
-              </div>
-            </div>
-
-            {/* Assessments Table */}
-            <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Utente
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Email
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Punteggio
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Data Creazione
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Data Completamento
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Azioni
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredAssessments.map((assessment) => (
-                      <tr key={assessment.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">
-                            {assessment.userName}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-600">{assessment.userEmail}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            assessment.status === 'completed'
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {assessment.status === 'completed' ? '✅ Completato' : '⏳ In corso'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                          {assessment.total_score ? (
-                            <span className="font-semibold">{assessment.total_score.toFixed(1)}/5.0</span>
-                          ) : '-'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                          {new Date(assessment.created_at).toLocaleDateString('it-IT')}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                          {assessment.completed_at 
-                            ? new Date(assessment.completed_at).toLocaleDateString('it-IT')
-                            : '-'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <div className="flex gap-2">
-                            {assessment.status === 'completed' && (
-                              <button
-                                onClick={() => router.push(`/dashboard/results/${assessment.id}`)}
-                                className="px-3 py-1 bg-purple-100 text-purple-700 rounded font-semibold hover:bg-purple-200 transition"
-                              >
-                                Visualizza
-                              </button>
-                            )}
-                            <button
-                              onClick={() => handleDeleteAssessment(assessment.id)}
-                              className="px-3 py-1 bg-red-100 text-red-700 rounded font-semibold hover:bg-red-200 transition"
-                            >
-                              Elimina
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              
-              {filteredAssessments.length === 0 && (
-                <div className="text-center py-12 text-gray-500">
-                  Nessun assessment trovato
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ==================== EMAIL TAB ==================== */}
-        {activeTab === 'email' && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">📧 Sistema Email</h2>
-                <button
-                  onClick={() => setShowEmailModal(true)}
-                  className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-semibold"
-                >
-                  ✉️ Componi Nuova Email
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-blue-50 rounded-lg p-6 text-center">
-                  <div className="text-4xl mb-2">📨</div>
-                  <div className="text-3xl font-bold text-gray-900">{users.length}</div>
-                  <div className="text-sm text-gray-600 mt-1">Utenti Totali</div>
-                </div>
-
-                <div className="bg-green-50 rounded-lg p-6 text-center">
-                  <div className="text-4xl mb-2">✅</div>
-                  <div className="text-3xl font-bold text-gray-900">
-                    {users.filter(u => u.assessmentCount > 0).length}
-                  </div>
-                  <div className="text-sm text-gray-600 mt-1">Con Assessment Completato</div>
-                </div>
-
-                <div className="bg-yellow-50 rounded-lg p-6 text-center">
-                  <div className="text-4xl mb-2">⏳</div>
-                  <div className="text-3xl font-bold text-gray-900">
-                    {users.filter(u => u.assessmentCount === 0).length}
-                  </div>
-                  <div className="text-sm text-gray-600 mt-1">Senza Assessment</div>
                 </div>
               </div>
 
-              <div className="mt-8">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">📋 Template Disponibili</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {Object.entries(emailTemplates).filter(([key]) => key !== 'custom').map(([key, template]) => (
-                    <div key={key} className="border border-gray-200 rounded-lg p-4 hover:border-purple-300 transition">
-                      <h4 className="font-semibold text-gray-900 mb-2">{template.subject}</h4>
-                      <p className="text-sm text-gray-600 line-clamp-3">{template.body}</p>
-                      <button
-                        onClick={() => {
-                          handleTemplateChange(key as keyof typeof emailTemplates)
-                          setShowEmailModal(true)
-                        }}
-                        className="mt-3 text-purple-600 hover:text-purple-700 font-semibold text-sm"
-                      >
-                        Usa Template →
-                      </button>
+              <div className="mt-6">
+                <h4 className="text-sm font-medium text-gray-700 mb-3">Score Medi per Categoria</h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {Object.entries(stats.categoryAverages).map(([category, score]) => (
+                    <div key={category} className="bg-gray-50 p-3 rounded">
+                      <div className="text-xs text-gray-500 capitalize">{category.replace('_', ' ')}</div>
+                      <div className="text-lg font-semibold text-purple-600">{score as string}/5.0</div>
                     </div>
                   ))}
                 </div>
@@ -1082,262 +561,672 @@ export default function AdminDashboard() {
             </div>
           </div>
         )}
-      </main>
 
-      {/* ==================== CREATE USER MODAL ==================== */}
-      {showCreateUserModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-bold text-gray-900">➕ Crea Nuovo Utente</h3>
+        {/* USERS TAB */}
+        {activeTab === 'users' && (
+          <div className="space-y-6">
+            {/* Actions Bar */}
+            <div className="bg-white p-4 rounded-lg shadow flex justify-between items-center">
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={() => setShowCreateUserModal(true)}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                >
+                  + Nuovo Utente
+                </button>
+                <input
+                  type="text"
+                  placeholder="Cerca utente..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="px-4 py-2 border rounded-lg"
+                />
+              </div>
               <button
-                onClick={() => {
-                  setShowCreateUserModal(false)
-                  setNewUserForm({ email: '', fullName: '', password: '' })
-                }}
-                className="text-gray-400 hover:text-gray-600"
+                onClick={handleExportUsers}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                📥 Export CSV
               </button>
             </div>
 
-            <form onSubmit={handleCreateUser} className="space-y-4">
-              <div>
+            {/* Users Table */}
+            <div className="bg-white rounded-lg shadow overflow-hidden">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Utente</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data Reg.</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Assessment</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stato</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Azioni</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredUsers.map(user => (
+                    <tr key={user.id}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">{user.full_name}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-500">{user.email}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-500">
+                          {new Date(user.created_at).toLocaleDateString('it-IT')}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{user.assessmentCount}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          user.is_blocked ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                        }`}>
+                          {user.is_blocked ? 'Bloccato' : 'Attivo'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <button
+                          onClick={() => handleBlockUser(user.id, user.is_blocked)}
+                          className={`mr-2 px-3 py-1 rounded ${
+                            user.is_blocked
+                              ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                              : 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                          }`}
+                        >
+                          {user.is_blocked ? 'Sblocca' : 'Blocca'}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteUser(user.id)}
+                          className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200"
+                        >
+                          Elimina
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ASSESSMENTS TAB */}
+        {activeTab === 'assessments' && (
+          <div className="space-y-6">
+            {/* Filters */}
+            <div className="bg-white p-4 rounded-lg shadow flex justify-between items-center">
+              <div className="flex items-center space-x-4">
+                <select
+                  value={assessmentFilter}
+                  onChange={(e) => setAssessmentFilter(e.target.value)}
+                  className="px-4 py-2 border rounded-lg"
+                >
+                  <option value="all">Tutti</option>
+                  <option value="completed">Completati</option>
+                  <option value="in_progress">In Corso</option>
+                  <option value="abandoned">Abbandonati</option>
+                </select>
+              </div>
+              <button
+                onClick={handleExportAssessments}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                📥 Export CSV
+              </button>
+            </div>
+
+            {/* Assessments Table */}
+            <div className="bg-white rounded-lg shadow overflow-hidden">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Utente</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Score</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Azioni</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredAssessments.map(assessment => (
+                    <tr key={assessment.id}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {assessment.id.substring(0, 8)}...
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {assessment.userName}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {assessment.userEmail}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          assessment.status === 'completed'
+                            ? 'bg-green-100 text-green-800'
+                            : assessment.status === 'in_progress'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {assessment.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {assessment.total_score ? assessment.total_score.toFixed(2) : 'N/A'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {new Date(assessment.created_at).toLocaleDateString('it-IT')}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <button
+                          onClick={() => handleDeleteAssessment(assessment.id)}
+                          className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200"
+                        >
+                          Elimina
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* EMAIL TAB */}
+        {activeTab === 'email' && (
+          <div className="space-y-6">
+            <div className="bg-white p-6 rounded-lg shadow">
+              <h3 className="text-lg font-semibold mb-4">Invio Email Bulk</h3>
+
+              {/* Template Selection */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Template</label>
+                <select
+                  value={emailTemplate}
+                  onChange={(e) => handleTemplateChange(e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg"
+                >
+                  <option value="welcome">Benvenuto</option>
+                  <option value="reminder">Reminder Assessment</option>
+                  <option value="congratulations">Congratulazioni</option>
+                </select>
+              </div>
+
+              {/* Recipients Selection */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Destinatari</label>
+                <div className="flex space-x-2 mb-2">
+                  <button
+                    onClick={() => handleSelectRecipients('all')}
+                    className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+                  >
+                    Tutti ({users.length})
+                  </button>
+                  <button
+                    onClick={() => handleSelectRecipients('completed')}
+                    className="px-4 py-2 bg-green-200 rounded hover:bg-green-300"
+                  >
+                    Completati
+                  </button>
+                  <button
+                    onClick={() => handleSelectRecipients('incomplete')}
+                    className="px-4 py-2 bg-orange-200 rounded hover:bg-orange-300"
+                  >
+                    In Corso
+                  </button>
+                </div>
+                <div className="text-sm text-gray-500">
+                  {emailRecipients.length} destinatari selezionati
+                </div>
+              </div>
+
+              {/* Subject */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Oggetto</label>
+                <input
+                  type="text"
+                  value={emailSubject}
+                  onChange={(e) => setEmailSubject(e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg"
+                />
+              </div>
+
+              {/* Body */}
+              <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email *
+                  Messaggio <span className="text-gray-400">(usa {'{name}'} per nome utente)</span>
                 </label>
+                <textarea
+                  value={emailBody}
+                  onChange={(e) => setEmailBody(e.target.value)}
+                  rows={8}
+                  className="w-full px-4 py-2 border rounded-lg"
+                />
+              </div>
+
+              {/* Send Button */}
+              <button
+                onClick={handleSendEmail}
+                disabled={sendingEmail || emailRecipients.length === 0}
+                className="w-full px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                {sendingEmail ? 'Invio in corso...' : `📧 Invia a ${emailRecipients.length} destinatari`}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* 🆕 CONTENUTI TAB */}
+        {activeTab === 'contenuti' && (
+          <div className="space-y-6">
+            {/* Header + Actions */}
+            <div className="bg-white p-4 rounded-lg shadow">
+              <div className="flex justify-between items-center mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold">Gestione Domande Assessment</h3>
+                  <p className="text-sm text-gray-500">
+                    Totale: {questions.length} domande | Attive: {questions.filter(q => q.is_active).length}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setEditingQuestion(null);
+                    setQuestionFormData({ category: '', question_text: '', question_order: 1, is_active: true });
+                    setShowQuestionModal(true);
+                  }}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                >
+                  + Nuova Domanda
+                </button>
+              </div>
+
+              {/* Category Filter */}
+              <div className="flex items-center space-x-4">
+                <label className="text-sm font-medium text-gray-700">Categoria:</label>
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="px-4 py-2 border rounded-lg"
+                >
+                  <option value="all">Tutte le categorie</option>
+                  {categories.map(cat => (
+                    <option key={cat.value} value={cat.value}>
+                      {cat.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Validation Status */}
+              {validationStatus && (
+                <div className={`mt-4 p-3 rounded-lg ${
+                  validationStatus.isValid ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">
+                      {validationStatus.isValid ? '✅ Configurazione valida' : '⚠️ Configurazione non valida'}
+                    </span>
+                    <span className="text-xs text-gray-600">
+                      {validationStatus.totalActiveQuestions} / 72 domande attive
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Questions List */}
+            {questionsLoading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+                <p className="text-gray-500 mt-2">Caricamento domande...</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {selectedCategory !== 'all' ? (
+                  // Single category view
+                  <div className="bg-white rounded-lg shadow">
+                    <div className="p-4 border-b bg-gray-50">
+                      <div className="flex justify-between items-center">
+                        <h4 className="font-semibold text-lg">
+                          {categories.find(c => c.value === selectedCategory)?.label}
+                        </h4>
+                        {validationStatus?.validation[selectedCategory] && (
+                          <span className={`text-sm px-3 py-1 rounded-full ${
+                            validationStatus.validation[selectedCategory].isValid
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {validationStatus.validation[selectedCategory].message}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="divide-y">
+                      {filteredQuestions
+                        .sort((a, b) => a.question_order - b.question_order)
+                        .map((question, index) => (
+                          <QuestionRow
+                            key={question.id}
+                            question={question}
+                            onToggle={handleToggleQuestion}
+                            onEdit={(q) => {
+                              setEditingQuestion(q);
+                              setQuestionFormData({
+                                category: q.category,
+                                question_text: q.question_text,
+                                question_order: q.question_order,
+                                is_active: q.is_active
+                              });
+                              setShowQuestionModal(true);
+                            }}
+                            onDelete={handleDeleteQuestion}
+                            onReorder={handleReorderQuestion}
+                            isFirst={index === 0}
+                            isLast={index === filteredQuestions.length - 1}
+                          />
+                        ))}
+                    </div>
+                  </div>
+                ) : (
+                  // All categories view
+                  categories.map(category => {
+                    const categoryQuestions = questions
+                      .filter(q => q.category === category.value)
+                      .sort((a, b) => a.question_order - b.question_order);
+                    
+                    return (
+                      <div key={category.value} className="bg-white rounded-lg shadow">
+                        <div className="p-4 border-b bg-gray-50">
+                          <div className="flex justify-between items-center">
+                            <h4 className="font-semibold">{category.label}</h4>
+                            {validationStatus?.validation[category.value] && (
+                              <span className={`text-sm px-3 py-1 rounded-full ${
+                                validationStatus.validation[category.value].isValid
+                                  ? 'bg-green-100 text-green-800'
+                                  : 'bg-red-100 text-red-800'
+                              }`}>
+                                {validationStatus.validation[category.value].message}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="divide-y">
+                          {categoryQuestions.map((question, index) => (
+                            <QuestionRow
+                              key={question.id}
+                              question={question}
+                              onToggle={handleToggleQuestion}
+                              onEdit={(q) => {
+                                setEditingQuestion(q);
+                                setQuestionFormData({
+                                  category: q.category,
+                                  question_text: q.question_text,
+                                  question_order: q.question_order,
+                                  is_active: q.is_active
+                                });
+                                setShowQuestionModal(true);
+                              }}
+                              onDelete={handleDeleteQuestion}
+                              onReorder={handleReorderQuestion}
+                              isFirst={index === 0}
+                              isLast={index === categoryQuestions.length - 1}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* 🆕 QUESTION MODAL */}
+      {showQuestionModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <h3 className="text-xl font-bold mb-4">
+              {editingQuestion ? 'Modifica Domanda' : 'Nuova Domanda'}
+            </h3>
+
+            {/* Category */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Categoria <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={questionFormData.category}
+                onChange={(e) => setQuestionFormData({ ...questionFormData, category: e.target.value })}
+                className="w-full px-4 py-2 border rounded-lg"
+                required
+              >
+                <option value="">Seleziona categoria...</option>
+                {categories.map(cat => (
+                  <option key={cat.value} value={cat.value}>
+                    {cat.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Question Text */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Testo Domanda <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={questionFormData.question_text}
+                onChange={(e) => setQuestionFormData({ ...questionFormData, question_text: e.target.value })}
+                rows={4}
+                className="w-full px-4 py-2 border rounded-lg"
+                placeholder="Inserisci il testo della domanda..."
+                required
+              />
+            </div>
+
+            {/* Order (only when editing) */}
+            {editingQuestion && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Ordine</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={questionFormData.question_order}
+                  onChange={(e) => setQuestionFormData({ ...questionFormData, question_order: parseInt(e.target.value) })}
+                  className="w-full px-4 py-2 border rounded-lg"
+                />
+              </div>
+            )}
+
+            {/* Active Toggle */}
+            <div className="mb-6">
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={questionFormData.is_active}
+                  onChange={(e) => setQuestionFormData({ ...questionFormData, is_active: e.target.checked })}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm font-medium text-gray-700">Domanda attiva</span>
+              </label>
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowQuestionModal(false);
+                  setEditingQuestion(null);
+                }}
+                className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={handleSaveQuestion}
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+              >
+                {editingQuestion ? 'Salva Modifiche' : 'Crea Domanda'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CREATE USER MODAL */}
+      {showCreateUserModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-xl font-bold mb-4">Crea Nuovo Utente</h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
                 <input
                   type="email"
-                  required
-                  value={newUserForm.email}
-                  onChange={(e) => setNewUserForm({ ...newUserForm, email: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  placeholder="utente@esempio.com"
+                  value={newUserData.email}
+                  onChange={(e) => setNewUserData({ ...newUserData, email: e.target.value })}
+                  className="w-full px-4 py-2 border rounded-lg"
+                  placeholder="email@example.com"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nome Completo *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Nome Completo</label>
                 <input
                   type="text"
-                  required
-                  value={newUserForm.fullName}
-                  onChange={(e) => setNewUserForm({ ...newUserForm, fullName: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  value={newUserData.fullName}
+                  onChange={(e) => setNewUserData({ ...newUserData, fullName: e.target.value })}
+                  className="w-full px-4 py-2 border rounded-lg"
                   placeholder="Mario Rossi"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Password Temporanea *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
                 <input
                   type="password"
-                  required
-                  value={newUserForm.password}
-                  onChange={(e) => setNewUserForm({ ...newUserForm, password: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  placeholder="Min 6 caratteri"
-                  minLength={6}
+                  value={newUserData.password}
+                  onChange={(e) => setNewUserData({ ...newUserData, password: e.target.value })}
+                  className="w-full px-4 py-2 border rounded-lg"
+                  placeholder="Min. 6 caratteri"
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  L'utente potrà cambiarla al primo accesso
-                </p>
-              </div>
-
-              <div className="flex gap-3 mt-6">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowCreateUserModal(false)
-                    setNewUserForm({ email: '', fullName: '', password: '' })
-                  }}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-semibold"
-                >
-                  Annulla
-                </button>
-                <button
-                  type="submit"
-                  disabled={creatingUser}
-                  className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {creatingUser ? 'Creazione...' : 'Crea Utente'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ==================== DELETE CONFIRM MODAL ==================== */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full">
-            <div className="text-center">
-              <div className="text-6xl mb-4">⚠️</div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Conferma Eliminazione</h3>
-              <p className="text-gray-600 mb-6">
-                Sei sicuro di voler eliminare questo utente?<br />
-                <strong>Questa azione è irreversibile!</strong>
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowDeleteConfirm(null)}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-semibold"
-                >
-                  Annulla
-                </button>
-                <button
-                  onClick={() => handleDeleteUser(showDeleteConfirm)}
-                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-semibold"
-                >
-                  Elimina Definitivamente
-                </button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
 
-      {/* ==================== EMAIL MODAL ==================== */}
-      {showEmailModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="bg-white rounded-xl shadow-2xl p-8 max-w-2xl w-full my-8">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-bold text-gray-900">📧 Componi Email</h3>
+            <div className="flex justify-end space-x-3 mt-6">
               <button
-                onClick={() => {
-                  setShowEmailModal(false)
-                  setEmailForm({
-                    recipients: 'all',
-                    customEmails: '',
-                    template: 'custom',
-                    subject: '',
-                    body: ''
-                  })
-                }}
-                className="text-gray-400 hover:text-gray-600"
+                onClick={() => setShowCreateUserModal(false)}
+                className="px-4 py-2 border rounded-lg hover:bg-gray-50"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                Annulla
+              </button>
+              <button
+                onClick={handleCreateUser}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              >
+                Crea Utente
               </button>
             </div>
-
-            <form onSubmit={handleSendEmail} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Template
-                </label>
-                <select
-                  value={emailForm.template}
-                  onChange={(e) => handleTemplateChange(e.target.value as keyof typeof emailTemplates)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                >
-                  <option value="custom">Personalizzato</option>
-                  <option value="welcome">Benvenuto</option>
-                  <option value="reminder">Reminder Completamento</option>
-                  <option value="congrats">Congratulazioni</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Destinatari
-                </label>
-                <select
-                  value={emailForm.recipients}
-                  onChange={(e) => setEmailForm({ ...emailForm, recipients: e.target.value as any })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                >
-                  <option value="all">Tutti gli utenti ({users.length})</option>
-                  <option value="completed">Chi ha completato assessment ({users.filter(u => u.assessmentCount > 0).length})</option>
-                  <option value="incomplete">Chi non ha completato ({users.filter(u => u.assessmentCount === 0).length})</option>
-                  <option value="selected">Utenti selezionati ({selectedUsers.length})</option>
-                  <option value="custom">Email personalizzate</option>
-                </select>
-              </div>
-
-              {emailForm.recipients === 'custom' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Email (separate da virgola)
-                  </label>
-                  <textarea
-                    value={emailForm.customEmails}
-                    onChange={(e) => setEmailForm({ ...emailForm, customEmails: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    rows={3}
-                    placeholder="email1@esempio.com, email2@esempio.com"
-                  />
-                </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Oggetto *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={emailForm.subject}
-                  onChange={(e) => setEmailForm({ ...emailForm, subject: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  placeholder="Oggetto dell'email"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Messaggio *
-                </label>
-                <textarea
-                  required
-                  value={emailForm.body}
-                  onChange={(e) => setEmailForm({ ...emailForm, body: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  rows={8}
-                  placeholder="Corpo dell'email..."
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Puoi usare {'{name}'} per il nome utente
-                </p>
-              </div>
-
-              <div className="flex gap-3 mt-6">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowEmailModal(false)
-                    setEmailForm({
-                      recipients: 'all',
-                      customEmails: '',
-                      template: 'custom',
-                      subject: '',
-                      body: ''
-                    })
-                  }}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-semibold"
-                >
-                  Annulla
-                </button>
-                <button
-                  type="submit"
-                  disabled={sendingEmail}
-                  className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {sendingEmail ? 'Invio in corso...' : '📧 Invia Email'}
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       )}
     </div>
-  )
+  );
+}
+
+// 🆕 QUESTION ROW COMPONENT
+function QuestionRow({
+  question,
+  onToggle,
+  onEdit,
+  onDelete,
+  onReorder,
+  isFirst,
+  isLast
+}: {
+  question: any;
+  onToggle: (id: string) => void;
+  onEdit: (question: any) => void;
+  onDelete: (id: string) => void;
+  onReorder: (id: string, order: number, direction: 'up' | 'down') => void;
+  isFirst: boolean;
+  isLast: boolean;
+}) {
+  return (
+    <div className="p-4 hover:bg-gray-50">
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <div className="flex items-center space-x-3 mb-2">
+            <span className="text-sm font-semibold text-gray-500">
+              #{question.question_order}
+            </span>
+            <span className={`px-2 py-1 text-xs rounded-full ${
+              question.is_active
+                ? 'bg-green-100 text-green-800'
+                : 'bg-gray-100 text-gray-600'
+            }`}>
+              {question.is_active ? 'Attiva' : 'Disattivata'}
+            </span>
+          </div>
+          <p className="text-gray-900">{question.question_text}</p>
+        </div>
+
+        <div className="flex items-center space-x-2 ml-4">
+          {/* Reorder buttons */}
+          <button
+            onClick={() => onReorder(question.id, question.question_order, 'up')}
+            disabled={isFirst}
+            className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30"
+            title="Sposta su"
+          >
+            ↑
+          </button>
+          <button
+            onClick={() => onReorder(question.id, question.question_order, 'down')}
+            disabled={isLast}
+            className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30"
+            title="Sposta giù"
+          >
+            ↓
+          </button>
+
+          {/* Toggle Active */}
+          <button
+            onClick={() => onToggle(question.id)}
+            className={`px-3 py-1 text-xs rounded ${
+              question.is_active
+                ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                : 'bg-green-100 text-green-700 hover:bg-green-200'
+            }`}
+          >
+            {question.is_active ? 'Disattiva' : 'Attiva'}
+          </button>
+
+          {/* Edit */}
+          <button
+            onClick={() => onEdit(question)}
+            className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+          >
+            Modifica
+          </button>
+
+          {/* Delete */}
+          <button
+            onClick={() => onDelete(question.id)}
+            className="px-3 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200"
+          >
+            Elimina
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
