@@ -541,7 +541,7 @@ export default function AdminDashboard() {
                   <div className="text-sm text-gray-500">Score Medio Generale</div>
                   <div className="text-2xl font-bold text-gray-900">
                     {Object.keys(stats.categoryAverages).length > 0
-                      ? (Object.values(stats.categoryAverages).reduce((a: any, b: any) => parseFloat(a) + parseFloat(b), 0) / Object.keys(stats.categoryAverages).length).toFixed(2)
+                      ? (Object.values(stats.categoryAverages).reduce((sum: number, value: unknown) => sum + parseFloat(value as string), 0) / Object.keys(stats.categoryAverages).length).toFixed(2)
                       : 'N/A'}
                   </div>
                 </div>
@@ -1230,3 +1230,4 @@ function QuestionRow({
     </div>
   );
 }
+
