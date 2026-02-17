@@ -153,7 +153,7 @@ export default function AgenziaTrialLanding() {
             </h1>
             
             <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-              Valuta le soft skills dei tuoi candidati in 15 minuti con tecnologia AI. 
+              Valuta le soft skills dei tuoi candidati in 15 minuti con tecnologia AI e framework scientifico. 
               Riduci il turnover, aumenta la retention, trova il match perfetto.
             </p>
             
@@ -169,7 +169,7 @@ export default function AgenziaTrialLanding() {
               <div className="flex items-start gap-3">
                 <CheckCircle className="w-6 h-6 text-green-500 flex-shrink-0 mt-1" />
                 <p className="text-gray-700">
-                  <strong>Report AI dettagliati</strong> per ogni candidato in tempo reale
+                  <strong>Report dettagliati</strong> per ogni candidato in tempo reale
                 </p>
               </div>
               
@@ -192,11 +192,11 @@ export default function AgenziaTrialLanding() {
             <div className="flex flex-wrap items-center gap-6 text-sm text-gray-500">
               <div className="flex items-center gap-2">
                 <Users className="w-5 h-5" />
-                <span>Usato da 50+ agenzie</span>
+                <span>Usato da 50+ aziende</span>
               </div>
               <div className="flex items-center gap-2">
                 <Clock className="w-5 h-5" />
-                <span>Attivazione in 2 ore</span>
+                <span>Attivazione entro 2 ore</span>
               </div>
               <div className="flex items-center gap-2">
                 <Building2 className="w-5 h-5" />
