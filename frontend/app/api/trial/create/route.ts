@@ -1,7 +1,4 @@
-// =============================================
 // FILE: frontend/app/api/trial/create/route.ts
-// Questo file fa da "ponte" tra la landing page e il backend
-// =============================================
 
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -9,9 +6,10 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    // Chiama il backend Express
+    const backendUrl = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL;
+
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/trial/create`,
+      `${backendUrl}/trial/create`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -38,3 +36,9 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+```
+
+Poi vai su **Vercel → Settings → Environment Variables** e aggiungi:
+```
+Nome:  BACKEND_URL
+Valore: https://valutolab-backend.onrender.com/api/v1
