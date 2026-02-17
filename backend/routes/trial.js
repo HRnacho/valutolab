@@ -2,10 +2,11 @@
 // FILE: backend/routes/trial.js
 // =============================================
 
-const express = require('express');
+import express from 'express';
+import { createClient } from '@supabase/supabase-js';
+import { Resend } from 'resend';
+
 const router = express.Router();
-const { createClient } = require('@supabase/supabase-js');
-const { Resend } = require('resend');
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -14,14 +15,10 @@ const supabase = createClient(
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// =============================================
 // POST /api/v1/trial/create
-// Riceve form dalla landing page aziende-trial
-// =============================================
 router.post('/create', async (req, res) => {
   const { fullName, email, company, phone, employees, sector } = req.body;
 
-  // Validazione base
   if (!fullName || !email || !company) {
     return res.status(400).json({ 
       error: 'Nome, email e azienda sono obbligatori' 
@@ -29,7 +26,6 @@ router.post('/create', async (req, res) => {
   }
 
   try {
-    // 1. Verifica se email già registrata
     const { data: existing } = await supabase
       .from('trial_organizations')
       .select('id, status')
@@ -42,8 +38,7 @@ router.post('/create', async (req, res) => {
       });
     }
 
-    // 2. Salva richiesta trial nel database (status: pending)
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // +30 giorni
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
     const { data: trial, error: trialError } = await supabase
       .from('trial_organizations')
@@ -54,7 +49,7 @@ router.post('/create', async (req, res) => {
         phone: phone || null,
         employees: employees || null,
         sector: sector || null,
-        assessment_quota: 20, // default, modificabile da admin
+        assessment_quota: 20,
         expires_at: expiresAt,
         status: 'pending'
       })
@@ -63,15 +58,13 @@ router.post('/create', async (req, res) => {
 
     if (trialError) throw trialError;
 
-    // 3. Invia email di notifica a TE (admin)
     await resend.emails.send({
       from: 'ValutoLab <noreply@valutolab.com>',
-      to: 'info@valutolab.com', // la tua email
+      to: 'info@valutolab.com',
       subject: `🔔 Nuova richiesta trial: ${company}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #4F46E5;">Nuova Richiesta Trial Azienda</h2>
-          
           <div style="background: #F3F4F6; padding: 20px; border-radius: 8px; margin: 20px 0;">
             <p><strong>Azienda:</strong> ${company}</p>
             <p><strong>Contatto:</strong> ${fullName}</p>
@@ -80,7 +73,6 @@ router.post('/create', async (req, res) => {
             <p><strong>Dipendenti:</strong> ${employees || 'Non specificato'}</p>
             <p><strong>Settore:</strong> ${sector || 'Non specificato'}</p>
           </div>
-
           <div style="background: #EEF2FF; padding: 20px; border-radius: 8px;">
             <h3 style="color: #4F46E5; margin-top: 0;">Prossimo Step</h3>
             <p>Vai alla dashboard admin per attivare il trial:</p>
@@ -94,7 +86,6 @@ router.post('/create', async (req, res) => {
       `
     });
 
-    // 4. Invia email di conferma all'azienda
     await resend.emails.send({
       from: 'ValutoLab <noreply@valutolab.com>',
       to: email,
@@ -105,15 +96,12 @@ router.post('/create', async (req, res) => {
                       padding: 40px; text-align: center; border-radius: 12px 12px 0 0;">
             <h1 style="color: white; margin: 0; font-size: 28px;">ValutoLab</h1>
           </div>
-          
           <div style="background: white; padding: 40px; border: 1px solid #E5E7EB; 
                       border-top: none; border-radius: 0 0 12px 12px;">
             <h2 style="color: #111827;">Ciao ${fullName}! 👋</h2>
-            
             <p style="color: #4B5563; font-size: 16px;">
               Abbiamo ricevuto la tua richiesta di trial gratuito per <strong>${company}</strong>.
             </p>
-
             <div style="background: #F9FAFB; border: 1px solid #E5E7EB; 
                         padding: 20px; border-radius: 8px; margin: 24px 0;">
               <h3 style="color: #111827; margin-top: 0;">Il tuo trial include:</h3>
@@ -125,7 +113,6 @@ router.post('/create', async (req, res) => {
                 <li>✅ Export PDF</li>
               </ul>
             </div>
-
             <div style="background: #EEF2FF; padding: 20px; border-radius: 8px; margin: 24px 0;">
               <h3 style="color: #4F46E5; margin-top: 0;">Cosa succede ora?</h3>
               <ol style="color: #4B5563; line-height: 2;">
@@ -134,12 +121,9 @@ router.post('/create', async (req, res) => {
                 <li>Inizierai subito a valutare i tuoi candidati</li>
               </ol>
             </div>
-
             <p style="color: #4B5563;">
-              Hai domande? Rispondi direttamente a questa email.<br>
-              Siamo sempre disponibili.
+              Hai domande? Rispondi direttamente a questa email.
             </p>
-
             <p style="color: #4B5563;">
               A presto,<br>
               <strong>Il Team ValutoLab</strong>
@@ -149,7 +133,6 @@ router.post('/create', async (req, res) => {
       `
     });
 
-    // 5. Risposta successo
     return res.status(200).json({ 
       success: true,
       message: 'Richiesta ricevuta! Controlla la tua email.',
@@ -164,16 +147,12 @@ router.post('/create', async (req, res) => {
   }
 });
 
-// =============================================
 // POST /api/v1/trial/activate/:id
-// Attiva trial dall'admin (crea account Supabase + magic link)
-// =============================================
 router.post('/activate/:id', async (req, res) => {
   const { id } = req.params;
   const { assessment_quota, days } = req.body;
 
   try {
-    // 1. Recupera trial
     const { data: trial, error: fetchError } = await supabase
       .from('trial_organizations')
       .select('*')
@@ -188,11 +167,10 @@ router.post('/activate/:id', async (req, res) => {
       return res.status(400).json({ error: 'Trial già attivo' });
     }
 
-    // 2. Calcola quota e scadenza (usa parametri admin o default)
     const quota = assessment_quota || trial.assessment_quota || 20;
     const expiresAt = new Date(Date.now() + (days || 30) * 24 * 60 * 60 * 1000);
 
-    // 3. Crea account Supabase Auth
+    let userId;
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: trial.contact_email,
       email_confirm: true,
@@ -205,19 +183,18 @@ router.post('/activate/:id', async (req, res) => {
     });
 
     if (authError) {
-      // Se utente esiste già, recupera user id
       if (authError.message.includes('already registered')) {
-        const { data: existingUser } = await supabase.auth.admin
-          .listUsers();
-        const user = existingUser.users.find(u => u.email === trial.contact_email);
-        if (!user) throw authError;
-        authData = { user };
+        const { data: existingUsers } = await supabase.auth.admin.listUsers();
+        const existingUser = existingUsers.users.find(u => u.email === trial.contact_email);
+        if (!existingUser) throw authError;
+        userId = existingUser.id;
       } else {
         throw authError;
       }
+    } else {
+      userId = authData.user.id;
     }
 
-    // 4. Genera magic link per primo accesso
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
       type: 'magiclink',
       email: trial.contact_email,
@@ -228,19 +205,17 @@ router.post('/activate/:id', async (req, res) => {
 
     if (linkError) throw linkError;
 
-    // 5. Aggiorna trial nel database
     await supabase
       .from('trial_organizations')
       .update({
         status: 'active',
-        user_id: authData.user.id,
+        user_id: userId,
         assessment_quota: quota,
-        expires_at: expiresAt,
+        expires_at: expiresAt.toISOString(),
         activated_at: new Date().toISOString()
       })
       .eq('id', id);
 
-    // 6. Invia email con magic link all'azienda
     await resend.emails.send({
       from: 'ValutoLab <noreply@valutolab.com>',
       to: trial.contact_email,
@@ -252,15 +227,12 @@ router.post('/activate/:id', async (req, res) => {
             <h1 style="color: white; margin: 0; font-size: 28px;">ValutoLab</h1>
             <p style="color: #C7D2FE; margin: 8px 0 0;">Il tuo trial è pronto!</p>
           </div>
-          
           <div style="background: white; padding: 40px; border: 1px solid #E5E7EB; 
                       border-top: none; border-radius: 0 0 12px 12px;">
             <h2 style="color: #111827;">Ciao ${trial.contact_name}! 🎉</h2>
-            
             <p style="color: #4B5563; font-size: 16px;">
               Il tuo trial per <strong>${trial.company_name}</strong> è attivo.
             </p>
-
             <div style="background: #F0FDF4; border: 1px solid #BBF7D0; 
                         padding: 20px; border-radius: 8px; margin: 24px 0;">
               <h3 style="color: #166534; margin-top: 0;">Il tuo piano trial:</h3>
@@ -270,7 +242,6 @@ router.post('/activate/:id', async (req, res) => {
                 <li>✅ Accesso completo a tutte le funzionalità</li>
               </ul>
             </div>
-
             <div style="text-align: center; margin: 32px 0;">
               <a href="${linkData.properties.action_link}" 
                  style="background: linear-gradient(135deg, #4F46E5, #7C3AED); 
@@ -283,7 +254,6 @@ router.post('/activate/:id', async (req, res) => {
                 Link valido per 24 ore
               </p>
             </div>
-
             <div style="background: #F9FAFB; padding: 20px; border-radius: 8px;">
               <h3 style="color: #111827; margin-top: 0;">Come iniziare:</h3>
               <ol style="color: #4B5563; line-height: 2;">
@@ -294,14 +264,10 @@ router.post('/activate/:id', async (req, res) => {
                 <li>Vedi i risultati nella tua dashboard</li>
               </ol>
             </div>
-
             <p style="color: #4B5563; margin-top: 24px;">
-              Hai bisogno di aiuto? Rispondi a questa email o scrivici a 
-              <a href="mailto:info@valutolab.com" style="color: #4F46E5;">
-                info@valutolab.com
-              </a>
+              Hai bisogno di aiuto? Scrivici a 
+              <a href="mailto:info@valutolab.com" style="color: #4F46E5;">info@valutolab.com</a>
             </p>
-
             <p style="color: #4B5563;">
               Buon lavoro!<br>
               <strong>Il Team ValutoLab</strong>
@@ -320,15 +286,12 @@ router.post('/activate/:id', async (req, res) => {
   } catch (error) {
     console.error('Trial activation error:', error);
     return res.status(500).json({ 
-      error: 'Errore attivazione trial: ' + error.message 
+      error: 'Errore attivazione: ' + error.message 
     });
   }
 });
 
-// =============================================
 // GET /api/v1/trial/list
-// Lista tutti i trial per admin dashboard
-// =============================================
 router.get('/list', async (req, res) => {
   try {
     const { data: trials, error } = await supabase
@@ -346,10 +309,7 @@ router.get('/list', async (req, res) => {
   }
 });
 
-// =============================================
 // PUT /api/v1/trial/update/:id
-// Modifica quota o scadenza da admin
-// =============================================
 router.put('/update/:id', async (req, res) => {
   const { id } = req.params;
   const { assessment_quota, add_days, notes, status } = req.body;
@@ -390,4 +350,4 @@ router.put('/update/:id', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;
