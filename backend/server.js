@@ -9,6 +9,7 @@ import adminRoutes from './routes/admin.js';
 import shareRoutes from './routes/share.js';
 import leadershipRoutes from './routes/leadership.js';
 import organizationsRoutes from './routes/organizations.js';
+import trialRoutes from './routes/trial.js';
 
 dotenv.config();
 
@@ -45,6 +46,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/share', shareRoutes);
 app.use('/api/leadership', leadershipRoutes);
 app.use('/api/organizations', organizationsRoutes);
+app.use('/api/v1/trial', trialRoutes);
 
 app.listen(PORT, () => {
   console.log(`ValutoLab Backend running on port ${PORT}`);
@@ -54,4 +56,5 @@ app.listen(PORT, () => {
   console.log(`Admin Dashboard: http://localhost:${PORT}/api/admin`);
   console.log(`Leadership Assessment: http://localhost:${PORT}/api/leadership`);
   console.log(`Organizations: http://localhost:${PORT}/api/organizations`);
+  console.log(`Trial Aziende: http://localhost:${PORT}/api/v1/trial`);
 });
