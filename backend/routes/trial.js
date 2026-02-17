@@ -58,86 +58,89 @@ router.post('/create', async (req, res) => {
 
     if (trialError) throw trialError;
 
-    await resend.emails.send({
-      from: 'ValutoLab <noreply@valutolab.com>',
-      to: 'info@valutolab.com',
-      subject: `🔔 Nuova richiesta trial: ${company}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #4F46E5;">Nuova Richiesta Trial Azienda</h2>
-          <div style="background: #F3F4F6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <p><strong>Azienda:</strong> ${company}</p>
-            <p><strong>Contatto:</strong> ${fullName}</p>
-            <p><strong>Email:</strong> ${email}</p>
-            <p><strong>Telefono:</strong> ${phone || 'Non fornito'}</p>
-            <p><strong>Dipendenti:</strong> ${employees || 'Non specificato'}</p>
-            <p><strong>Settore:</strong> ${sector || 'Non specificato'}</p>
-          </div>
-          <div style="background: #EEF2FF; padding: 20px; border-radius: 8px;">
-            <h3 style="color: #4F46E5; margin-top: 0;">Prossimo Step</h3>
-            <p>Vai alla dashboard admin per attivare il trial:</p>
-            <a href="https://valutolab.com/admin" 
-               style="background: #4F46E5; color: white; padding: 12px 24px; 
-                      border-radius: 6px; text-decoration: none; display: inline-block;">
-              Vai all'Admin
-            </a>
-          </div>
-        </div>
-      `
-    });
-
-    await resend.emails.send({
-      from: 'ValutoLab <noreply@valutolab.com>',
-      to: email,
-      subject: '✅ Richiesta Trial Ricevuta - ValutoLab',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <div style="background: linear-gradient(135deg, #4F46E5, #7C3AED); 
-                      padding: 40px; text-align: center; border-radius: 12px 12px 0 0;">
-            <h1 style="color: white; margin: 0; font-size: 28px;">ValutoLab</h1>
-          </div>
-          <div style="background: white; padding: 40px; border: 1px solid #E5E7EB; 
-                      border-top: none; border-radius: 0 0 12px 12px;">
-            <h2 style="color: #111827;">Ciao ${fullName}! 👋</h2>
-            <p style="color: #4B5563; font-size: 16px;">
-              Abbiamo ricevuto la tua richiesta di trial gratuito per <strong>${company}</strong>.
-            </p>
-            <div style="background: #F9FAFB; border: 1px solid #E5E7EB; 
-                        padding: 20px; border-radius: 8px; margin: 24px 0;">
-              <h3 style="color: #111827; margin-top: 0;">Il tuo trial include:</h3>
-              <ul style="color: #4B5563; line-height: 1.8;">
-                <li>✅ <strong>20 assessment gratuiti</strong></li>
-                <li>✅ <strong>30 giorni</strong> di accesso completo</li>
-                <li>✅ Report AI dettagliati per ogni candidato</li>
-                <li>✅ Dashboard comparazione candidati</li>
-                <li>✅ Export PDF</li>
-              </ul>
-            </div>
-            <div style="background: #EEF2FF; padding: 20px; border-radius: 8px; margin: 24px 0;">
-              <h3 style="color: #4F46E5; margin-top: 0;">Cosa succede ora?</h3>
-              <ol style="color: #4B5563; line-height: 2;">
-                <li>Riceverai le credenziali di accesso <strong>entro 2 ore</strong></li>
-                <li>Ti contatteremo per una call di onboarding di 15 minuti</li>
-                <li>Inizierai subito a valutare i tuoi candidati</li>
-              </ol>
-            </div>
-            <p style="color: #4B5563;">
-              Hai domande? Rispondi direttamente a questa email.
-            </p>
-            <p style="color: #4B5563;">
-              A presto,<br>
-              <strong>Il Team ValutoLab</strong>
-            </p>
-          </div>
-        </div>
-      `
-    });
-
-    return res.status(200).json({ 
+    // ✅ Risposta IMMEDIATA - non aspetta le email
+    res.status(200).json({ 
       success: true,
       message: 'Richiesta ricevuta! Controlla la tua email.',
       trial_id: trial.id
     });
+
+    // 📧 Email inviate in background (non bloccano la risposta)
+    Promise.all([
+      resend.emails.send({
+        from: 'ValutoLab <noreply@valutolab.com>',
+        to: 'info@valutolab.com',
+        subject: `🔔 Nuova richiesta trial: ${company}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #4F46E5;">Nuova Richiesta Trial Azienda</h2>
+            <div style="background: #F3F4F6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <p><strong>Azienda:</strong> ${company}</p>
+              <p><strong>Contatto:</strong> ${fullName}</p>
+              <p><strong>Email:</strong> ${email}</p>
+              <p><strong>Telefono:</strong> ${phone || 'Non fornito'}</p>
+              <p><strong>Dipendenti:</strong> ${employees || 'Non specificato'}</p>
+              <p><strong>Settore:</strong> ${sector || 'Non specificato'}</p>
+            </div>
+            <div style="background: #EEF2FF; padding: 20px; border-radius: 8px;">
+              <h3 style="color: #4F46E5; margin-top: 0;">Prossimo Step</h3>
+              <p>Vai alla dashboard admin per attivare il trial:</p>
+              <a href="https://valutolab.com/admin" 
+                 style="background: #4F46E5; color: white; padding: 12px 24px; 
+                        border-radius: 6px; text-decoration: none; display: inline-block;">
+                Vai all'Admin
+              </a>
+            </div>
+          </div>
+        `
+      }),
+      resend.emails.send({
+        from: 'ValutoLab <noreply@valutolab.com>',
+        to: email,
+        subject: '✅ Richiesta Trial Ricevuta - ValutoLab',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: linear-gradient(135deg, #4F46E5, #7C3AED); 
+                        padding: 40px; text-align: center; border-radius: 12px 12px 0 0;">
+              <h1 style="color: white; margin: 0; font-size: 28px;">ValutoLab</h1>
+            </div>
+            <div style="background: white; padding: 40px; border: 1px solid #E5E7EB; 
+                        border-top: none; border-radius: 0 0 12px 12px;">
+              <h2 style="color: #111827;">Ciao ${fullName}! 👋</h2>
+              <p style="color: #4B5563; font-size: 16px;">
+                Abbiamo ricevuto la tua richiesta di trial gratuito per <strong>${company}</strong>.
+              </p>
+              <div style="background: #F9FAFB; border: 1px solid #E5E7EB; 
+                          padding: 20px; border-radius: 8px; margin: 24px 0;">
+                <h3 style="color: #111827; margin-top: 0;">Il tuo trial include:</h3>
+                <ul style="color: #4B5563; line-height: 1.8;">
+                  <li>✅ <strong>20 assessment gratuiti</strong></li>
+                  <li>✅ <strong>30 giorni</strong> di accesso completo</li>
+                  <li>✅ Report AI dettagliati per ogni candidato</li>
+                  <li>✅ Dashboard comparazione candidati</li>
+                  <li>✅ Export PDF</li>
+                </ul>
+              </div>
+              <div style="background: #EEF2FF; padding: 20px; border-radius: 8px; margin: 24px 0;">
+                <h3 style="color: #4F46E5; margin-top: 0;">Cosa succede ora?</h3>
+                <ol style="color: #4B5563; line-height: 2;">
+                  <li>Riceverai le credenziali di accesso <strong>entro 2 ore</strong></li>
+                  <li>Ti contatteremo per una call di onboarding di 15 minuti</li>
+                  <li>Inizierai subito a valutare i tuoi candidati</li>
+                </ol>
+              </div>
+              <p style="color: #4B5563;">
+                Hai domande? Rispondi direttamente a questa email.
+              </p>
+              <p style="color: #4B5563;">
+                A presto,<br>
+                <strong>Il Team ValutoLab</strong>
+              </p>
+            </div>
+          </div>
+        `
+      })
+    ]).catch(err => console.error('Email background error:', err));
 
   } catch (error) {
     console.error('Trial creation error:', error);
