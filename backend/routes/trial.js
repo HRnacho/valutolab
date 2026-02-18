@@ -353,4 +353,23 @@ router.put('/update/:id', async (req, res) => {
   }
 });
 
+// DELETE /api/v1/trial/delete/:id
+router.delete('/delete/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const { error } = await supabase
+      .from('trial_organizations')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+
+    return res.status(200).json({ success: true });
+  } catch (error) {
+    console.error('Trial delete error:', error);
+    return res.status(500).json({ error: 'Errore eliminazione trial' });
+  }
+});
+
 export default router;
