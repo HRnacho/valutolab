@@ -291,7 +291,6 @@ export default function AdminDashboard() {
   const handleActivateTrial = async () => {
     if (!showActivateModal) return
     setActivatingTrial(showActivateModal.id)
-
     try {
       const response = await fetch(
         `https://valutolab-backend.onrender.com/api/v1/trial/activate/${showActivateModal.id}`,
@@ -304,9 +303,7 @@ export default function AdminDashboard() {
           })
         }
       )
-
       const data = await response.json()
-
       if (data.success) {
         showMessage('success', `✅ Trial attivato! Magic link inviato a ${showActivateModal.contact_email}`)
         setShowActivateModal(null)
@@ -332,9 +329,7 @@ export default function AdminDashboard() {
           body: JSON.stringify({ status })
         }
       )
-
       const data = await response.json()
-
       if (data.success) {
         showMessage('success', 'Status aggiornato!')
         await loadData()
@@ -346,6 +341,24 @@ export default function AdminDashboard() {
     }
   }
 
+  const handleDeleteTrial = async (trialId: string) => {
+    try {
+      const response = await fetch(
+        `https://valutolab-backend.onrender.com/api/v1/trial/delete/${trialId}`,
+        { method: 'DELETE' }
+      )
+      const data = await response.json()
+      if (data.success) {
+        showMessage('success', 'Trial eliminato!')
+        await loadData()
+      } else {
+        showMessage('error', 'Errore eliminazione')
+      }
+    } catch (error) {
+      showMessage('error', 'Errore eliminazione')
+    }
+  }
+
   const filteredTrials = trials.filter(trial => {
     if (trialFilter === 'all') return true
     if (trialFilter === 'pending') return trial.status === 'pending'
@@ -353,7 +366,6 @@ export default function AdminDashboard() {
     if (trialFilter === 'expired') return trial.status === 'expired'
     return true
   })
-
   // ==================== USER MANAGEMENT HANDLERS ====================
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -1208,6 +1220,16 @@ export default function AdminDashboard() {
                                 💼 Converti
                               </button>
                             )}
+                            <button
+                              onClick={() => {
+                                if (confirm(`Eliminare il trial di ${trial.company_name}?`)) {
+                                  handleDeleteTrial(trial.id)
+                                }
+                              }}
+                              className="px-3 py-1 bg-red-100 text-red-700 rounded font-semibold hover:bg-red-200 transition"
+                            >
+                              🗑️ Elimina
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -1571,3 +1593,4 @@ export default function AdminDashboard() {
     </div>
   )
 }
+
