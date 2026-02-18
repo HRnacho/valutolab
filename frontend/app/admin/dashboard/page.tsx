@@ -46,6 +46,23 @@ interface EmailLog {
   status: 'sent' | 'failed'
 }
 
+// ==================== NEW: TRIAL INTERFACE ====================
+interface Trial {
+  id: string
+  company_name: string
+  contact_email: string
+  contact_name: string
+  phone: string | null
+  employees: string | null
+  sector: string | null
+  assessment_quota: number
+  used_assessments: number
+  expires_at: string
+  status: 'pending' | 'active' | 'expired' | 'converted'
+  created_at: string
+  activated_at: string | null
+}
+
 // ==================== CONSTANTS ====================
 const categoryLabels: Record<string, string> = {
   communication: 'Comunicazione',
@@ -121,9 +138,10 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState<User[]>([])
   const [assessments, setAssessments] = useState<Assessment[]>([])
   const [emailLogs, setEmailLogs] = useState<EmailLog[]>([])
+  const [trials, setTrials] = useState<Trial[]>([])
   
   // UI states
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'assessments' | 'email'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'assessments' | 'email' | 'trials'>('overview')
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   
   // User Management states
@@ -156,6 +174,12 @@ export default function AdminDashboard() {
   // Assessment filter states
   const [assessmentFilter, setAssessmentFilter] = useState<'all' | 'completed' | 'in_progress'>('all')
   const [assessmentSearchTerm, setAssessmentSearchTerm] = useState('')
+
+  // Trial states
+  const [activatingTrial, setActivatingTrial] = useState<string | null>(null)
+  const [trialFilter, setTrialFilter] = useState<'all' | 'pending' | 'active' | 'expired'>('all')
+  const [showActivateModal, setShowActivateModal] = useState<Trial | null>(null)
+  const [activateForm, setActivateForm] = useState({ quota: 20, days: 30 })
 
   // ==================== EFFECTS ====================
   useEffect(() => {
@@ -214,10 +238,11 @@ export default function AdminDashboard() {
       const assessmentsData = await assessmentsResponse.json()
       if (assessmentsData.success) setAssessments(assessmentsData.assessments)
 
-      // Load email logs (se endpoint disponibile)
-      // const emailResponse = await fetch(`${apiUrl}/api/admin/emails/logs`)
-      // const emailData = await emailResponse.json()
-      // if (emailData.success) setEmailLogs(emailData.logs)
+      // Load trials
+      const trialsResponse = await fetch(`${apiUrl}/api/v1/trial/list`)
+      const trialsData = await trialsResponse.json()
+      if (trialsData.success) setTrials(trialsData.trials)
+
     } catch (error) {
       console.error('Error loading admin data:', error)
       showMessage('error', 'Errore nel caricamento dei dati')
@@ -244,6 +269,90 @@ export default function AdminDashboard() {
     link.download = `${filename}_${new Date().toISOString().split('T')[0]}.csv`
     link.click()
   }
+
+  const getTrialStatusBadge = (trial: Trial) => {
+    const now = new Date()
+    const expires = new Date(trial.expires_at)
+    
+    if (trial.status === 'pending') {
+      return <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">⏳ In attesa</span>
+    }
+    if (trial.status === 'converted') {
+      return <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">💼 Convertito</span>
+    }
+    if (trial.status === 'active' && expires > now) {
+      const daysLeft = Math.ceil((expires.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+      return <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">✅ Attivo ({daysLeft}gg)</span>
+    }
+    return <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">❌ Scaduto</span>
+  }
+
+  // ==================== TRIAL HANDLERS ====================
+  const handleActivateTrial = async () => {
+    if (!showActivateModal) return
+    setActivatingTrial(showActivateModal.id)
+
+    try {
+      const response = await fetch(
+        `https://valutolab-backend.onrender.com/api/v1/trial/activate/${showActivateModal.id}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            assessment_quota: activateForm.quota,
+            days: activateForm.days
+          })
+        }
+      )
+
+      const data = await response.json()
+
+      if (data.success) {
+        showMessage('success', `✅ Trial attivato! Magic link inviato a ${showActivateModal.contact_email}`)
+        setShowActivateModal(null)
+        await loadData()
+      } else {
+        showMessage('error', data.error || 'Errore attivazione')
+      }
+    } catch (error) {
+      console.error('Error activating trial:', error)
+      showMessage('error', 'Errore attivazione trial')
+    } finally {
+      setActivatingTrial(null)
+    }
+  }
+
+  const handleUpdateTrialStatus = async (trialId: string, status: string) => {
+    try {
+      const response = await fetch(
+        `https://valutolab-backend.onrender.com/api/v1/trial/update/${trialId}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status })
+        }
+      )
+
+      const data = await response.json()
+
+      if (data.success) {
+        showMessage('success', 'Status aggiornato!')
+        await loadData()
+      } else {
+        showMessage('error', 'Errore aggiornamento')
+      }
+    } catch (error) {
+      showMessage('error', 'Errore aggiornamento')
+    }
+  }
+
+  const filteredTrials = trials.filter(trial => {
+    if (trialFilter === 'all') return true
+    if (trialFilter === 'pending') return trial.status === 'pending'
+    if (trialFilter === 'active') return trial.status === 'active'
+    if (trialFilter === 'expired') return trial.status === 'expired'
+    return true
+  })
 
   // ==================== USER MANAGEMENT HANDLERS ====================
   const handleCreateUser = async (e: React.FormEvent) => {
@@ -364,7 +473,6 @@ export default function AdminDashboard() {
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://valutolab-backend.onrender.com'
       
-      // Determina destinatari
       let recipients: string[] = []
       
       if (emailForm.recipients === 'all') {
@@ -492,6 +600,8 @@ export default function AdminDashboard() {
   }
 
   const completionRate = stats ? Math.round((stats.completedAssessments / stats.totalAssessments) * 100) : 0
+  const pendingTrials = trials.filter(t => t.status === 'pending').length
+  const activeTrials = trials.filter(t => t.status === 'active').length
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -569,6 +679,21 @@ export default function AdminDashboard() {
                 📋 Assessment ({assessments.length})
               </button>
               <button
+                onClick={() => setActiveTab('trials')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm relative ${
+                  activeTab === 'trials'
+                    ? 'border-purple-600 text-purple-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                🏢 Trial Aziende ({trials.length})
+                {pendingTrials > 0 && (
+                  <span className="absolute -top-1 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                    {pendingTrials}
+                  </span>
+                )}
+              </button>
+              <button
                 onClick={() => setActiveTab('email')}
                 className={`py-4 px-1 border-b-2 font-medium text-sm ${
                   activeTab === 'email'
@@ -635,14 +760,12 @@ export default function AdminDashboard() {
               <div className="bg-white rounded-xl shadow-lg p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600 mb-1">Tasso Completamento</p>
-                    <p className="text-3xl font-bold text-gray-900">{completionRate}%</p>
-                    <p className="text-xs text-orange-600 mt-1">{stats.abandonedAssessments} abbandonati</p>
+                    <p className="text-sm text-gray-600 mb-1">Trial Aziende</p>
+                    <p className="text-3xl font-bold text-gray-900">{trials.length}</p>
+                    <p className="text-xs text-orange-600 mt-1">{pendingTrials} in attesa · {activeTrials} attivi</p>
                   </div>
-                  <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                    <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                    </svg>
+                  <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                    <span className="text-2xl">🏢</span>
                   </div>
                 </div>
               </div>
@@ -663,14 +786,16 @@ export default function AdminDashboard() {
                   <div className="font-semibold">Crea Utente</div>
                 </button>
                 <button
-                  onClick={() => {
-                    setActiveTab('email')
-                    setShowEmailModal(true)
-                  }}
-                  className="bg-white/20 hover:bg-white/30 backdrop-blur rounded-lg p-4 text-center transition"
+                  onClick={() => setActiveTab('trials')}
+                  className="bg-white/20 hover:bg-white/30 backdrop-blur rounded-lg p-4 text-center transition relative"
                 >
-                  <div className="text-2xl mb-2">📧</div>
-                  <div className="font-semibold">Invia Email</div>
+                  <div className="text-2xl mb-2">🏢</div>
+                  <div className="font-semibold">Trial Aziende</div>
+                  {pendingTrials > 0 && (
+                    <span className="absolute top-2 right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                      {pendingTrials}
+                    </span>
+                  )}
                 </button>
                 <button
                   onClick={handleExportUsers}
@@ -680,11 +805,14 @@ export default function AdminDashboard() {
                   <div className="font-semibold">Export Utenti</div>
                 </button>
                 <button
-                  onClick={handleExportAssessments}
+                  onClick={() => {
+                    setActiveTab('email')
+                    setShowEmailModal(true)
+                  }}
                   className="bg-white/20 hover:bg-white/30 backdrop-blur rounded-lg p-4 text-center transition"
                 >
-                  <div className="text-2xl mb-2">📋</div>
-                  <div className="font-semibold">Export Assessment</div>
+                  <div className="text-2xl mb-2">📧</div>
+                  <div className="font-semibold">Invia Email</div>
                 </button>
               </div>
             </div>
@@ -716,7 +844,6 @@ export default function AdminDashboard() {
         {/* ==================== USERS TAB ==================== */}
         {activeTab === 'users' && (
           <div className="space-y-4">
-            {/* Toolbar */}
             <div className="bg-white rounded-xl shadow-lg p-4">
               <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
                 <div className="flex gap-2 flex-1 w-full md:w-auto">
@@ -737,7 +864,6 @@ export default function AdminDashboard() {
                     <option value="blocked">Bloccati</option>
                   </select>
                 </div>
-                
                 <div className="flex gap-2">
                   {selectedUsers.length > 0 && (
                     <button
@@ -766,7 +892,6 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* Users Table */}
             <div className="bg-white rounded-xl shadow-lg overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -786,27 +911,13 @@ export default function AdminDashboard() {
                           className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
                         />
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Nome
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Email
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Assessment
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Ultimo Assessment
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Registrato
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Azioni
-                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nome</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assessment</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ultimo Assessment</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Registrato</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Azioni</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -827,9 +938,7 @@ export default function AdminDashboard() {
                           />
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">
-                            {user.full_name || 'N/A'}
-                          </div>
+                          <div className="text-sm font-medium text-gray-900">{user.full_name || 'N/A'}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-600">{user.email}</div>
@@ -840,18 +949,14 @@ export default function AdminDashboard() {
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                          {user.last_assessment_date 
-                            ? new Date(user.last_assessment_date).toLocaleDateString('it-IT')
-                            : '-'}
+                          {user.last_assessment_date ? new Date(user.last_assessment_date).toLocaleDateString('it-IT') : '-'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                           {new Date(user.created_at).toLocaleDateString('it-IT')}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            user.is_blocked 
-                              ? 'bg-red-100 text-red-800' 
-                              : 'bg-green-100 text-green-800'
+                            user.is_blocked ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
                           }`}>
                             {user.is_blocked ? '🔒 Bloccato' : '✅ Attivo'}
                           </span>
@@ -882,11 +987,8 @@ export default function AdminDashboard() {
                   </tbody>
                 </table>
               </div>
-              
               {filteredUsers.length === 0 && (
-                <div className="text-center py-12 text-gray-500">
-                  Nessun utente trovato
-                </div>
+                <div className="text-center py-12 text-gray-500">Nessun utente trovato</div>
               )}
             </div>
           </div>
@@ -895,7 +997,6 @@ export default function AdminDashboard() {
         {/* ==================== ASSESSMENTS TAB ==================== */}
         {activeTab === 'assessments' && (
           <div className="space-y-4">
-            {/* Toolbar */}
             <div className="bg-white rounded-xl shadow-lg p-4">
               <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
                 <div className="flex gap-2 flex-1 w-full md:w-auto">
@@ -916,7 +1017,6 @@ export default function AdminDashboard() {
                     <option value="in_progress">In Corso</option>
                   </select>
                 </div>
-                
                 <button
                   onClick={handleExportAssessments}
                   className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold"
@@ -926,67 +1026,44 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* Assessments Table */}
             <div className="bg-white rounded-xl shadow-lg overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Utente
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Email
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Punteggio
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Data Creazione
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Data Completamento
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Azioni
-                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Utente</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Punteggio</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data Creazione</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data Completamento</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Azioni</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {filteredAssessments.map((assessment) => (
                       <tr key={assessment.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">
-                            {assessment.userName}
-                          </div>
+                          <div className="text-sm font-medium text-gray-900">{assessment.userName}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-600">{assessment.userEmail}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            assessment.status === 'completed'
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-yellow-100 text-yellow-800'
+                            assessment.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                           }`}>
                             {assessment.status === 'completed' ? '✅ Completato' : '⏳ In corso'}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                          {assessment.total_score ? (
-                            <span className="font-semibold">{assessment.total_score.toFixed(1)}/5.0</span>
-                          ) : '-'}
+                          {assessment.total_score ? <span className="font-semibold">{assessment.total_score.toFixed(1)}/5.0</span> : '-'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                           {new Date(assessment.created_at).toLocaleDateString('it-IT')}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                          {assessment.completed_at 
-                            ? new Date(assessment.completed_at).toLocaleDateString('it-IT')
-                            : '-'}
+                          {assessment.completed_at ? new Date(assessment.completed_at).toLocaleDateString('it-IT') : '-'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                           <div className="flex gap-2">
@@ -1011,10 +1088,136 @@ export default function AdminDashboard() {
                   </tbody>
                 </table>
               </div>
-              
               {filteredAssessments.length === 0 && (
+                <div className="text-center py-12 text-gray-500">Nessun assessment trovato</div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ==================== TRIALS TAB ==================== */}
+        {activeTab === 'trials' && (
+          <div className="space-y-4">
+            {/* Stats strip */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-center">
+                <div className="text-2xl font-bold text-yellow-700">{trials.filter(t => t.status === 'pending').length}</div>
+                <div className="text-sm text-yellow-600 font-medium">⏳ In Attesa</div>
+              </div>
+              <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
+                <div className="text-2xl font-bold text-green-700">{trials.filter(t => t.status === 'active').length}</div>
+                <div className="text-sm text-green-600 font-medium">✅ Attivi</div>
+              </div>
+              <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 text-center">
+                <div className="text-2xl font-bold text-purple-700">{trials.filter(t => t.status === 'converted').length}</div>
+                <div className="text-sm text-purple-600 font-medium">💼 Convertiti</div>
+              </div>
+            </div>
+
+            {/* Toolbar */}
+            <div className="bg-white rounded-xl shadow-lg p-4">
+              <div className="flex gap-2 items-center justify-between">
+                <div className="flex gap-2">
+                  {(['all', 'pending', 'active', 'expired'] as const).map(f => (
+                    <button
+                      key={f}
+                      onClick={() => setTrialFilter(f)}
+                      className={`px-4 py-2 rounded-lg font-semibold text-sm transition ${
+                        trialFilter === f
+                          ? 'bg-purple-600 text-white'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      {f === 'all' ? 'Tutti' : f === 'pending' ? '⏳ In attesa' : f === 'active' ? '✅ Attivi' : '❌ Scaduti'}
+                    </button>
+                  ))}
+                </div>
+                <div className="text-sm text-gray-500">{filteredTrials.length} trial</div>
+              </div>
+            </div>
+
+            {/* Trials Table */}
+            <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Azienda</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contatto</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dimensione</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assessment</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Scadenza</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Richiesta</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Azioni</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredTrials.map((trial) => (
+                      <tr key={trial.id} className={`hover:bg-gray-50 ${trial.status === 'pending' ? 'bg-yellow-50/30' : ''}`}>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-bold text-gray-900">{trial.company_name}</div>
+                          <div className="text-xs text-gray-500">{trial.sector || '-'}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">{trial.contact_name}</div>
+                          <div className="text-xs text-gray-500">{trial.contact_email}</div>
+                          {trial.phone && <div className="text-xs text-gray-500">{trial.phone}</div>}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                          {trial.employees || '-'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-semibold text-gray-900">
+                            {trial.used_assessments}/{trial.assessment_quota}
+                          </div>
+                          <div className="w-20 bg-gray-200 rounded-full h-1.5 mt-1">
+                            <div
+                              className="bg-purple-600 h-1.5 rounded-full"
+                              style={{ width: `${Math.min((trial.used_assessments / trial.assessment_quota) * 100, 100)}%` }}
+                            />
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                          {new Date(trial.expires_at).toLocaleDateString('it-IT')}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {getTrialStatusBadge(trial)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                          {new Date(trial.created_at).toLocaleDateString('it-IT')}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <div className="flex gap-2">
+                            {trial.status === 'pending' && (
+                              <button
+                                onClick={() => {
+                                  setShowActivateModal(trial)
+                                  setActivateForm({ quota: 20, days: 30 })
+                                }}
+                                className="px-3 py-1 bg-green-600 text-white rounded font-semibold hover:bg-green-700 transition"
+                              >
+                                ✅ Attiva
+                              </button>
+                            )}
+                            {trial.status === 'active' && (
+                              <button
+                                onClick={() => handleUpdateTrialStatus(trial.id, 'converted')}
+                                className="px-3 py-1 bg-purple-100 text-purple-700 rounded font-semibold hover:bg-purple-200 transition"
+                              >
+                                💼 Converti
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {filteredTrials.length === 0 && (
                 <div className="text-center py-12 text-gray-500">
-                  Nessun assessment trovato
+                  Nessun trial trovato
                 </div>
               )}
             </div>
@@ -1041,7 +1244,6 @@ export default function AdminDashboard() {
                   <div className="text-3xl font-bold text-gray-900">{users.length}</div>
                   <div className="text-sm text-gray-600 mt-1">Utenti Totali</div>
                 </div>
-
                 <div className="bg-green-50 rounded-lg p-6 text-center">
                   <div className="text-4xl mb-2">✅</div>
                   <div className="text-3xl font-bold text-gray-900">
@@ -1049,7 +1251,6 @@ export default function AdminDashboard() {
                   </div>
                   <div className="text-sm text-gray-600 mt-1">Con Assessment Completato</div>
                 </div>
-
                 <div className="bg-yellow-50 rounded-lg p-6 text-center">
                   <div className="text-4xl mb-2">⏳</div>
                   <div className="text-3xl font-bold text-gray-900">
@@ -1084,6 +1285,77 @@ export default function AdminDashboard() {
         )}
       </main>
 
+      {/* ==================== ACTIVATE TRIAL MODAL ==================== */}
+      {showActivateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-2xl font-bold text-gray-900">✅ Attiva Trial</h3>
+              <button onClick={() => setShowActivateModal(null)} className="text-gray-400 hover:text-gray-600">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="bg-gray-50 rounded-lg p-4 mb-6">
+              <p className="font-bold text-gray-900">{showActivateModal.company_name}</p>
+              <p className="text-sm text-gray-600">{showActivateModal.contact_name}</p>
+              <p className="text-sm text-gray-600">{showActivateModal.contact_email}</p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Assessment da includere
+                </label>
+                <input
+                  type="number"
+                  min={5}
+                  max={100}
+                  value={activateForm.quota}
+                  onChange={(e) => setActivateForm({ ...activateForm, quota: parseInt(e.target.value) })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Durata (giorni)
+                </label>
+                <input
+                  type="number"
+                  min={7}
+                  max={90}
+                  value={activateForm.days}
+                  onChange={(e) => setActivateForm({ ...activateForm, days: parseInt(e.target.value) })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+
+            <div className="bg-blue-50 rounded-lg p-4 mt-4 text-sm text-blue-700">
+              📧 Verrà inviato automaticamente un magic link a <strong>{showActivateModal.contact_email}</strong>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowActivateModal(null)}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-semibold"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={handleActivateTrial}
+                disabled={activatingTrial === showActivateModal.id}
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold disabled:opacity-50"
+              >
+                {activatingTrial === showActivateModal.id ? 'Attivazione...' : '✅ Attiva e Invia Link'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ==================== CREATE USER MODAL ==================== */}
       {showCreateUserModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -1102,12 +1374,9 @@ export default function AdminDashboard() {
                 </svg>
               </button>
             </div>
-
             <form onSubmit={handleCreateUser} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
                 <input
                   type="email"
                   required
@@ -1117,11 +1386,8 @@ export default function AdminDashboard() {
                   placeholder="utente@esempio.com"
                 />
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nome Completo *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Nome Completo *</label>
                 <input
                   type="text"
                   required
@@ -1131,11 +1397,8 @@ export default function AdminDashboard() {
                   placeholder="Mario Rossi"
                 />
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Password Temporanea *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Password Temporanea *</label>
                 <input
                   type="password"
                   required
@@ -1145,11 +1408,8 @@ export default function AdminDashboard() {
                   placeholder="Min 6 caratteri"
                   minLength={6}
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  L'utente potrà cambiarla al primo accesso
-                </p>
+                <p className="text-xs text-gray-500 mt-1">L'utente potrà cambiarla al primo accesso</p>
               </div>
-
               <div className="flex gap-3 mt-6">
                 <button
                   type="button"
@@ -1213,13 +1473,7 @@ export default function AdminDashboard() {
               <button
                 onClick={() => {
                   setShowEmailModal(false)
-                  setEmailForm({
-                    recipients: 'all',
-                    customEmails: '',
-                    template: 'custom',
-                    subject: '',
-                    body: ''
-                  })
+                  setEmailForm({ recipients: 'all', customEmails: '', template: 'custom', subject: '', body: '' })
                 }}
                 className="text-gray-400 hover:text-gray-600"
               >
@@ -1228,12 +1482,9 @@ export default function AdminDashboard() {
                 </svg>
               </button>
             </div>
-
             <form onSubmit={handleSendEmail} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Template
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Template</label>
                 <select
                   value={emailForm.template}
                   onChange={(e) => handleTemplateChange(e.target.value as keyof typeof emailTemplates)}
@@ -1245,29 +1496,23 @@ export default function AdminDashboard() {
                   <option value="congrats">Congratulazioni</option>
                 </select>
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Destinatari
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Destinatari</label>
                 <select
                   value={emailForm.recipients}
                   onChange={(e) => setEmailForm({ ...emailForm, recipients: e.target.value as any })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 >
                   <option value="all">Tutti gli utenti ({users.length})</option>
-                  <option value="completed">Chi ha completato assessment ({users.filter(u => u.assessmentCount > 0).length})</option>
+                  <option value="completed">Chi ha completato ({users.filter(u => u.assessmentCount > 0).length})</option>
                   <option value="incomplete">Chi non ha completato ({users.filter(u => u.assessmentCount === 0).length})</option>
                   <option value="selected">Utenti selezionati ({selectedUsers.length})</option>
                   <option value="custom">Email personalizzate</option>
                 </select>
               </div>
-
               {emailForm.recipients === 'custom' && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Email (separate da virgola)
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Email (separate da virgola)</label>
                   <textarea
                     value={emailForm.customEmails}
                     onChange={(e) => setEmailForm({ ...emailForm, customEmails: e.target.value })}
@@ -1277,11 +1522,8 @@ export default function AdminDashboard() {
                   />
                 </div>
               )}
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Oggetto *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Oggetto *</label>
                 <input
                   type="text"
                   required
@@ -1291,11 +1533,8 @@ export default function AdminDashboard() {
                   placeholder="Oggetto dell'email"
                 />
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Messaggio *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Messaggio *</label>
                 <textarea
                   required
                   value={emailForm.body}
@@ -1304,23 +1543,14 @@ export default function AdminDashboard() {
                   rows={8}
                   placeholder="Corpo dell'email..."
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  Puoi usare {'{name}'} per il nome utente
-                </p>
+                <p className="text-xs text-gray-500 mt-1">Puoi usare {'{name}'} per il nome utente</p>
               </div>
-
               <div className="flex gap-3 mt-6">
                 <button
                   type="button"
                   onClick={() => {
                     setShowEmailModal(false)
-                    setEmailForm({
-                      recipients: 'all',
-                      customEmails: '',
-                      template: 'custom',
-                      subject: '',
-                      body: ''
-                    })
+                    setEmailForm({ recipients: 'all', customEmails: '', template: 'custom', subject: '', body: '' })
                   }}
                   className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-semibold"
                 >
@@ -1341,4 +1571,3 @@ export default function AdminDashboard() {
     </div>
   )
 }
-
