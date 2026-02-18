@@ -68,7 +68,7 @@ router.post('/create', async (req, res) => {
     // 📧 Email inviate in background (non bloccano la risposta)
     Promise.all([
       resend.emails.send({
-        from: 'ValutoLab <noreply@valutolab.com>',
+        from: 'ValutoLab <info@valutolab.com>',
         to: 'info@valutolab.com',
         subject: `🔔 Nuova richiesta trial: ${company}`,
         html: `
@@ -95,7 +95,7 @@ router.post('/create', async (req, res) => {
         `
       }),
       resend.emails.send({
-        from: 'ValutoLab <noreply@valutolab.com>',
+        from: 'ValutoLab <info@valutolab.com>',
         to: email,
         subject: '✅ Richiesta Trial Ricevuta - ValutoLab',
         html: `
@@ -220,7 +220,7 @@ router.post('/activate/:id', async (req, res) => {
       .eq('id', id);
 
     await resend.emails.send({
-      from: 'ValutoLab <noreply@valutolab.com>',
+      from: 'ValutoLab <info@valutolab.com>',
       to: trial.contact_email,
       subject: '🎉 Il tuo Trial ValutoLab è Attivo!',
       html: `
