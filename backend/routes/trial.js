@@ -202,7 +202,7 @@ router.post('/activate/:id', async (req, res) => {
       type: 'magiclink',
       email: trial.contact_email,
       options: {
-        redirectTo: 'https://valutolab.com/dashboard'
+        redirectTo: 'https://valutolab.com/aziende/dashboard'
       }
     });
 
