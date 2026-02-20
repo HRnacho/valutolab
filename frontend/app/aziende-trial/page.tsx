@@ -162,7 +162,7 @@ export default function AgenziaTrialLanding() {
               <div className="flex items-start gap-3">
                 <CheckCircle className="w-6 h-6 text-green-500 flex-shrink-0 mt-1" />
                 <p className="text-gray-700">
-                  <strong>20 assessment gratuiti</strong> per 30 giorni di trial
+                  <strong>fino a 10 assessment gratuiti</strong> per 30 giorni di trial
                 </p>
               </div>
               
@@ -258,7 +258,7 @@ export default function AgenziaTrialLanding() {
                   value={formData.company}
                   onChange={handleChange}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                  placeholder="Agenzia XYZ Srl"
+                  placeholder="Ragione Sociale"
                 />
               </div>
               
@@ -357,11 +357,11 @@ export default function AgenziaTrialLanding() {
               </div>
               
               <h3 className="text-xl font-bold text-gray-900 mb-3">
-                20 Assessment Inclusi
+                10 Assessment Inclusi
               </h3>
               
               <p className="text-gray-700 mb-4">
-                Valuta fino a 20 candidati con assessment completi di 48 domande scientifiche sulle soft skills
+                Valuta fino a 10 candidati con assessment completi di 60 domande scientifiche sulle soft skills, 48 domande di autovalutazione e 12 domande situazionali
               </p>
               
               <ul className="space-y-2 text-sm text-gray-600">
@@ -508,7 +508,7 @@ export default function AgenziaTrialLanding() {
                 Il trial è davvero gratuito?
               </summary>
               <p className="text-gray-600 mt-4">
-                Sì, assolutamente. Non ti chiediamo nessuna carta di credito. Ricevi 20 assessment gratuiti per 30 giorni. Dopo il trial, se ti interessa continuare, parliamo insieme di un piano su misura.
+                Sì, assolutamente. Non ti chiediamo nessuna carta di credito. Ricevi fino a 10 assessment gratuiti per 30 giorni. Dopo il trial, se ti interessa continuare, parliamo insieme di un piano su misura.
               </p>
             </details>
             
@@ -526,7 +526,7 @@ export default function AgenziaTrialLanding() {
                 Come funziona l'assessment per i candidati?
               </summary>
               <p className="text-gray-600 mt-4">
-                Tu inserisci l'email del candidato nella dashboard. Lui riceve un'email con un link univoco. Clicca il link, risponde a 48 domande (15 minuti), e tu vedi i risultati immediatamente nella tua dashboard. Nessuna registrazione richiesta per il candidato.
+                Tu inserisci l'email del candidato nella dashboard. Lui riceve un'email con un link univoco. Clicca il link, risponde a 60 domande (15-20 minuti), e tu vedi i risultati immediatamente nella tua dashboard. Nessuna registrazione richiesta per il candidato.
               </p>
             </details>
             
@@ -568,7 +568,7 @@ export default function AgenziaTrialLanding() {
           </h2>
           
           <p className="text-xl text-blue-100 mb-8">
-            Inizia oggi con 20 assessment gratuiti. Nessuna carta di credito richiesta.
+            Inizia oggi con 10 assessment gratuiti. Nessuna carta di credito richiesta.
           </p>
           
           <a
@@ -584,7 +584,7 @@ export default function AgenziaTrialLanding() {
           </a>
           
           <p className="text-blue-100 mt-6 text-sm">
-            Attivazione in 2 ore • 30 giorni gratis • 20 assessment inclusi
+            Attivazione in 2 ore • 30 giorni gratis • fino a 10 assessment inclusi
           </p>
         </div>
       </section>
