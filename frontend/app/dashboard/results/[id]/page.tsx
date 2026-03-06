@@ -162,10 +162,18 @@ export default function ResultsPage() {
     return { text: 'Base', color: 'bg-gray-100 text-gray-800' }
   }
 
+  // Conta quante competenze hanno livello Avanzato o Esperto (per il badge ESCO)
+  const escoAdvancedCount = qualitativeReport
+    ? Object.values(qualitativeReport.category_interpretations || {}).filter(
+        (interp: any) => interp.esco_mapping?.esco_level === 'Avanzato' || interp.esco_mapping?.esco_level === 'Esperto'
+      ).length
+    : 0
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
         
+        {/* HEADER */}
         <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl shadow-2xl p-8 text-white">
           <div className="flex justify-between items-start mb-6">
             <h1 className="text-4xl font-bold">Risultati Assessment</h1>
@@ -177,7 +185,7 @@ export default function ResultsPage() {
             </button>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
               <p className="text-white/80 text-sm mb-2">Punteggio Generale</p>
               <p className="text-6xl font-bold mb-2">{assessment?.total_score.toFixed(1)}</p>
@@ -189,9 +197,26 @@ export default function ResultsPage() {
               <p className="text-6xl font-bold mb-2">{percentile}%</p>
               <p className="text-white/80 text-lg">delle competenze</p>
             </div>
+
+            {/* BADGE ESCO nell'header */}
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 flex flex-col justify-between">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xl">🇪🇺</span>
+                <p className="text-white/80 text-sm font-semibold">Standard Europeo ESCO v1.2</p>
+              </div>
+              {qualitativeReport ? (
+                <>
+                  <p className="text-4xl font-bold mb-1">{escoAdvancedCount}<span className="text-2xl">/12</span></p>
+                  <p className="text-white/80 text-sm">competenze Avanzato/Esperto</p>
+                </>
+              ) : (
+                <p className="text-white/70 text-sm">Generazione report in corso...</p>
+              )}
+            </div>
           </div>
         </div>
 
+        {/* PUNTI DI FORZA & MIGLIORAMENTO */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-white rounded-xl shadow-lg p-6">
             <div className="flex items-center gap-3 mb-4">
@@ -272,7 +297,8 @@ export default function ResultsPage() {
           </div>
         </div>
 
-       <div className="bg-white rounded-xl shadow-lg p-8">
+        {/* RADAR CHART */}
+        <div className="bg-white rounded-xl shadow-lg p-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Panoramica Competenze</h2>
           <div className="h-96">
             <ResponsiveContainer width="100%" height="100%">
@@ -300,6 +326,7 @@ export default function ResultsPage() {
           </div>
         </div>
 
+        {/* BAR CHART */}
         <div className="bg-white rounded-xl shadow-lg p-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Dettaglio per Categoria</h2>
           <div className="h-96 mb-6">
@@ -342,6 +369,7 @@ export default function ResultsPage() {
 
         {qualitativeReport && (
           <>
+            {/* PROFILO PROFESSIONALE */}
             <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl shadow-lg p-8 text-white">
               <div className="flex items-center gap-3 mb-4">
                 <span className="text-3xl">💡</span>
@@ -396,6 +424,60 @@ export default function ResultsPage() {
               )}
             </div>
 
+            {/* ===== SEZIONE ESCO ===== */}
+            {qualitativeReport.profile_insights?.esco_profile_summary && (
+              <div className="bg-white rounded-xl shadow-lg p-8 border-l-4 border-blue-600">
+                <div className="flex items-center gap-3 mb-6">
+                  <span className="text-3xl">🇪🇺</span>
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">Profilo ESCO Europeo</h2>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Framework European Skills, Competences, Qualifications and Occupations — v1.2 (maggio 2024)
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 rounded-xl p-6 mb-6">
+                  <p className="text-gray-800 leading-relaxed">
+                    {qualitativeReport.profile_insights.esco_profile_summary}
+                  </p>
+                </div>
+
+                {/* Griglia livelli ESCO per competenza */}
+                <h3 className="font-semibold text-gray-900 mb-4">Livello ESCO per Competenza:</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {Object.entries(qualitativeReport.category_interpretations || {}).map(([category, interp]: [string, any]) => {
+                    const escoLevel = interp.esco_mapping?.esco_level || interp.level
+                    const escoGroup = interp.esco_mapping?.esco_group
+                    const levelColors: Record<string, string> = {
+                      'Esperto':     'bg-green-100 border-green-400 text-green-800',
+                      'Avanzato':    'bg-blue-100 border-blue-400 text-blue-800',
+                      'Intermedio':  'bg-yellow-100 border-yellow-400 text-yellow-800',
+                      'Base':        'bg-gray-100 border-gray-400 text-gray-700',
+                    }
+                    const colorClass = levelColors[escoLevel] || levelColors['Base']
+                    return (
+                      <div
+                        key={category}
+                        className={`rounded-lg border-2 p-3 ${colorClass}`}
+                      >
+                        <p className="font-semibold text-sm mb-1">{categoryLabels[category]}</p>
+                        <p className="text-xs font-bold uppercase tracking-wide">{escoLevel}</p>
+                        {escoGroup && (
+                          <p className="text-xs mt-1 opacity-75 leading-tight">{escoGroup}</p>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+
+                <p className="text-xs text-gray-400 mt-4 text-right">
+                  © Commissione Europea — ESCO v1.2 | Competenze mappate da ValutoLab
+                </p>
+              </div>
+            )}
+
+            {/* INTERPRETAZIONE QUALITATIVA */}
             <div className="bg-white rounded-xl shadow-lg p-8">
               <div className="flex items-center gap-3 mb-6">
                 <span className="text-3xl">🎓</span>
@@ -405,6 +487,7 @@ export default function ResultsPage() {
               <div className="space-y-6">
                 {Object.entries(qualitativeReport.category_interpretations || {}).map(([category, interp]: [string, any]) => {
                   const level = getLevelBadge(interp.score)
+                  const escoMapping = interp.esco_mapping
                   return (
                     <div 
                       key={category} 
@@ -421,6 +504,12 @@ export default function ResultsPage() {
                             <span className={`px-3 py-1 rounded-full text-sm font-semibold ${level.color}`}>
                               {level.text}
                             </span>
+                            {/* Badge ESCO inline */}
+                            {escoMapping?.esco_level && (
+                              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1">
+                                🇪🇺 ESCO {escoMapping.esco_level}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -434,7 +523,7 @@ export default function ResultsPage() {
                         </div>
                       )}
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <div>
                           <h4 className="font-semibold text-green-800 mb-2 flex items-center gap-2">
                             <span>✓</span> Punti di Forza
@@ -463,12 +552,51 @@ export default function ResultsPage() {
                           </ul>
                         </div>
                       </div>
+
+                      {/* Box ESCO skills per categoria */}
+                      {escoMapping && (escoMapping.esco_skills_demonstrated?.length > 0 || escoMapping.esco_skills_to_develop?.length > 0) && (
+                        <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                          <p className="text-xs font-bold text-blue-700 uppercase tracking-wide mb-3 flex items-center gap-1">
+                            🇪🇺 Skill ESCO v1.2 — {escoMapping.esco_group}
+                          </p>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {escoMapping.esco_skills_demonstrated?.length > 0 && (
+                              <div>
+                                <p className="text-xs font-semibold text-green-700 mb-1">✓ Dimostrate</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {escoMapping.esco_skills_demonstrated.map((skill: string, idx: number) => (
+                                    <span key={idx} className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
+                                      {skill}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {escoMapping.esco_skills_to_develop?.length > 0 && (
+                              <div>
+                                <p className="text-xs font-semibold text-orange-700 mb-1">↗ Da sviluppare</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {escoMapping.esco_skills_to_develop.map((skill: string, idx: number) => (
+                                    <span key={idx} className="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded-full">
+                                      {skill}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          {escoMapping.recognition_note && (
+                            <p className="text-xs text-blue-600 mt-3 italic">{escoMapping.recognition_note}</p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )
                 })}
               </div>
             </div>
 
+            {/* PIANO DI SVILUPPO */}
             <div className="bg-white rounded-xl shadow-lg p-8">
               <div className="flex items-center gap-3 mb-6">
                 <span className="text-3xl">🎯</span>
@@ -487,12 +615,12 @@ export default function ResultsPage() {
 
               <div className="space-y-6 mb-8">
                 {qualitativeReport.development_plan?.focus_areas?.map((area: any, idx: number) => {
-                  const priorityColors = {
+                  const priorityColors: Record<string, string> = {
                     'Alta': 'bg-red-100 text-red-800 border-red-300',
                     'Media': 'bg-yellow-100 text-yellow-800 border-yellow-300',
                     'Bassa': 'bg-green-100 text-green-800 border-green-300'
                   }
-                  const priorityColor = priorityColors[area.priority as keyof typeof priorityColors] || priorityColors['Media']
+                  const priorityColor = priorityColors[area.priority] || priorityColors['Media']
 
                   return (
                     <div key={idx} className="border-2 border-gray-200 rounded-xl p-6">
@@ -518,6 +646,17 @@ export default function ResultsPage() {
                         <div className="bg-purple-50 border-l-4 border-purple-500 p-4 mb-4 rounded-r">
                           <p className="text-sm font-semibold text-purple-900 mb-1">Gap Analysis:</p>
                           <p className="text-purple-800">{area.gap_analysis}</p>
+                        </div>
+                      )}
+
+                      {/* Obiettivo ESCO nel piano di sviluppo */}
+                      {area.esco_target && (
+                        <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4 rounded-r flex items-start gap-2">
+                          <span className="text-lg">🇪🇺</span>
+                          <div>
+                            <p className="text-xs font-bold text-blue-700 uppercase tracking-wide mb-1">Obiettivo ESCO</p>
+                            <p className="text-blue-800 text-sm">{area.esco_target}</p>
+                          </div>
                         </div>
                       )}
 
