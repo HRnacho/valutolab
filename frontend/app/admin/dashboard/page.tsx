@@ -344,7 +344,7 @@ export default function AdminDashboard() {
   const handleDeleteTrial = async (trialId: string) => {
     try {
       const response = await fetch(
-        `https://valutolab-backend.onrender.com/api/v1/trial/delete/${trialId}`,
+        `${process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'}/api/v1/trial/delete/${trialId}`,
         { method: 'DELETE' }
       )
       const data = await response.json()
@@ -372,7 +372,7 @@ export default function AdminDashboard() {
     setCreatingUser(true)
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://valutolab-backend.onrender.com'
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'
       
       const response = await fetch(`${apiUrl}/api/admin/users/create`, {
         method: 'POST',
@@ -1593,5 +1593,6 @@ export default function AdminDashboard() {
     </div>
   )
 }
+
 
 
