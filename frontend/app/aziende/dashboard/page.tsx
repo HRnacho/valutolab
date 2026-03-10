@@ -20,7 +20,16 @@ export default function AziendeDashboardPage() {
   })
 
   useEffect(() => {
-    checkUserAndLoadOrg()
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+        if (session?.user) {
+          await checkUserAndLoadOrg()
+        } else {
+          router.push('/login')
+        }
+      }
+    })
+    return () => subscription.unsubscribe()
   }, [])
 
   const checkUserAndLoadOrg = async () => {
@@ -34,8 +43,7 @@ export default function AziendeDashboardPage() {
 
       setUser(user)
 
-      // Carica organizzazione dell'utente
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://valutolab-backend.onrender.com'
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'
       const response = await fetch(`${apiUrl}/api/organizations/user/${user.id}`)
       const data = await response.json()
 
@@ -44,7 +52,6 @@ export default function AziendeDashboardPage() {
         setOrganization(org)
         loadInvites(org.id)
       } else {
-        // Se non ha organizzazione, redirect a creazione
         router.push('/aziende/create')
       }
 
@@ -58,7 +65,7 @@ export default function AziendeDashboardPage() {
 
   const loadInvites = async (orgId: string) => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://valutolab-backend.onrender.com'
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'
       const response = await fetch(`${apiUrl}/api/organizations/${orgId}/invites`)
       const data = await response.json()
 
@@ -76,7 +83,7 @@ export default function AziendeDashboardPage() {
     setMessage(null)
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://valutolab-backend.onrender.com'
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'
       const response = await fetch(`${apiUrl}/api/organizations/${organization.id}/invite`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -208,7 +215,6 @@ export default function AziendeDashboardPage() {
         {/* TAB: OVERVIEW */}
         {activeTab === 'overview' && (
           <div className="space-y-6">
-            {/* Stats Cards */}
             <div className="grid md:grid-cols-4 gap-6">
               <div className="bg-white rounded-xl p-6 shadow-lg">
                 <div className="flex items-center justify-between mb-2">
@@ -251,36 +257,29 @@ export default function AziendeDashboardPage() {
               </div>
             </div>
 
-            {/* Informazioni Azienda */}
             <div className="bg-white rounded-xl p-6 shadow-lg">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">Informazioni Azienda</h2>
-              
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Ragione Sociale</p>
                   <p className="text-lg font-semibold text-gray-900">{organization?.name}</p>
                 </div>
-
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Partita IVA</p>
                   <p className="text-lg font-semibold text-gray-900">{organization?.partita_iva || 'N/A'}</p>
                 </div>
-
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Referente</p>
                   <p className="text-lg font-semibold text-gray-900">{organization?.referent_name || 'N/A'}</p>
                 </div>
-
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Ruolo Referente</p>
                   <p className="text-lg font-semibold text-gray-900">{organization?.referent_role || 'N/A'}</p>
                 </div>
-
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Email Contatto</p>
                   <p className="text-lg font-semibold text-gray-900">{organization?.contact_email}</p>
                 </div>
-
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Piano Attivo</p>
                   <p className="text-lg font-semibold text-orange-600 capitalize">
@@ -290,7 +289,6 @@ export default function AziendeDashboardPage() {
               </div>
             </div>
 
-            {/* Quick Actions */}
             <div className="bg-gradient-to-br from-orange-100 to-pink-100 rounded-xl p-6">
               <h3 className="text-xl font-bold text-gray-900 mb-4">Azioni Rapide</h3>
               <div className="grid md:grid-cols-3 gap-4">
@@ -302,7 +300,6 @@ export default function AziendeDashboardPage() {
                   <p className="font-semibold text-gray-900">Invia Nuovo Invito</p>
                   <p className="text-sm text-gray-600 mt-1">Aggiungi un candidato</p>
                 </button>
-
                 <button
                   onClick={() => setActiveTab('invites')}
                   className="bg-white hover:shadow-lg transition p-4 rounded-lg text-left"
@@ -311,7 +308,6 @@ export default function AziendeDashboardPage() {
                   <p className="font-semibold text-gray-900">Visualizza Inviti</p>
                   <p className="text-sm text-gray-600 mt-1">Controlla lo stato</p>
                 </button>
-
                 <button
                   className="bg-white hover:shadow-lg transition p-4 rounded-lg text-left opacity-50 cursor-not-allowed"
                   disabled
@@ -371,14 +367,14 @@ export default function AziendeDashboardPage() {
                         <td className="py-3 px-4 text-gray-600">{invite.candidate_email}</td>
                         <td className="py-3 px-4">
                           <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                            invite.status === 'completed' 
+                            invite.status === 'completed'
                               ? 'bg-green-100 text-green-800'
                               : invite.status === 'pending'
                               ? 'bg-orange-100 text-orange-800'
                               : 'bg-gray-100 text-gray-800'
                           }`}>
-                            {invite.status === 'completed' ? '✅ Completato' : 
-                             invite.status === 'pending' ? '⏳ In Attesa' : 
+                            {invite.status === 'completed' ? '✅ Completato' :
+                             invite.status === 'pending' ? '⏳ In Attesa' :
                              invite.status}
                           </span>
                         </td>
@@ -459,7 +455,7 @@ export default function AziendeDashboardPage() {
                 <p className="text-sm text-gray-700">
                   <strong>ℹ️ Cosa succede dopo:</strong>
                   <br />
-                  Il candidato riceverà un'email con un link unico per accedere all'assessment. 
+                  Il candidato riceverà un'email con un link unico per accedere all'assessment.
                   Una volta completato, potrai visualizzare il report completo nella sezione Inviti.
                 </p>
               </div>
