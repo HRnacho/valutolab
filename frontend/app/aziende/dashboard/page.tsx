@@ -22,22 +22,33 @@ export default function AziendeDashboardPage() {
   })
 
   useEffect(() => {
+    let handled = false
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (handled) return
+
       if (event === 'SIGNED_IN') {
+        handled = true
         await checkUserAndLoadOrg()
       } else if (event === 'INITIAL_SESSION' && session?.user) {
+        handled = true
         await checkUserAndLoadOrg()
       } else if (event === 'INITIAL_SESSION' && !session?.user) {
-        router.push('/login')
+        setTimeout(() => {
+          if (!handled) {
+            router.push('/login')
+          }
+        }, 1000)
       }
     })
+
     return () => subscription.unsubscribe()
   }, [])
 
   const checkUserAndLoadOrg = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      
+
       if (!user) {
         router.push('/login')
         return
