@@ -322,7 +322,7 @@ export default function AdminDashboard() {
   const handleUpdateTrialStatus = async (trialId: string, status: string) => {
     try {
       const response = await fetch(
-        `https://valutolab-backend.onrender.com/api/v1/trial/update/${trialId}`,
+        `${process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'}/api/v1/trial/update/${trialId}`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -1593,6 +1593,7 @@ export default function AdminDashboard() {
     </div>
   )
 }
+
 
 
 
