@@ -12,7 +12,9 @@ export default function AziendeDashboardPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'invites' | 'new-invite'>('overview')
   const [invites, setInvites] = useState<any[]>([])
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-  
+  const [isFirstAccess, setIsFirstAccess] = useState(false)
+  const [sendingPasswordEmail, setSendingPasswordEmail] = useState(false)
+
   const [inviteForm, setInviteForm] = useState({
     candidateEmail: '',
     candidateName: '',
@@ -21,12 +23,12 @@ export default function AziendeDashboardPage() {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-        if (session?.user) {
-          await checkUserAndLoadOrg()
-        } else {
-          router.push('/login')
-        }
+      if (event === 'SIGNED_IN') {
+        await checkUserAndLoadOrg()
+      } else if (event === 'INITIAL_SESSION' && session?.user) {
+        await checkUserAndLoadOrg()
+      } else if (event === 'INITIAL_SESSION' && !session?.user) {
+        router.push('/login')
       }
     })
     return () => subscription.unsubscribe()
@@ -42,6 +44,11 @@ export default function AziendeDashboardPage() {
       }
 
       setUser(user)
+
+      const lastSignIn = user.last_sign_in_at
+      const createdAt = user.created_at
+      const diff = new Date(lastSignIn).getTime() - new Date(createdAt).getTime()
+      if (diff < 60000) setIsFirstAccess(true)
 
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'
       const response = await fetch(`${apiUrl}/api/organizations/user/${user.id}`)
@@ -74,6 +81,22 @@ export default function AziendeDashboardPage() {
       }
     } catch (error) {
       console.error('Error loading invites:', error)
+    }
+  }
+
+  const handleSendPasswordSetup = async () => {
+    setSendingPasswordEmail(true)
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+        redirectTo: 'https://valutolab.com/aziende/dashboard'
+      })
+      if (error) throw error
+      setMessage({ type: 'success', text: '📧 Email inviata! Controlla la casella per impostare la password.' })
+      setIsFirstAccess(false)
+    } catch (error: any) {
+      setMessage({ type: 'error', text: 'Errore nell\'invio email' })
+    } finally {
+      setSendingPasswordEmail(false)
     }
   }
 
@@ -172,6 +195,24 @@ export default function AziendeDashboardPage() {
           message.type === 'success' ? 'bg-green-500' : 'bg-red-500'
         } text-white font-semibold`}>
           {message.text}
+        </div>
+      )}
+
+      {isFirstAccess && (
+        <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mx-4 mt-4 rounded-lg flex items-center justify-between">
+          <div>
+            <p className="font-bold text-blue-800">👋 Benvenuto! Imposta la tua password</p>
+            <p className="text-sm text-blue-700 mt-1">
+              Per accedere in futuro senza magic link, imposta una password personale.
+            </p>
+          </div>
+          <button
+            onClick={handleSendPasswordSetup}
+            disabled={sendingPasswordEmail}
+            className="ml-4 bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 whitespace-nowrap"
+          >
+            {sendingPasswordEmail ? 'Invio...' : '🔑 Imposta Password'}
+          </button>
         </div>
       )}
 
