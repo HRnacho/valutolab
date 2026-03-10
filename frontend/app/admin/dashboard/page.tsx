@@ -293,7 +293,7 @@ export default function AdminDashboard() {
     setActivatingTrial(showActivateModal.id)
     try {
       const response = await fetch(
-        `https://valutolab-backend.onrender.com/api/v1/trial/activate/${showActivateModal.id}`,
+        `${process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'}/api/v1/trial/activate/${showActivateModal.id}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1593,4 +1593,5 @@ export default function AdminDashboard() {
     </div>
   )
 }
+
 
