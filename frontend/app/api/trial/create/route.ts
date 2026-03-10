@@ -5,7 +5,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     const response = await fetch(
-      'https://valutolab-backend.onrender.com/api/v1/trial/create',
+      `${process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'}/api/v1/trial/create`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
