@@ -45,7 +45,7 @@ export default function AziendeDashboardPage() {
 
       setUser(user)
 
-      const lastSignIn = user.last_sign_in_at
+      const lastSignIn = user.last_sign_in_at ?? user.created_at
       const createdAt = user.created_at
       const diff = new Date(lastSignIn).getTime() - new Date(createdAt).getTime()
       if (diff < 60000) setIsFirstAccess(true)
