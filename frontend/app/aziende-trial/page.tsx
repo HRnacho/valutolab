@@ -21,14 +21,24 @@ export default function AgenziaTrialLanding() {
     setLoading(true);
     
     try {
-      const response = await fetch('/api/trial/create', {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com';
+      const response = await fetch(`${apiUrl}/api/v1/trial/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          company_name: formData.company,
+          contact_name: formData.fullName,
+          contact_email: formData.email,
+          contact_phone: formData.phone,
+          notes: `Dipendenti: ${formData.employees} | Settore: ${formData.sector}`
+        })
       });
       
       if (response.ok) {
         setSubmitted(true);
+      } else {
+        const data = await response.json();
+        alert(data.error || 'Errore durante l\'invio. Riprova.');
       }
     } catch (error) {
       console.error('Error:', error);
@@ -162,7 +172,7 @@ export default function AgenziaTrialLanding() {
               <div className="flex items-start gap-3">
                 <CheckCircle className="w-6 h-6 text-green-500 flex-shrink-0 mt-1" />
                 <p className="text-gray-700">
-                  <strong>fino a 10 assessment gratuiti</strong> per 30 giorni di trial
+                  <strong>fino a 20 assessment gratuiti</strong> per 30 giorni di trial
                 </p>
               </div>
               
@@ -350,93 +360,48 @@ export default function AgenziaTrialLanding() {
           </div>
           
           <div className="grid md:grid-cols-3 gap-8">
-            {/* Feature 1 */}
             <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-8 border border-blue-200">
               <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center mb-6">
                 <BarChart3 className="w-6 h-6 text-white" />
               </div>
-              
-              <h3 className="text-xl font-bold text-gray-900 mb-3">
-                10 Assessment Inclusi
-              </h3>
-              
+              <h3 className="text-xl font-bold text-gray-900 mb-3">20 Assessment Inclusi</h3>
               <p className="text-gray-700 mb-4">
-                Valuta fino a 10 candidati con assessment completi di 60 domande scientifiche sulle soft skills, 48 domande di autovalutazione e 12 domande situazionali
+                Valuta fino a 20 candidati con assessment completi di 60 domande scientifiche sulle soft skills
               </p>
-              
               <ul className="space-y-2 text-sm text-gray-600">
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                  12 categorie soft skills
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                  Report AI dettagliati
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                  Risultati in tempo reale
-                </li>
+                <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-green-500" />12 categorie soft skills</li>
+                <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-green-500" />Report AI dettagliati</li>
+                <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-green-500" />Risultati in tempo reale</li>
               </ul>
             </div>
             
-            {/* Feature 2 */}
             <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-8 border border-purple-200">
               <div className="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center mb-6">
                 <Users className="w-6 h-6 text-white" />
               </div>
-              
-              <h3 className="text-xl font-bold text-gray-900 mb-3">
-                Dashboard Comparazione
-              </h3>
-              
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Dashboard Comparazione</h3>
               <p className="text-gray-700 mb-4">
                 Confronta fino a 4 candidati affiancati per trovare il match perfetto per ogni posizione
               </p>
-              
               <ul className="space-y-2 text-sm text-gray-600">
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                  Vista side-by-side
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                  Grafici comparativi
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                  Export PDF
-                </li>
+                <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-green-500" />Vista side-by-side</li>
+                <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-green-500" />Grafici comparativi</li>
+                <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-green-500" />Export PDF</li>
               </ul>
             </div>
             
-            {/* Feature 3 */}
             <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-8 border border-green-200">
               <div className="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center mb-6">
                 <Mail className="w-6 h-6 text-white" />
               </div>
-              
-              <h3 className="text-xl font-bold text-gray-900 mb-3">
-                Supporto Dedicato
-              </h3>
-              
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Supporto Dedicato</h3>
               <p className="text-gray-700 mb-4">
                 Non sei solo: ti affianchiamo con onboarding personalizzato e supporto continuo
               </p>
-              
               <ul className="space-y-2 text-sm text-gray-600">
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                  Call onboarding 15min
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                  Email support
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                  Guide e tutorial
-                </li>
+                <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-green-500" />Call onboarding 15min</li>
+                <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-green-500" />Email support</li>
+                <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-green-500" />Guide e tutorial</li>
               </ul>
             </div>
           </div>
@@ -447,49 +412,25 @@ export default function AgenziaTrialLanding() {
       <section className="py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              Come Funziona
-            </h2>
-            <p className="text-xl text-gray-600">
-              In 3 semplici passi inizi a valutare i tuoi candidati
-            </p>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Come Funziona</h2>
+            <p className="text-xl text-gray-600">In 3 semplici passi inizi a valutare i tuoi candidati</p>
           </div>
           
           <div className="grid md:grid-cols-3 gap-8">
             <div className="text-center">
-              <div className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-6">
-                1
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">
-                Compila il Form
-              </h3>
-              <p className="text-gray-600">
-                Bastano 2 minuti. Inserisci i tuoi dati e la tua azienda.
-              </p>
+              <div className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-6">1</div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Compila il Form</h3>
+              <p className="text-gray-600">Bastano 2 minuti. Inserisci i tuoi dati e la tua azienda.</p>
             </div>
-            
             <div className="text-center">
-              <div className="w-16 h-16 bg-purple-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-6">
-                2
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">
-                Ricevi Accesso
-              </h3>
-              <p className="text-gray-600">
-                Entro 2 ore ricevi email con link per accedere alla piattaforma.
-              </p>
+              <div className="w-16 h-16 bg-purple-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-6">2</div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Ricevi Accesso</h3>
+              <p className="text-gray-600">Entro 2 ore ricevi email con credenziali per accedere alla piattaforma.</p>
             </div>
-            
             <div className="text-center">
-              <div className="w-16 h-16 bg-green-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-6">
-                3
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">
-                Invita Candidati
-              </h3>
-              <p className="text-gray-600">
-                Inserisci email candidato, lui fa assessment, tu vedi risultati.
-              </p>
+              <div className="w-16 h-16 bg-green-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-6">3</div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Invita Candidati</h3>
+              <p className="text-gray-600">Inserisci email candidato, lui fa assessment, tu vedi risultati.</p>
             </div>
           </div>
         </div>
@@ -498,63 +439,32 @@ export default function AgenziaTrialLanding() {
       {/* FAQ */}
       <section className="py-16 bg-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">
-            Domande Frequenti
-          </h2>
+          <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">Domande Frequenti</h2>
           
           <div className="space-y-6">
             <details className="bg-gray-50 rounded-lg p-6 cursor-pointer hover:bg-gray-100 transition">
-              <summary className="font-semibold text-gray-900 text-lg">
-                Il trial è davvero gratuito?
-              </summary>
-              <p className="text-gray-600 mt-4">
-                Sì, assolutamente. Non ti chiediamo nessuna carta di credito. Ricevi fino a 10 assessment gratuiti per 30 giorni. Dopo il trial, se ti interessa continuare, parliamo insieme di un piano su misura.
-              </p>
+              <summary className="font-semibold text-gray-900 text-lg">Il trial è davvero gratuito?</summary>
+              <p className="text-gray-600 mt-4">Sì, assolutamente. Non ti chiediamo nessuna carta di credito. Ricevi fino a 20 assessment gratuiti per 30 giorni. Dopo il trial, se ti interessa continuare, parliamo insieme di un piano su misura.</p>
             </details>
-            
             <details className="bg-gray-50 rounded-lg p-6 cursor-pointer hover:bg-gray-100 transition">
-              <summary className="font-semibold text-gray-900 text-lg">
-                Quanto tempo ci vuole per attivare il trial?
-              </summary>
-              <p className="text-gray-600 mt-4">
-                Massimo 2 ore lavorative. Compili il form, noi creiamo il tuo account e ti inviamo le credenziali via email. Se compili il form di mattina, spesso attivi entro 1 ora.
-              </p>
+              <summary className="font-semibold text-gray-900 text-lg">Quanto tempo ci vuole per attivare il trial?</summary>
+              <p className="text-gray-600 mt-4">Massimo 2 ore lavorative. Compili il form, noi creiamo il tuo account e ti inviamo le credenziali via email. Se compili il form di mattina, spesso attivi entro 1 ora.</p>
             </details>
-            
             <details className="bg-gray-50 rounded-lg p-6 cursor-pointer hover:bg-gray-100 transition">
-              <summary className="font-semibold text-gray-900 text-lg">
-                Come funziona l'assessment per i candidati?
-              </summary>
-              <p className="text-gray-600 mt-4">
-                Tu inserisci l'email del candidato nella dashboard. Lui riceve un'email con un link univoco. Clicca il link, risponde a 60 domande (15-20 minuti), e tu vedi i risultati immediatamente nella tua dashboard. Nessuna registrazione richiesta per il candidato.
-              </p>
+              <summary className="font-semibold text-gray-900 text-lg">Come funziona l'assessment per i candidati?</summary>
+              <p className="text-gray-600 mt-4">Tu inserisci l'email del candidato nella dashboard. Lui riceve un'email con un link univoco. Clicca il link, risponde a 60 domande (15-20 minuti), e tu vedi i risultati immediatamente nella tua dashboard.</p>
             </details>
-            
             <details className="bg-gray-50 rounded-lg p-6 cursor-pointer hover:bg-gray-100 transition">
-              <summary className="font-semibold text-gray-900 text-lg">
-                Cosa succede dopo i 30 giorni?
-              </summary>
-              <p className="text-gray-600 mt-4">
-                Nulla in automatico. Non addebitiamo nulla. Ti contattiamo per sapere come è andato il trial e se vuoi continuare. Se sì, costruiamo insieme un piano su misura per le tue esigenze. Se no, rimaniamo amici.
-              </p>
+              <summary className="font-semibold text-gray-900 text-lg">Cosa succede dopo i 30 giorni?</summary>
+              <p className="text-gray-600 mt-4">Nulla in automatico. Non addebitiamo nulla. Ti contattiamo per sapere come è andato il trial e se vuoi continuare. Se sì, costruiamo insieme un piano su misura per le tue esigenze.</p>
             </details>
-            
             <details className="bg-gray-50 rounded-lg p-6 cursor-pointer hover:bg-gray-100 transition">
-              <summary className="font-semibold text-gray-900 text-lg">
-                I dati dei candidati sono sicuri?
-              </summary>
-              <p className="text-gray-600 mt-4">
-                Assolutamente. Siamo GDPR compliant. I dati sono criptati, ospitati in server EU, e visibili solo a te. I candidati possono richiedere cancellazione dati in qualsiasi momento. Privacy e sicurezza sono la nostra priorità.
-              </p>
+              <summary className="font-semibold text-gray-900 text-lg">I dati dei candidati sono sicuri?</summary>
+              <p className="text-gray-600 mt-4">Assolutamente. Siamo GDPR compliant. I dati sono criptati, ospitati in server EU, e visibili solo a te. I candidati possono richiedere cancellazione dati in qualsiasi momento.</p>
             </details>
-            
             <details className="bg-gray-50 rounded-lg p-6 cursor-pointer hover:bg-gray-100 transition">
-              <summary className="font-semibold text-gray-900 text-lg">
-                Ricevo supporto durante il trial?
-              </summary>
-              <p className="text-gray-600 mt-4">
-                Sì! Ti offriamo una call di onboarding di 15 minuti per mostrarti come funziona la piattaforma. Inoltre puoi scriverci via email in qualsiasi momento e ti rispondiamo entro 24h (spesso molto prima).
-              </p>
+              <summary className="font-semibold text-gray-900 text-lg">Ricevo supporto durante il trial?</summary>
+              <p className="text-gray-600 mt-4">Sì! Ti offriamo una call di onboarding di 15 minuti per mostrarti come funziona la piattaforma. Inoltre puoi scriverci via email in qualsiasi momento e ti rispondiamo entro 24h.</p>
             </details>
           </div>
         </div>
@@ -563,15 +473,9 @@ export default function AgenziaTrialLanding() {
       {/* Final CTA */}
       <section className="bg-gradient-to-r from-blue-600 to-purple-600 py-16">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-4xl font-bold text-white mb-6">
-            Pronto a Trovare i Candidati Perfetti?
-          </h2>
+          <h2 className="text-4xl font-bold text-white mb-6">Pronto a Trovare i Candidati Perfetti?</h2>
+          <p className="text-xl text-blue-100 mb-8">Inizia oggi con 20 assessment gratuiti. Nessuna carta di credito richiesta.</p>
           
-          <p className="text-xl text-blue-100 mb-8">
-            Inizia oggi con 10 assessment gratuiti. Nessuna carta di credito richiesta.
-          </p>
-          
-          <a
             href="#form"
             onClick={(e) => {
               e.preventDefault();
@@ -582,10 +486,7 @@ export default function AgenziaTrialLanding() {
             Attiva Trial Gratuito
             <ArrowRight className="w-5 h-5" />
           </a>
-          
-          <p className="text-blue-100 mt-6 text-sm">
-            Attivazione in 2 ore • 30 giorni gratis • fino a 10 assessment inclusi
-          </p>
+          <p className="text-blue-100 mt-6 text-sm">Attivazione in 2 ore • 30 giorni gratis • 20 assessment inclusi</p>
         </div>
       </section>
 
@@ -600,11 +501,8 @@ export default function AgenziaTrialLanding() {
                 </div>
                 <span className="text-xl font-bold">ValutoLab</span>
               </div>
-              <p className="text-gray-400 text-sm">
-                La piattaforma per valutare le soft skills professionali con tecnologia AI.
-              </p>
+              <p className="text-gray-400 text-sm">La piattaforma per valutare le soft skills professionali con tecnologia AI.</p>
             </div>
-            
             <div>
               <h3 className="font-semibold mb-4">Contatti</h3>
               <div className="space-y-2 text-sm text-gray-400">
@@ -612,7 +510,6 @@ export default function AgenziaTrialLanding() {
                 <p>Web: www.valutolab.com</p>
               </div>
             </div>
-            
             <div>
               <h3 className="font-semibold mb-4">Legale</h3>
               <div className="space-y-2 text-sm">
@@ -621,7 +518,6 @@ export default function AgenziaTrialLanding() {
               </div>
             </div>
           </div>
-          
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-sm text-gray-400">
             <p>&copy; 2026 ValutoLab. Tutti i diritti riservati.</p>
           </div>
