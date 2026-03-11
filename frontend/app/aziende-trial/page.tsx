@@ -475,7 +475,7 @@ export default function AgenziaTrialLanding() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-4xl font-bold text-white mb-6">Pronto a Trovare i Candidati Perfetti?</h2>
           <p className="text-xl text-blue-100 mb-8">Inizia oggi con 20 assessment gratuiti. Nessuna carta di credito richiesta.</p>
-          
+        <a
             href="#form"
             onClick={(e) => {
               e.preventDefault();
