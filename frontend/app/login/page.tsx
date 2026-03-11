@@ -16,7 +16,12 @@ export default function LoginPage() {
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        router.push('/dashboard');
+        const role = session.user?.user_metadata?.role;
+        if (role === 'azienda') {
+          router.push('/aziende/dashboard');
+        } else {
+          router.push('/dashboard');
+        }
       }
     };
     checkUser();
@@ -24,7 +29,7 @@ export default function LoginPage() {
 
   // Email/Password Login
   const handleEmailLogin = async (e: React.FormEvent) => {
-    e.preventDefault(); // 🔥 IMPORTANTE: Previene ricarica pagina
+    e.preventDefault();
     
     if (!email || !password) {
       setError('Inserisci email e password');
@@ -52,15 +57,19 @@ export default function LoginPage() {
       }
 
       console.log('Login successful, redirecting...');
-      
-      // Redirect to dashboard
-      router.push('/dashboard');
+
+      // Redirect basato sul ruolo utente
+      const role = data.user?.user_metadata?.role;
+      if (role === 'azienda') {
+        router.push('/aziende/dashboard');
+      } else {
+        router.push('/dashboard');
+      }
       router.refresh();
       
     } catch (error: any) {
       console.error('Login error:', error);
       
-      // Messaggi di errore user-friendly
       if (error.message.includes('Invalid login credentials')) {
         setError('Email o password non corretti');
       } else if (error.message.includes('Email not confirmed')) {
@@ -90,8 +99,6 @@ export default function LoginPage() {
         console.error('Google login error:', oauthError);
         throw oauthError;
       }
-
-      // Il redirect verrà gestito automaticamente da Supabase
       
     } catch (error: any) {
       console.error('Google login error:', error);
@@ -229,16 +236,6 @@ export default function LoginPage() {
             </a>
           </div>
         </div>
-
-        {/* Debug Info (solo in development) */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="mt-4 p-4 bg-gray-100 rounded-lg text-xs text-gray-600">
-            <p><strong>Debug Info:</strong></p>
-            <p>Email: {email || 'vuoto'}</p>
-            <p>Password: {password ? '****' : 'vuoto'}</p>
-            <p>Loading: {loading ? 'true' : 'false'}</p>
-          </div>
-        )}
       </div>
     </div>
   );
