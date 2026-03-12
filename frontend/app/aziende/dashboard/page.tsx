@@ -70,12 +70,15 @@ export default function AziendeDashboardPage() {
         setOrganization(org)
         loadInvites(org.id)
       } else {
-        router.push('/aziende/create')
+        // Nessuna organization trovata — torna in home dove l'utente
+        // vedrà il bottone Dashboard Azienda se è un referente trial
+        router.push('/')
       }
 
     } catch (error) {
       console.error('Error loading organization:', error)
       setMessage({ type: 'error', text: 'Errore nel caricamento dei dati' })
+      setLoading(false)
     } finally {
       setLoading(false)
     }
