@@ -7,11 +7,25 @@ import { supabase } from '@/lib/supabase'
 export default function HomePage() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
+  const [isAziendaReferente, setIsAziendaReferente] = useState(false)
 
   useEffect(() => {
     const checkUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       setUser(user)
+
+      if (user) {
+        try {
+          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'
+          const response = await fetch(`${apiUrl}/api/v1/trial/check-referente/${user.id}`)
+          if (response.ok) {
+            const data = await response.json()
+            setIsAziendaReferente(data.isReferente === true)
+          }
+        } catch (e) {
+          // silenzioso: se fallisce non mostriamo il bottone
+        }
+      }
     }
     checkUser()
   }, [])
@@ -45,12 +59,22 @@ export default function HomePage() {
 
             <div className="flex items-center gap-2 sm:gap-3">
               {user ? (
-                <button
-                  onClick={() => router.push('/dashboard')}
-                  className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg font-semibold hover:shadow-lg transition text-sm sm:text-base"
-                >
-                  Dashboard
-                </button>
+                <>
+                  <button
+                    onClick={() => router.push('/dashboard')}
+                    className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg font-semibold hover:shadow-lg transition text-sm sm:text-base"
+                  >
+                    Dashboard
+                  </button>
+                  {isAziendaReferente && (
+                    <button
+                      onClick={() => router.push('/aziende/dashboard')}
+                      className="bg-gradient-to-r from-orange-500 to-pink-600 text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg font-semibold hover:shadow-lg transition text-sm sm:text-base"
+                    >
+                      🏢 Dashboard Azienda
+                    </button>
+                  )}
+                </>
               ) : (
                 <>
                   <button
@@ -86,7 +110,6 @@ export default function HomePage() {
 
       {/* HERO SECTION */}
       <section className="relative py-20 lg:py-32 overflow-hidden">
-        {/* Immagine di sfondo in trasparenza */}
         <div className="absolute inset-0 opacity-10">
           <img 
             src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=1600&q=80" 
@@ -94,9 +117,7 @@ export default function HomePage() {
             className="w-full h-full object-cover"
           />
         </div>
-        
         <div className="absolute inset-0 bg-gradient-to-r from-purple-600/10 to-blue-600/10"></div>
-        
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-4xl mx-auto">
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-black text-gray-900 mb-6 leading-tight">
@@ -105,13 +126,11 @@ export default function HomePage() {
                 Soft Skills
               </span>
             </h1>
-            
             <p className="text-xl md:text-2xl text-gray-700 mb-12 leading-relaxed">
               Assessment professionale delle competenze trasversali.
               <br />
               Risultati immediati, certificati verificabili e badge per LinkedIn.
             </p>
-
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <button
                 onClick={() => router.push('/servizi')}
@@ -119,7 +138,6 @@ export default function HomePage() {
               >
                 🧑 Per Privati
               </button>
-              
               <button
                 onClick={() => router.push('/aziende/create')}
                 className="w-full sm:w-auto bg-gradient-to-r from-orange-500 to-pink-600 text-white px-10 py-4 rounded-xl font-bold text-lg hover:shadow-2xl hover:scale-105 transition-all"
@@ -127,7 +145,6 @@ export default function HomePage() {
                 🏢 Per Aziende
               </button>
             </div>
-
             <p className="mt-8 text-sm text-gray-600">
               ✨ Report Personalizzati • 📊 Certificati PDF • 🎯 Badge LinkedIn • 📱 QR Code
             </p>
@@ -146,7 +163,6 @@ export default function HomePage() {
               La piattaforma più completa per valutare e valorizzare le tue competenze
             </p>
           </div>
-
           <div className="grid md:grid-cols-3 gap-8">
             <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-2xl p-8 hover:shadow-xl transition">
               <div className="w-16 h-16 bg-gradient-to-br from-purple-600 to-blue-600 rounded-xl flex items-center justify-center mb-6">
@@ -157,7 +173,6 @@ export default function HomePage() {
                 Analisi dettagliata delle tue competenze con suggerimenti concreti per la crescita professionale. Ogni report è unico e costruito sulle tue risposte.
               </p>
             </div>
-
             <div className="bg-gradient-to-br from-pink-50 to-orange-50 rounded-2xl p-8 hover:shadow-xl transition">
               <div className="w-16 h-16 bg-gradient-to-br from-pink-600 to-orange-600 rounded-xl flex items-center justify-center mb-6">
                 <span className="text-3xl">⚡</span>
@@ -167,7 +182,6 @@ export default function HomePage() {
                 15 minuti per completare l'assessment, report disponibile istantaneamente con badge professionali e certificati scaricabili.
               </p>
             </div>
-
             <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-8 hover:shadow-xl transition">
               <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center mb-6">
                 <span className="text-3xl">🎯</span>
@@ -192,9 +206,7 @@ export default function HomePage() {
               Scegli l'assessment più adatto alle tue esigenze professionali
             </p>
           </div>
-
           <div className="grid md:grid-cols-3 gap-8">
-            {/* Assessment Base */}
             <div className="bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transition">
               <div className="text-center mb-6">
                 <div className="inline-block bg-gradient-to-br from-purple-600 to-blue-600 rounded-full p-4 mb-4">
@@ -203,44 +215,22 @@ export default function HomePage() {
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">Assessment Base</h3>
                 <p className="text-gray-600">Competenze Trasversali</p>
               </div>
-
               <ul className="space-y-3 mb-8">
-                <li className="flex items-start gap-3">
-                  <span className="text-purple-600 mt-1">✓</span>
-                  <span className="text-gray-700">48 domande di autovalutazione</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-purple-600 mt-1">✓</span>
-                  <span className="text-gray-700">12 domande situazionali</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-purple-600 mt-1">✓</span>
-                  <span className="text-gray-700">Valutazione 12 soft skills</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-purple-600 mt-1">✓</span>
-                  <span className="text-gray-700">Report completo personalizzato</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-purple-600 mt-1">✓</span>
-                  <span className="text-gray-700">Badge + QR + PDF</span>
-                </li>
+                <li className="flex items-start gap-3"><span className="text-purple-600 mt-1">✓</span><span className="text-gray-700">48 domande di autovalutazione</span></li>
+                <li className="flex items-start gap-3"><span className="text-purple-600 mt-1">✓</span><span className="text-gray-700">12 domande situazionali</span></li>
+                <li className="flex items-start gap-3"><span className="text-purple-600 mt-1">✓</span><span className="text-gray-700">Valutazione 12 soft skills</span></li>
+                <li className="flex items-start gap-3"><span className="text-purple-600 mt-1">✓</span><span className="text-gray-700">Report completo personalizzato</span></li>
+                <li className="flex items-start gap-3"><span className="text-purple-600 mt-1">✓</span><span className="text-gray-700">Badge + QR + PDF</span></li>
               </ul>
-
-              <button
-                onClick={() => router.push('/servizi')}
-                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 rounded-lg font-semibold hover:shadow-lg transition"
-              >
+              <button onClick={() => router.push('/servizi')} className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 rounded-lg font-semibold hover:shadow-lg transition">
                 Scopri di più
               </button>
             </div>
 
-            {/* Leadership Deep Dive */}
             <div className="bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transition border-4 border-yellow-400 relative">
               <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-yellow-400 text-yellow-900 px-4 py-1 rounded-full text-sm font-bold">
                 PREMIUM
               </div>
-              
               <div className="text-center mb-6">
                 <div className="inline-block bg-gradient-to-br from-yellow-500 to-orange-600 rounded-full p-4 mb-4">
                   <span className="text-4xl">🏆</span>
@@ -248,46 +238,22 @@ export default function HomePage() {
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">Leadership Deep Dive</h3>
                 <p className="text-gray-600">Per Manager e Leader</p>
               </div>
-
               <ul className="space-y-3 mb-8">
-                <li className="flex items-start gap-3">
-                  <span className="text-yellow-600 mt-1">✓</span>
-                  <span className="text-gray-700">30 domande situazionali avanzate</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-yellow-600 mt-1">✓</span>
-                  <span className="text-gray-700">6 dimensioni di leadership</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-yellow-600 mt-1">✓</span>
-                  <span className="text-gray-700">Stile di leadership personalizzato</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-yellow-600 mt-1">✓</span>
-                  <span className="text-gray-700">Piano d'azione 3-6 mesi</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-yellow-600 mt-1">✓</span>
-                  <span className="text-gray-700">Risorse consigliate</span>
-                </li>
+                <li className="flex items-start gap-3"><span className="text-yellow-600 mt-1">✓</span><span className="text-gray-700">30 domande situazionali avanzate</span></li>
+                <li className="flex items-start gap-3"><span className="text-yellow-600 mt-1">✓</span><span className="text-gray-700">6 dimensioni di leadership</span></li>
+                <li className="flex items-start gap-3"><span className="text-yellow-600 mt-1">✓</span><span className="text-gray-700">Stile di leadership personalizzato</span></li>
+                <li className="flex items-start gap-3"><span className="text-yellow-600 mt-1">✓</span><span className="text-gray-700">Piano d'azione 3-6 mesi</span></li>
+                <li className="flex items-start gap-3"><span className="text-yellow-600 mt-1">✓</span><span className="text-gray-700">Risorse consigliate</span></li>
               </ul>
-
-              <button
-                onClick={() => router.push('/servizi')}
-                className="w-full bg-gradient-to-r from-yellow-500 to-orange-600 text-white py-3 rounded-lg font-semibold hover:shadow-lg transition"
-              >
+              <button onClick={() => router.push('/servizi')} className="w-full bg-gradient-to-r from-yellow-500 to-orange-600 text-white py-3 rounded-lg font-semibold hover:shadow-lg transition">
                 Scopri di più
               </button>
             </div>
 
-            {/* Dinamiche di Gruppo - Coming Soon */}
             <div className="bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transition opacity-75 relative">
               <div className="absolute inset-0 bg-gray-100/50 rounded-2xl flex items-center justify-center">
-                <span className="bg-gray-800 text-white px-6 py-2 rounded-full font-bold text-lg">
-                  COMING SOON
-                </span>
+                <span className="bg-gray-800 text-white px-6 py-2 rounded-full font-bold text-lg">COMING SOON</span>
               </div>
-              
               <div className="text-center mb-6">
                 <div className="inline-block bg-gradient-to-br from-green-500 to-teal-600 rounded-full p-4 mb-4">
                   <span className="text-4xl">👥</span>
@@ -295,42 +261,20 @@ export default function HomePage() {
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">Dinamiche di Gruppo</h3>
                 <p className="text-gray-600">Team Assessment</p>
               </div>
-
               <ul className="space-y-3 mb-8">
-                <li className="flex items-start gap-3">
-                  <span className="text-green-600 mt-1">✓</span>
-                  <span className="text-gray-700">Valutazione team completa</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-green-600 mt-1">✓</span>
-                  <span className="text-gray-700">Analisi relazioni interpersonali</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-green-600 mt-1">✓</span>
-                  <span className="text-gray-700">Identificazione ruoli team</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-green-600 mt-1">✓</span>
-                  <span className="text-gray-700">Report collaborazione</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-green-600 mt-1">✓</span>
-                  <span className="text-gray-700">Piano miglioramento team</span>
-                </li>
+                <li className="flex items-start gap-3"><span className="text-green-600 mt-1">✓</span><span className="text-gray-700">Valutazione team completa</span></li>
+                <li className="flex items-start gap-3"><span className="text-green-600 mt-1">✓</span><span className="text-gray-700">Analisi relazioni interpersonali</span></li>
+                <li className="flex items-start gap-3"><span className="text-green-600 mt-1">✓</span><span className="text-gray-700">Identificazione ruoli team</span></li>
+                <li className="flex items-start gap-3"><span className="text-green-600 mt-1">✓</span><span className="text-gray-700">Report collaborazione</span></li>
+                <li className="flex items-start gap-3"><span className="text-green-600 mt-1">✓</span><span className="text-gray-700">Piano miglioramento team</span></li>
               </ul>
-
-              <button
-                disabled
-                className="w-full bg-gray-400 text-white py-3 rounded-lg font-semibold cursor-not-allowed"
-              >
-                Prossimamente
-              </button>
+              <button disabled className="w-full bg-gray-400 text-white py-3 rounded-lg font-semibold cursor-not-allowed">Prossimamente</button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* TRASFORMA LE TUE COMPETENZE IN OPPORTUNITÀ */}
+      {/* COSA OTTIENI */}
       <section id="cosa-ottieni" className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
@@ -341,9 +285,7 @@ export default function HomePage() {
               Ogni assessment ValutoLab ti fornisce strumenti concreti per valorizzare il tuo profilo professionale
             </p>
           </div>
-
           <div className="grid md:grid-cols-2 gap-12">
-            {/* Assessment Competenze Trasversali */}
             <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-2xl p-8">
               <div className="flex items-center gap-4 mb-6">
                 <div className="w-16 h-16 bg-gradient-to-br from-purple-600 to-blue-600 rounded-xl flex items-center justify-center">
@@ -351,59 +293,15 @@ export default function HomePage() {
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900">Assessment Competenze Trasversali</h3>
               </div>
-
               <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <span className="text-purple-600 text-xl mt-1">✓</span>
-                  <div>
-                    <p className="font-semibold text-gray-900">Report personalizzato dettagliato</p>
-                    <p className="text-gray-600 text-sm">con profilo professionale suggerito e analisi approfondita</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <span className="text-purple-600 text-xl mt-1">✓</span>
-                  <div>
-                    <p className="font-semibold text-gray-900">Badge LinkedIn</p>
-                    <p className="text-gray-600 text-sm">per valorizzare immediatamente il tuo profilo professionale</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <span className="text-purple-600 text-xl mt-1">✓</span>
-                  <div>
-                    <p className="font-semibold text-gray-900">QR Code dinamico</p>
-                    <p className="text-gray-600 text-sm">da inserire nel CV e biglietto da visita per networking efficace</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <span className="text-purple-600 text-xl mt-1">✓</span>
-                  <div>
-                    <p className="font-semibold text-gray-900">Certificato PDF professionale</p>
-                    <p className="text-gray-600 text-sm">scaricabile e stampabile con codice di verifica</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <span className="text-purple-600 text-xl mt-1">✓</span>
-                  <div>
-                    <p className="font-semibold text-gray-900">Link pubblico condivisibile</p>
-                    <p className="text-gray-600 text-sm">per mostrare i tuoi risultati a recruiter e aziende</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <span className="text-purple-600 text-xl mt-1">✓</span>
-                  <div>
-                    <p className="font-semibold text-gray-900">Accesso permanente</p>
-                    <p className="text-gray-600 text-sm">al tuo profilo e dashboard personale</p>
-                  </div>
-                </div>
+                <div className="flex items-start gap-3"><span className="text-purple-600 text-xl mt-1">✓</span><div><p className="font-semibold text-gray-900">Report personalizzato dettagliato</p><p className="text-gray-600 text-sm">con profilo professionale suggerito e analisi approfondita</p></div></div>
+                <div className="flex items-start gap-3"><span className="text-purple-600 text-xl mt-1">✓</span><div><p className="font-semibold text-gray-900">Badge LinkedIn</p><p className="text-gray-600 text-sm">per valorizzare immediatamente il tuo profilo professionale</p></div></div>
+                <div className="flex items-start gap-3"><span className="text-purple-600 text-xl mt-1">✓</span><div><p className="font-semibold text-gray-900">QR Code dinamico</p><p className="text-gray-600 text-sm">da inserire nel CV e biglietto da visita per networking efficace</p></div></div>
+                <div className="flex items-start gap-3"><span className="text-purple-600 text-xl mt-1">✓</span><div><p className="font-semibold text-gray-900">Certificato PDF professionale</p><p className="text-gray-600 text-sm">scaricabile e stampabile con codice di verifica</p></div></div>
+                <div className="flex items-start gap-3"><span className="text-purple-600 text-xl mt-1">✓</span><div><p className="font-semibold text-gray-900">Link pubblico condivisibile</p><p className="text-gray-600 text-sm">per mostrare i tuoi risultati a recruiter e aziende</p></div></div>
+                <div className="flex items-start gap-3"><span className="text-purple-600 text-xl mt-1">✓</span><div><p className="font-semibold text-gray-900">Accesso permanente</p><p className="text-gray-600 text-sm">al tuo profilo e dashboard personale</p></div></div>
               </div>
             </div>
-
-            {/* Leadership Deep Dive */}
             <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-2xl p-8">
               <div className="flex items-center gap-4 mb-6">
                 <div className="w-16 h-16 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-xl flex items-center justify-center">
@@ -411,47 +309,12 @@ export default function HomePage() {
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900">Leadership Deep Dive</h3>
               </div>
-
               <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <span className="text-yellow-600 text-xl mt-1">✓</span>
-                  <div>
-                    <p className="font-semibold text-gray-900">Identificazione stile di leadership</p>
-                    <p className="text-gray-600 text-sm">Trasformazionale, Servant Leader, Coaching e altri profili</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <span className="text-yellow-600 text-xl mt-1">✓</span>
-                  <div>
-                    <p className="font-semibold text-gray-900">Piano d'azione personalizzato</p>
-                    <p className="text-gray-600 text-sm">con obiettivi immediati (1 mese) e medio termine (3-6 mesi)</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <span className="text-yellow-600 text-xl mt-1">✓</span>
-                  <div>
-                    <p className="font-semibold text-gray-900">Analisi punti di forza</p>
-                    <p className="text-gray-600 text-sm">e aree di sviluppo specifiche per la tua leadership</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <span className="text-yellow-600 text-xl mt-1">✓</span>
-                  <div>
-                    <p className="font-semibold text-gray-900">Risorse consigliate</p>
-                    <p className="text-gray-600 text-sm">libri, corsi e strumenti per crescita manageriale continua</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <span className="text-yellow-600 text-xl mt-1">✓</span>
-                  <div>
-                    <p className="font-semibold text-gray-900">Report premium scaricabile</p>
-                    <p className="text-gray-600 text-sm">con analisi approfondita delle 6 dimensioni di leadership</p>
-                  </div>
-                </div>
+                <div className="flex items-start gap-3"><span className="text-yellow-600 text-xl mt-1">✓</span><div><p className="font-semibold text-gray-900">Identificazione stile di leadership</p><p className="text-gray-600 text-sm">Trasformazionale, Servant Leader, Coaching e altri profili</p></div></div>
+                <div className="flex items-start gap-3"><span className="text-yellow-600 text-xl mt-1">✓</span><div><p className="font-semibold text-gray-900">Piano d'azione personalizzato</p><p className="text-gray-600 text-sm">con obiettivi immediati (1 mese) e medio termine (3-6 mesi)</p></div></div>
+                <div className="flex items-start gap-3"><span className="text-yellow-600 text-xl mt-1">✓</span><div><p className="font-semibold text-gray-900">Analisi punti di forza</p><p className="text-gray-600 text-sm">e aree di sviluppo specifiche per la tua leadership</p></div></div>
+                <div className="flex items-start gap-3"><span className="text-yellow-600 text-xl mt-1">✓</span><div><p className="font-semibold text-gray-900">Risorse consigliate</p><p className="text-gray-600 text-sm">libri, corsi e strumenti per crescita manageriale continua</p></div></div>
+                <div className="flex items-start gap-3"><span className="text-yellow-600 text-xl mt-1">✓</span><div><p className="font-semibold text-gray-900">Report premium scaricabile</p><p className="text-gray-600 text-sm">con analisi approfondita delle 6 dimensioni di leadership</p></div></div>
               </div>
             </div>
           </div>
@@ -467,43 +330,19 @@ export default function HomePage() {
                 <p className="text-gray-600">Valuta il tuo team, semplifica il recruiting</p>
               </div>
             </div>
-
             <div className="grid md:grid-cols-2 gap-6 mb-6">
               <div className="space-y-3">
-                <div className="flex items-start gap-3">
-                  <span className="text-orange-600 text-xl mt-1">✓</span>
-                  <p className="text-gray-700">Dashboard centralizzata per HR</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <span className="text-orange-600 text-xl mt-1">✓</span>
-                  <p className="text-gray-700">Inviti e gestione candidati illimitati</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <span className="text-orange-600 text-xl mt-1">✓</span>
-                  <p className="text-gray-700">Comparazione risultati team</p>
-                </div>
+                <div className="flex items-start gap-3"><span className="text-orange-600 text-xl mt-1">✓</span><p className="text-gray-700">Dashboard centralizzata per HR</p></div>
+                <div className="flex items-start gap-3"><span className="text-orange-600 text-xl mt-1">✓</span><p className="text-gray-700">Inviti e gestione candidati illimitati</p></div>
+                <div className="flex items-start gap-3"><span className="text-orange-600 text-xl mt-1">✓</span><p className="text-gray-700">Comparazione risultati team</p></div>
               </div>
-
               <div className="space-y-3">
-                <div className="flex items-start gap-3">
-                  <span className="text-orange-600 text-xl mt-1">✓</span>
-                  <p className="text-gray-700">Export report per recruiting</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <span className="text-orange-600 text-xl mt-1">✓</span>
-                  <p className="text-gray-700">Gestione permessi team</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <span className="text-orange-600 text-xl mt-1">✓</span>
-                  <p className="text-gray-700">Supporto dedicato</p>
-                </div>
+                <div className="flex items-start gap-3"><span className="text-orange-600 text-xl mt-1">✓</span><p className="text-gray-700">Export report per recruiting</p></div>
+                <div className="flex items-start gap-3"><span className="text-orange-600 text-xl mt-1">✓</span><p className="text-gray-700">Gestione permessi team</p></div>
+                <div className="flex items-start gap-3"><span className="text-orange-600 text-xl mt-1">✓</span><p className="text-gray-700">Supporto dedicato</p></div>
               </div>
             </div>
-
-            <button
-              onClick={() => router.push('/aziende/create')}
-              className="bg-gradient-to-r from-orange-500 to-pink-600 text-white px-8 py-3 rounded-lg font-bold hover:shadow-lg transition"
-            >
+            <button onClick={() => router.push('/aziende/create')} className="bg-gradient-to-r from-orange-500 to-pink-600 text-white px-8 py-3 rounded-lg font-bold hover:shadow-lg transition">
               Scopri di più →
             </button>
           </div>
@@ -519,18 +358,11 @@ export default function HomePage() {
           <p className="text-xl text-white/90 mb-8">
             Inizia il tuo assessment oggi e ricevi risultati immediati
           </p>
-          
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button
-              onClick={() => router.push('/servizi')}
-              className="bg-white text-purple-600 px-10 py-4 rounded-xl font-bold text-lg hover:shadow-2xl transition"
-            >
+            <button onClick={() => router.push('/servizi')} className="bg-white text-purple-600 px-10 py-4 rounded-xl font-bold text-lg hover:shadow-2xl transition">
               Inizia Come Privato
             </button>
-            <button
-              onClick={() => router.push('/aziende/create')}
-              className="bg-gradient-to-r from-orange-500 to-pink-600 text-white px-10 py-4 rounded-xl font-bold text-lg hover:shadow-2xl transition border-2 border-white"
-            >
+            <button onClick={() => router.push('/aziende/create')} className="bg-gradient-to-r from-orange-500 to-pink-600 text-white px-10 py-4 rounded-xl font-bold text-lg hover:shadow-2xl transition border-2 border-white">
               Parla con Noi - Aziende
             </button>
           </div>
@@ -552,7 +384,6 @@ export default function HomePage() {
                 Piattaforma professionale per l'assessment delle soft skills e competenze di leadership.
               </p>
             </div>
-
             <div>
               <h4 className="font-bold mb-4">Servizi</h4>
               <ul className="space-y-2 text-gray-400">
@@ -561,23 +392,17 @@ export default function HomePage() {
                 <li><a href="/aziende/create" className="hover:text-white transition">Soluzioni Aziende</a></li>
               </ul>
             </div>
-
             <div>
               <h4 className="font-bold mb-4">Contatti</h4>
               <ul className="space-y-2 text-gray-400">
                 <li>Email: info@valutolab.com</li>
-                <li>
-                  <a href="/login" className="hover:text-white transition">Accedi</a>
-                </li>
-                <li>
-                  <a href="/register" className="hover:text-white transition">Registrati</a>
-                </li>
+                <li><a href="/login" className="hover:text-white transition">Accedi</a></li>
+                <li><a href="/register" className="hover:text-white transition">Registrati</a></li>
               </ul>
             </div>
           </div>
-
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2025 ValutoLab. Tutti i diritti riservati.</p>
+            <p>&copy; 2026 ValutoLab. Tutti i diritti riservati.</p>
           </div>
         </div>
       </footer>
