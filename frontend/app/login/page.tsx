@@ -14,9 +14,17 @@ export default function LoginPage() {
   // Check if already logged in
   useEffect(() => {
     const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error || !session) {
+          // Pulisce token corrotti o scaduti
+          await supabase.auth.signOut();
+          return;
+        }
+        // Sessione valida — vai in home
         router.push('/');
+      } catch (e) {
+        await supabase.auth.signOut();
       }
     };
     checkUser();
