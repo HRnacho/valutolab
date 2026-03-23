@@ -162,7 +162,6 @@ export default function DashboardPage() {
   const handleGeneratePDF = async (assessmentId: string) => {
     setGeneratingPDF(assessmentId)
     try {
-      // 1. Carica tutti i dati necessari
       const { data: assessment } = await supabase
         .from('assessments')
         .select('total_score, completed_at')
@@ -175,7 +174,6 @@ export default function DashboardPage() {
         .eq('id', user.id)
         .single()
 
-      // Carica profile_insights + category_interpretations per ESCO
       const { data: qualitativeReport } = await supabase
         .from('qualitative_reports')
         .select('profile_insights, category_interpretations')
@@ -233,7 +231,6 @@ export default function DashboardPage() {
         resilience: '#EF4444'
       }
 
-      // Colori badge ESCO per livello
       const escoLevelColors: Record<string, { bg: string; border: string; text: string; label: string }> = {
         'Esperto':    { bg: '#DCFCE7', border: '#16A34A', text: '#15803D', label: '★ Esperto' },
         'Avanzato':   { bg: '#DBEAFE', border: '#2563EB', text: '#1D4ED8', label: '▲ Avanzato' },
@@ -253,11 +250,9 @@ export default function DashboardPage() {
         score: parseFloat(r.final_score)
       }))
 
-      // Prepara dati ESCO da category_interpretations
       const categoryInterps = qualitativeReport?.category_interpretations || {}
       const escoSummary = qualitativeReport?.profile_insights?.esco_profile_summary || null
 
-      // 2. Genera QR Code
       const shareToken = shareData[assessmentId]?.share_token
       const qrCodeUrl = shareToken 
         ? await QRCode.toDataURL(`https://valutolab.com/profile/${shareToken}`, {
@@ -267,7 +262,6 @@ export default function DashboardPage() {
           })
         : ''
 
-      // 3. Inizializza PDF
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
@@ -277,7 +271,6 @@ export default function DashboardPage() {
       const imgWidth = 210
       const imgHeight = 297
 
-      // ─── PAGINA 1 ───────────────────────────────────────────
       const page1Element = document.createElement('div')
       page1Element.style.width = '210mm'
       page1Element.style.height = '297mm'
@@ -316,7 +309,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <div style="margin-bottom: 25px;">
-            <h3 style="font-size: 18px; font-weight: bold; color: #1F2937; margin: 0 0 12px 0;">🎯 Profilo Professionale</h3>
+            <h3 style="font-size: 18px; font-weight: bold; color: #1F2937; margin: 0 0 12px 0;">Profilo Professionale</h3>
             <div style="background-color: #F3E8FF; padding: 18px 20px; border-radius: 10px; border-left: 4px solid #9333EA; margin-bottom: 15px;">
               <p style="font-size: 20px; font-weight: bold; color: #7C3AED; margin: 0; line-height: 1.3;">${qualitativeReport?.profile_insights?.suggested_profile || 'N/A'}</p>
             </div>
@@ -325,13 +318,13 @@ export default function DashboardPage() {
             </div>
           </div>
           <div style="margin-bottom: 25px;">
-            <h3 style="font-size: 18px; font-weight: bold; color: #1F2937; margin: 0 0 12px 0;">✨ La Tua Unicità</h3>
+            <h3 style="font-size: 18px; font-weight: bold; color: #1F2937; margin: 0 0 12px 0;">La Tua Unicita</h3>
             <div style="background-color: #DBEAFE; padding: 18px 20px; border-radius: 10px; border-left: 4px solid #3B82F6;">
               <p style="color: #374151; line-height: 1.5; margin: 0; font-size: 14px;">${qualitativeReport?.profile_insights?.unique_strengths || 'N/A'}</p>
             </div>
           </div>
           <div>
-            <h3 style="font-size: 18px; font-weight: bold; color: #1F2937; margin: 0 0 15px 0;">🏆 Top 3 Competenze</h3>
+            <h3 style="font-size: 18px; font-weight: bold; color: #1F2937; margin: 0 0 15px 0;">Top 3 Competenze</h3>
             <div style="display: flex; gap: 12px; justify-content: space-between;">
               ${topSkills.map((skill) => `
                 <div style="flex: 1; text-align: center; padding: 28px 15px 26px 15px; border-radius: 10px; background: linear-gradient(135deg, #F3E8FF, #DBEAFE); min-height: 165px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
@@ -350,7 +343,6 @@ export default function DashboardPage() {
       pdf.addImage(canvas1.toDataURL('image/png'), 'PNG', 0, 0, imgWidth, imgHeight)
       document.body.removeChild(page1Element)
 
-      // ─── PAGINA 2 ───────────────────────────────────────────
       pdf.addPage()
 
       const page2Element = document.createElement('div')
@@ -368,7 +360,7 @@ export default function DashboardPage() {
         </div>
         <div style="position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column;">
           <div style="flex: 1; display: flex; flex-direction: column;">
-            <h3 style="font-size: 18px; font-weight: bold; color: #1F2937; margin: 0 0 20px 0;">📊 Profilo Completo delle Competenze</h3>
+            <h3 style="font-size: 18px; font-weight: bold; color: #1F2937; margin: 0 0 20px 0;">Profilo Completo delle Competenze</h3>
             <div style="flex: 1; display: flex; flex-direction: column; gap: 0; padding: 0 5px;">
               ${allSkills.map((skill, index) => {
                 const color = skillColors[skill.name] || '#8B5CF6'
@@ -416,10 +408,8 @@ export default function DashboardPage() {
       pdf.addImage(canvas2.toDataURL('image/png'), 'PNG', 0, 0, imgWidth, imgHeight)
       document.body.removeChild(page2Element)
 
-      // ─── PAGINA 3 — ESCO v1.2 ───────────────────────────────
       pdf.addPage()
 
-      // Calcola competenze per livello (per la legenda)
       const escoLevelCount = { Esperto: 0, Avanzato: 0, Intermedio: 0, Base: 0 }
       Object.values(categoryInterps).forEach((interp: any) => {
         const lvl = interp?.esco_mapping?.esco_level
@@ -428,7 +418,6 @@ export default function DashboardPage() {
         }
       })
 
-      // Mappa ordine canonico competenze per la griglia
       const canonicalOrder = [
         'communication','leadership','problem_solving','teamwork',
         'time_management','adaptability','creativity','critical_thinking',
@@ -445,35 +434,27 @@ export default function DashboardPage() {
       page3Element.style.boxSizing = 'border-box'
 
       page3Element.innerHTML = `
-        <!-- Watermark -->
         <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 100px; font-weight: bold; color: rgba(37, 99, 235, 0.05); white-space: nowrap; z-index: 0; pointer-events: none;">
           ESCO v1.2
         </div>
-
         <div style="position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column;">
-
-          <!-- Header ESCO -->
           <div style="border-bottom: 4px solid #2563EB; padding-bottom: 16px; margin-bottom: 20px;">
             <div style="display: flex; align-items: center; justify-content: space-between;">
               <div style="display: flex; align-items: center; gap: 14px;">
-                <!-- Bandiera EU stilizzata -->
                 <div style="width: 52px; height: 52px; background: #003399; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                  <span style="font-size: 30px; line-height: 1;">🇪🇺</span>
+                  <span style="font-size: 30px; line-height: 1;">EU</span>
                 </div>
                 <div>
                   <h2 style="font-size: 22px; font-weight: bold; color: #1E3A5F; margin: 0 0 3px 0;">Profilo ESCO Europeo</h2>
-                  <p style="font-size: 11px; color: #6B7280; margin: 0;">European Skills, Competences, Qualifications and Occupations — v1.2 (maggio 2024)</p>
+                  <p style="font-size: 11px; color: #6B7280; margin: 0;">European Skills, Competences, Qualifications and Occupations v1.2 (maggio 2024)</p>
                 </div>
               </div>
-              <!-- Badge ValutoLab ESCO aligned -->
               <div style="background: #EFF6FF; border: 2px solid #2563EB; border-radius: 10px; padding: 8px 14px; text-align: center;">
                 <p style="font-size: 10px; font-weight: bold; color: #1D4ED8; margin: 0 0 2px 0; text-transform: uppercase; letter-spacing: 0.5px;">ESCO-Aligned</p>
                 <p style="font-size: 9px; color: #3B82F6; margin: 0;">ValutoLab Certified</p>
               </div>
             </div>
           </div>
-
-          <!-- Summary ESCO -->
           ${escoSummary ? `
           <div style="background: #EFF6FF; border-left: 4px solid #2563EB; border-radius: 8px; padding: 14px 18px; margin-bottom: 20px;">
             <p style="font-size: 12px; font-weight: bold; color: #1D4ED8; margin: 0 0 6px 0; text-transform: uppercase; letter-spacing: 0.5px;">Analisi del Profilo</p>
@@ -484,11 +465,7 @@ export default function DashboardPage() {
             <p style="font-size: 12px; color: #1E3A5F; line-height: 1.6; margin: 0;">Competenze valutate secondo il framework europeo ESCO v1.2, standard ufficiale della Commissione Europea per il riconoscimento delle competenze nel mercato del lavoro europeo.</p>
           </div>
           `}
-
-          <!-- Titolo griglia -->
           <h3 style="font-size: 14px; font-weight: bold; color: #1F2937; margin: 0 0 12px 0;">Livelli ESCO per Competenza</h3>
-
-          <!-- Griglia 3 colonne x 4 righe -->
           <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 20px;">
             ${canonicalOrder.map((cat) => {
               const interp = categoryInterps[cat] as any
@@ -498,7 +475,6 @@ export default function DashboardPage() {
               const colors = escoLevelColors[escoLevel] || escoLevelColors['Base']
               const icon = categoryIcons[cat] || '⭐'
               const label = categoryLabels[cat] || cat
-
               return `
                 <div style="background: ${colors.bg}; border: 2px solid ${colors.border}; border-radius: 10px; padding: 12px 14px;">
                   <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
@@ -514,8 +490,6 @@ export default function DashboardPage() {
               `
             }).join('')}
           </div>
-
-          <!-- Legenda livelli -->
           <div style="background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px;">
             <p style="font-size: 11px; font-weight: bold; color: #374151; margin: 0 0 8px 0;">Scala Livelli ESCO:</p>
             <div style="display: flex; gap: 16px; flex-wrap: wrap;">
@@ -527,27 +501,22 @@ export default function DashboardPage() {
               `).join('')}
             </div>
           </div>
-
-          <!-- Scala punteggi → livelli -->
           <div style="background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 8px; padding: 10px 16px; margin-bottom: auto;">
             <p style="font-size: 10px; color: #6B7280; margin: 0; line-height: 1.6;">
               <strong style="color: #374151;">Scala di conversione:</strong>
-              &nbsp;1.0–2.0 = Base &nbsp;|&nbsp; 2.1–3.0 = Intermedio &nbsp;|&nbsp; 3.1–4.0 = Avanzato &nbsp;|&nbsp; 4.1–5.0 = Esperto
+              1.0-2.0 = Base | 2.1-3.0 = Intermedio | 3.1-4.0 = Avanzato | 4.1-5.0 = Esperto
             </p>
           </div>
-
-          <!-- Footer -->
           <div style="margin-top: 16px; padding-top: 14px; border-top: 2px solid #DBEAFE; display: flex; justify-content: space-between; align-items: center;">
             <div>
-              <p style="font-size: 10px; color: #6B7280; margin: 0 0 2px 0;">Certificato generato da <strong style="color: #9333EA;">ValutoLab</strong> — valutolab.com</p>
-              <p style="font-size: 9px; color: #9CA3AF; margin: 0;">ID Assessment: ${assessmentId.substring(0, 8)} &nbsp;|&nbsp; ${new Date(assessment?.completed_at || '').toLocaleDateString('it-IT')}</p>
+              <p style="font-size: 10px; color: #6B7280; margin: 0 0 2px 0;">Certificato generato da ValutoLab - valutolab.com</p>
+              <p style="font-size: 9px; color: #9CA3AF; margin: 0;">ID Assessment: ${assessmentId.substring(0, 8)} | ${new Date(assessment?.completed_at || '').toLocaleDateString('it-IT')}</p>
             </div>
             <div style="text-align: right;">
               <p style="font-size: 9px; color: #9CA3AF; margin: 0;">Framework: ESCO v1.2</p>
-              <p style="font-size: 9px; color: #9CA3AF; margin: 0;">© Commissione Europea, maggio 2024</p>
+              <p style="font-size: 9px; color: #9CA3AF; margin: 0;">Commissione Europea, maggio 2024</p>
             </div>
           </div>
-
         </div>
       `
 
@@ -556,7 +525,6 @@ export default function DashboardPage() {
       pdf.addImage(canvas3.toDataURL('image/png'), 'PNG', 0, 0, imgWidth, imgHeight)
       document.body.removeChild(page3Element)
 
-      // Salva PDF
       pdf.save(`ValutoLab_Certificato_${profile?.full_name || 'Utente'}.pdf`)
       showMessage('success', 'PDF scaricato con successo!')
 
@@ -621,7 +589,25 @@ export default function DashboardPage() {
     }
   }
 
-  const handleStartNewAssessment = () => router.push('/servizi')
+  const handleStartNewAssessment = async () => {
+    const isTrial = user?.user_metadata?.role === 'trial_user'
+    if (isTrial) {
+      try {
+        const { data: newAssessment, error } = await supabase
+          .from('assessments')
+          .insert({ user_id: user.id, status: 'in_progress' })
+          .select()
+          .single()
+        if (error) throw error
+        router.push(`/assessment/${newAssessment.id}`)
+      } catch (error) {
+        console.error('Error starting assessment:', error)
+        alert("Errore nell'avvio dell'assessment. Riprova.")
+      }
+    } else {
+      router.push('/servizi')
+    }
+  }
 
   const handleDeleteLeadership = async (assessmentId: string) => {
     setDeleting(assessmentId)
@@ -689,6 +675,8 @@ export default function DashboardPage() {
   const inProgressLeadership = leadershipAssessments.filter(a => a.status === 'in_progress')
   const completedLeadership = leadershipAssessments.filter(a => a.status === 'completed')
 
+  const isTrial = user?.user_metadata?.role === 'trial_user'
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
       {message && (
@@ -719,17 +707,19 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">Nuovo Assessment</h3>
-              <p className="text-gray-600">Scegli tra Assessment Base o Leadership Deep Dive</p>
+              <p className="text-gray-600">
+                {isTrial ? 'Inizia il tuo assessment gratuito delle soft skills' : 'Scegli tra Assessment Base o Leadership Deep Dive'}
+              </p>
             </div>
             <button onClick={handleStartNewAssessment} className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-blue-700 transition shadow-lg">
-              + Vai ai Servizi
+              {isTrial ? 'Inizia Assessment' : '+ Vai ai Servizi'}
             </button>
           </div>
         </div>
 
         {inProgressAssessments.length > 0 && (
           <div className="mb-8">
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">📋 Assessment Base in Corso</h3>
+            <h3 className="text-2xl font-bold text-gray-900 mb-4">Assessment Base in Corso</h3>
             <div className="space-y-4">
               {inProgressAssessments.map((assessment) => {
                 const answeredCount = responsesCount[assessment.id] || 0
@@ -767,7 +757,7 @@ export default function DashboardPage() {
 
         {inProgressLeadership.length > 0 && (
           <div className="mb-8">
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">🏆 Leadership Deep Dive in Corso</h3>
+            <h3 className="text-2xl font-bold text-gray-900 mb-4">Leadership Deep Dive in Corso</h3>
             <div className="space-y-4">
               {inProgressLeadership.map((assessment) => {
                 const answeredCount = leadershipResponsesCount[assessment.id] || 0
@@ -805,7 +795,7 @@ export default function DashboardPage() {
 
         {(completedAssessments.length > 0 || completedLeadership.length > 0) && (
           <div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">✅ Assessment Completati</h3>
+            <h3 className="text-2xl font-bold text-gray-900 mb-4">Assessment Completati</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {completedAssessments.map((assessment) => {
                 const share = shareData[assessment.id]
@@ -813,7 +803,7 @@ export default function DashboardPage() {
                   <div key={assessment.id} className="bg-white rounded-xl shadow-lg p-6">
                     <div className="flex items-center justify-between mb-4">
                       <div>
-                        <h4 className="text-lg font-semibold text-gray-900">📋 Assessment Soft Skills</h4>
+                        <h4 className="text-lg font-semibold text-gray-900">Assessment Soft Skills</h4>
                         <p className="text-sm text-gray-600">Completato il {new Date(assessment.completed_at || '').toLocaleDateString('it-IT')}</p>
                       </div>
                       <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-semibold">Completato</span>
@@ -830,8 +820,8 @@ export default function DashboardPage() {
                         <div className="border-2 border-purple-200 rounded-lg p-4 bg-purple-50">
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-2">
-                              <span className="text-sm font-semibold text-gray-700">🔗 Condivisione</span>
-                              {share.is_active && <span className="text-xs text-gray-600">👁️ {share.view_count} views</span>}
+                              <span className="text-sm font-semibold text-gray-700">Condivisione</span>
+                              {share.is_active && <span className="text-xs text-gray-600">{share.view_count} views</span>}
                             </div>
                             <label className="relative inline-flex items-center cursor-pointer">
                               <input type="checkbox" checked={share.is_active} onChange={() => handleToggleShare(assessment.id)} className="sr-only peer" />
@@ -845,10 +835,10 @@ export default function DashboardPage() {
                                 <button onClick={() => handleCopyLink(assessment.id)} className="px-3 py-1 bg-purple-600 text-white rounded text-xs font-semibold hover:bg-purple-700">Copia</button>
                               </div>
                               <div className="grid grid-cols-3 gap-2">
-                                <button onClick={() => handleOpenBadge(assessment.id)} className="px-2 py-1 border border-purple-300 text-purple-700 rounded text-xs font-semibold hover:bg-purple-50">📱 Badge</button>
-                                <button onClick={() => handleOpenQR(assessment.id)} className="px-2 py-1 border border-purple-300 text-purple-700 rounded text-xs font-semibold hover:bg-purple-50">📄 QR</button>
+                                <button onClick={() => handleOpenBadge(assessment.id)} className="px-2 py-1 border border-purple-300 text-purple-700 rounded text-xs font-semibold hover:bg-purple-50">Badge</button>
+                                <button onClick={() => handleOpenQR(assessment.id)} className="px-2 py-1 border border-purple-300 text-purple-700 rounded text-xs font-semibold hover:bg-purple-50">QR</button>
                                 <button onClick={() => handleGeneratePDF(assessment.id)} disabled={generatingPDF === assessment.id} className="px-2 py-1 border border-purple-300 text-purple-700 rounded text-xs font-semibold hover:bg-purple-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                                  {generatingPDF === assessment.id ? '⏳' : '📋'} PDF
+                                  {generatingPDF === assessment.id ? '...' : 'PDF'}
                                 </button>
                               </div>
                             </div>
@@ -857,15 +847,12 @@ export default function DashboardPage() {
                       )}
                       <div className="grid grid-cols-3 gap-2">
                         <button onClick={() => handlePrintPDF(assessment.id)} className="px-3 py-2 border-2 border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition flex items-center justify-center gap-1">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
                           PDF
                         </button>
                         <button onClick={() => handleShareEmail(assessment.id)} className="px-3 py-2 border-2 border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition flex items-center justify-center gap-1">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                           Email
                         </button>
                         <button onClick={() => { if (window.confirm('Eliminare questo assessment? Azione irreversibile.')) handleDeleteAssessment(assessment.id) }} disabled={deleting === assessment.id} className="px-3 py-2 border-2 border-red-300 text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 transition disabled:opacity-50 flex items-center justify-center gap-1">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                           {deleting === assessment.id ? '...' : 'Elimina'}
                         </button>
                       </div>
@@ -878,7 +865,7 @@ export default function DashboardPage() {
                 <div key={assessment.id} className="bg-white rounded-xl shadow-lg p-6 border-t-4 border-yellow-500">
                   <div className="flex items-center justify-between mb-4">
                     <div>
-                      <h4 className="text-lg font-semibold text-gray-900">🏆 Leadership Deep Dive</h4>
+                      <h4 className="text-lg font-semibold text-gray-900">Leadership Deep Dive</h4>
                       <p className="text-sm text-gray-600">Completato il {new Date(assessment.completed_at || '').toLocaleDateString('it-IT')}</p>
                     </div>
                     <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-semibold">Completato</span>
@@ -909,7 +896,7 @@ export default function DashboardPage() {
             <h3 className="text-xl font-semibold text-gray-900 mb-2">Nessun assessment ancora</h3>
             <p className="text-gray-600 mb-4">Inizia il tuo primo assessment per scoprire le tue competenze</p>
             <button onClick={handleStartNewAssessment} className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-blue-700 transition shadow-lg">
-              Vai ai Servizi
+              {isTrial ? 'Inizia Assessment Gratuito' : 'Vai ai Servizi'}
             </button>
           </div>
         )}
