@@ -1,8 +1,9 @@
-const express = require('express');
+import express from 'express';
+import { createClient } from '@supabase/supabase-js';
+import { Resend } from 'resend';
+import pg from 'pg';
+
 const router = express.Router();
-const db = require('../config/db');
-const { createClient } = require('@supabase/supabase-js');
-const { Resend } = require('resend');
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -10,6 +11,10 @@ const supabase = createClient(
 );
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+
+const db = new pg.Pool({
+  connectionString: process.env.DATABASE_URL
+});
 
 // POST /api/trial-b2c/register
 router.post('/register', async (req, res) => {
@@ -49,7 +54,7 @@ router.post('/register', async (req, res) => {
       if (authError.message.includes('already been registered')) {
         return res.status(409).json({ error: 'Questa email è già registrata. Prova ad accedere.' });
       }
-      return res.status(500).json({ error: 'Errore durante la creazione dell\'account.' });
+      return res.status(500).json({ error: "Errore durante la creazione dell'account." });
     }
 
     const userId = authData.user.id;
@@ -62,7 +67,7 @@ router.post('/register', async (req, res) => {
       [userId, full_name, email]
     );
 
-    // 4. Invia email di benvenuto con credenziali
+    // 4. Invia email con credenziali
     await resend.emails.send({
       from: 'ValutoLab <noreply@valutolab.com>',
       to: email,
@@ -73,20 +78,16 @@ router.post('/register', async (req, res) => {
             <h1 style="color: #7c3aed; font-size: 28px; margin: 0;">ValutoLab</h1>
             <p style="color: #6b7280; margin: 5px 0;">Valutazione Soft Skills Professionale</p>
           </div>
-
           <h2 style="color: #1f2937;">Ciao ${full_name}! 👋</h2>
-
           <p style="color: #4b5563; line-height: 1.6;">
             Il tuo account trial è stato creato con successo. Hai a disposizione 
             <strong>1 assessment gratuito</strong> valido per 30 giorni.
           </p>
-
           <div style="background: #f3f4f6; border-radius: 8px; padding: 20px; margin: 24px 0;">
             <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 14px;">Le tue credenziali di accesso:</p>
             <p style="margin: 4px 0; color: #1f2937;"><strong>Email:</strong> ${email}</p>
             <p style="margin: 4px 0; color: #1f2937;"><strong>Password:</strong> ${password}</p>
           </div>
-
           <div style="text-align: center; margin: 32px 0;">
             <a href="https://valutolab.com/login" 
                style="background: #7c3aed; color: white; padding: 14px 32px; 
@@ -94,14 +95,10 @@ router.post('/register', async (req, res) => {
               Inizia il tuo Assessment →
             </a>
           </div>
-
           <p style="color: #4b5563; line-height: 1.6; font-size: 14px;">
-            L'assessment dura circa <strong>10-15 minuti</strong> e valuta 12 soft skills professionali. 
-            Al termine riceverai un report dettagliato con i tuoi punti di forza e aree di miglioramento.
+            L'assessment dura circa <strong>10-15 minuti</strong> e valuta 12 soft skills professionali.
           </p>
-
           <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
-
           <p style="color: #9ca3af; font-size: 12px; text-align: center;">
             Hai domande? Scrivici a <a href="mailto:info@valutolab.com" style="color: #7c3aed;">info@valutolab.com</a>
           </p>
@@ -120,4 +117,4 @@ router.post('/register', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;
