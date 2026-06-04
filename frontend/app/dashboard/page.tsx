@@ -285,67 +285,122 @@ export default function DashboardPage() {
       const page1Element = document.createElement('div')
       page1Element.style.width = '210mm'
       page1Element.style.height = '297mm'
-      page1Element.style.padding = '20mm'
+      page1Element.style.padding = '0'
       page1Element.style.backgroundColor = 'white'
       page1Element.style.fontFamily = 'Arial, sans-serif'
       page1Element.style.position = 'relative'
       page1Element.style.boxSizing = 'border-box'
-      
+      page1Element.style.overflow = 'hidden'
+
       page1Element.innerHTML = `
-        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 100px; font-weight: bold; color: rgba(147, 51, 234, 0.08); white-space: nowrap; z-index: 0; pointer-events: none;">
-          ValutoLab
-        </div>
-        <div style="position: relative; z-index: 1;">
-          <div style="text-align: center; border-bottom: 4px solid #9333EA; padding-bottom: 20px; margin-bottom: 25px;">
-            <div style="display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 8px;">
-              <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #EC4899, #8B5CF6, #3B82F6); border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(147, 51, 234, 0.3); flex-shrink: 0;">
-                <span style="font-size: 36px; font-weight: 900; color: white; line-height: 1;">V</span>
-              </div>
-              <h1 style="font-size: 36px; font-weight: bold; color: #1F2937; margin: 0; line-height: 1;">ValutoLab</h1>
-            </div>
-            <h2 style="font-size: 20px; font-weight: 600; color: #6B7280; margin: 0 0 5px 0;">Certificato di Valutazione Professionale</h2>
-            <p style="color: #9CA3AF; font-size: 14px; margin: 0;">Soft Skills Assessment</p>
-          </div>
-          <div style="background: linear-gradient(to right, #F3E8FF, #DBEAFE); padding: 20px 25px; border-radius: 10px; margin-bottom: 25px;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="height: 297mm; display: flex; flex-direction: column; font-family: Arial, sans-serif; background: white; box-sizing: border-box;">
+
+          <!-- HEADER FULL-BLEED -->
+          <div style="background: linear-gradient(135deg, #2E1065 0%, #5B21B6 55%, #7C3AED 100%); padding: 30px 28px 26px; position: relative; overflow: hidden; flex-shrink: 0;">
+            <div style="position: absolute; top: -50px; right: -50px; width: 180px; height: 180px; background: rgba(255,255,255,0.05); border-radius: 50%;"></div>
+            <div style="position: absolute; bottom: -30px; right: 110px; width: 100px; height: 100px; background: rgba(255,255,255,0.04); border-radius: 50%;"></div>
+            <div style="position: absolute; top: 15px; right: 230px; width: 45px; height: 45px; background: rgba(255,255,255,0.04); border-radius: 50%;"></div>
+
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; position: relative; z-index: 1;">
               <div style="flex: 1;">
-                <h3 style="font-size: 24px; font-weight: bold; color: #1F2937; margin: 0 0 12px 0;">${sanitizeText(profile?.full_name) || 'Utente ValutoLab'}</h3>
-                <p style="font-weight: 600; color: #6B7280; margin: 0 0 3px 0; font-size: 13px;">Data Valutazione:</p>
-                <p style="color: #9CA3AF; font-size: 13px; margin: 0;">${new Date(assessment?.completed_at || '').toLocaleDateString('it-IT')}</p>
-              </div>
-              <div style="text-align: right;">
-                <p style="font-weight: 600; color: #6B7280; margin: 0 0 3px 0; font-size: 13px;">Punteggio Generale:</p>
-                <p style="font-size: 36px; font-weight: bold; color: #9333EA; margin: 0; line-height: 1;">${assessment?.total_score?.toFixed(1)}<span style="font-size: 20px; color: #9CA3AF;">/5.0</span></p>
-              </div>
-            </div>
-          </div>
-          <div style="margin-bottom: 25px;">
-            <h3 style="font-size: 18px; font-weight: bold; color: #1F2937; margin: 0 0 12px 0;">Profilo Professionale</h3>
-            <div style="background-color: #F3E8FF; padding: 18px 20px; border-radius: 10px; border-left: 4px solid #9333EA; margin-bottom: 15px;">
-              <p style="font-size: 20px; font-weight: bold; color: #7C3AED; margin: 0; line-height: 1.3;">${sanitizeText(qualitativeReport?.profile_insights?.suggested_profile) || 'N/A'}</p>
-            </div>
-            <div style="background-color: #F9FAFB; padding: 16px 20px; border-radius: 10px; border: 1px solid #E5E7EB;">
-              <p style="color: #374151; line-height: 1.7; margin: 0; font-size: 13px; text-align: justify;">${sanitizeText(qualitativeReport?.profile_insights?.summary) || 'Descrizione del profilo professionale non disponibile.'}</p>
-            </div>
-          </div>
-          <div style="margin-bottom: 25px;">
-            <h3 style="font-size: 18px; font-weight: bold; color: #1F2937; margin: 0 0 12px 0;">La Tua Unicita</h3>
-            <div style="background-color: #DBEAFE; padding: 18px 20px; border-radius: 10px; border-left: 4px solid #3B82F6;">
-              <p style="color: #374151; line-height: 1.5; margin: 0; font-size: 14px;">${sanitizeText(qualitativeReport?.profile_insights?.unique_strengths) || 'N/A'}</p>
-            </div>
-          </div>
-          <div>
-            <h3 style="font-size: 18px; font-weight: bold; color: #1F2937; margin: 0 0 15px 0;">Top 3 Competenze</h3>
-            <div style="display: flex; gap: 12px; justify-content: space-between;">
-              ${topSkills.map((skill) => `
-                <div style="flex: 1; text-align: center; padding: 28px 15px 26px 15px; border-radius: 10px; background: linear-gradient(135deg, #F3E8FF, #DBEAFE); min-height: 165px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
-                  <div style="font-size: 44px; margin-bottom: 16px; line-height: 1.5; display: flex; align-items: center; justify-content: center; min-height: 70px;">${skill.icon}</div>
-                  <div style="font-weight: 600; color: #1F2937; margin-bottom: 10px; font-size: 14px; line-height: 1.4;">${sanitizeText(skill.category)}</div>
-                  <div style="font-size: 24px; font-weight: bold; color: #7C3AED; line-height: 1.3;">${skill.score.toFixed(1)}<span style="font-size: 15px; color: #9CA3AF;">/5.0</span></div>
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 18px;">
+                  <div style="width: 40px; height: 40px; background: rgba(255,255,255,0.15); border: 1.5px solid rgba(255,255,255,0.3); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <span style="font-size: 24px; font-weight: 900; color: white; line-height: 1;">V</span>
+                  </div>
+                  <span style="font-size: 22px; font-weight: 800; color: white; letter-spacing: -0.3px;">ValutoLab</span>
+                  <span style="font-size: 9px; color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.1); padding: 2px 9px; border-radius: 99px; border: 1px solid rgba(255,255,255,0.15); letter-spacing: 0.5px;">Soft Skills</span>
                 </div>
-              `).join('')}
+                <p style="color: rgba(255,255,255,0.5); font-size: 9.5px; margin: 0 0 5px 0; text-transform: uppercase; letter-spacing: 2px;">Certificato di Valutazione Professionale</p>
+                <h2 style="color: white; font-size: 28px; font-weight: 800; margin: 0 0 7px 0; line-height: 1.1;">${sanitizeText(profile?.full_name) || 'Utente ValutoLab'}</h2>
+                <p style="color: rgba(255,255,255,0.5); font-size: 11px; margin: 0;">${new Date(assessment?.completed_at || '').toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+              </div>
+              <div style="text-align: center; background: rgba(255,255,255,0.1); border: 1.5px solid rgba(255,255,255,0.2); border-radius: 16px; padding: 16px 22px; flex-shrink: 0; margin-left: 20px;">
+                <p style="color: rgba(255,255,255,0.55); font-size: 9px; margin: 0 0 3px 0; text-transform: uppercase; letter-spacing: 1.5px;">Score Totale</p>
+                <p style="color: white; font-size: 50px; font-weight: 900; margin: 0; line-height: 1; letter-spacing: -2px;">${assessment?.total_score?.toFixed(1)}</p>
+                <p style="color: rgba(255,255,255,0.4); font-size: 12px; margin: 1px 0 0 0;">/ 5.0</p>
+              </div>
             </div>
           </div>
+
+          <!-- BODY -->
+          <div style="flex: 1; padding: 22px 28px 14px; display: flex; flex-direction: column; gap: 17px; overflow: hidden;">
+
+            <!-- Profilo professionale -->
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 9px;">
+                <div style="width: 3px; height: 16px; background: linear-gradient(180deg, #7C3AED, #3B82F6); border-radius: 2px;"></div>
+                <span style="font-size: 9.5px; font-weight: 700; color: #6D28D9; text-transform: uppercase; letter-spacing: 2px;">Profilo Professionale</span>
+              </div>
+              <div style="background: linear-gradient(135deg, #F5F3FF, #EDE9FE); border-radius: 10px; padding: 14px 18px; border: 1px solid #C4B5FD;">
+                <p style="font-size: 17px; font-weight: 800; color: #4C1D95; margin: 0; line-height: 1.3;">"${sanitizeText(qualitativeReport?.profile_insights?.suggested_profile) || 'N/A'}"</p>
+              </div>
+            </div>
+
+            <!-- Sintesi -->
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 9px;">
+                <div style="width: 3px; height: 16px; background: linear-gradient(180deg, #7C3AED, #3B82F6); border-radius: 2px;"></div>
+                <span style="font-size: 9.5px; font-weight: 700; color: #6D28D9; text-transform: uppercase; letter-spacing: 2px;">Sintesi del Profilo</span>
+              </div>
+              <p style="color: #374151; line-height: 1.75; margin: 0; font-size: 12px; text-align: justify;">${sanitizeText(qualitativeReport?.profile_insights?.summary) || 'Descrizione del profilo professionale non disponibile.'}</p>
+            </div>
+
+            <!-- Punti di forza -->
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 9px;">
+                <div style="width: 3px; height: 16px; background: linear-gradient(180deg, #2563EB, #06B6D4); border-radius: 2px;"></div>
+                <span style="font-size: 9.5px; font-weight: 700; color: #1D4ED8; text-transform: uppercase; letter-spacing: 2px;">Punti di Forza Unici</span>
+              </div>
+              <div style="background: #EFF6FF; border-radius: 10px; padding: 12px 16px; border: 1px solid #BFDBFE;">
+                <p style="color: #1E3A8A; line-height: 1.65; margin: 0; font-size: 12px;">${sanitizeText(qualitativeReport?.profile_insights?.unique_strengths) || 'N/A'}</p>
+              </div>
+            </div>
+
+            <!-- Top 3 competenze -->
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 11px;">
+                <div style="width: 3px; height: 16px; background: linear-gradient(180deg, #7C3AED, #3B82F6); border-radius: 2px;"></div>
+                <span style="font-size: 9.5px; font-weight: 700; color: #6D28D9; text-transform: uppercase; letter-spacing: 2px;">Top 3 Competenze</span>
+              </div>
+              <div style="display: flex; gap: 10px;">
+                ${topSkills.map((skill, idx) => {
+                  const gradients = [
+                    'linear-gradient(150deg, #4C1D95, #7C3AED)',
+                    'linear-gradient(150deg, #1E40AF, #3B82F6)',
+                    'linear-gradient(150deg, #155E75, #0891B2)'
+                  ]
+                  const textColors = ['#6D28D9', '#1D4ED8', '#0E7490']
+                  const borderColors = ['#C4B5FD', '#BFDBFE', '#A5F3FC']
+                  const bgColors = ['#F5F3FF', '#EFF6FF', '#ECFEFF']
+                  const rankLabels = ['1°', '2°', '3°']
+                  return `
+                    <div style="flex: 1; border-radius: 12px; overflow: hidden; box-shadow: 0 3px 14px rgba(0,0,0,0.09);">
+                      <div style="background: ${gradients[idx]}; padding: 18px 10px 14px; text-align: center; position: relative;">
+                        <div style="position: absolute; top: 7px; right: 9px; background: rgba(255,255,255,0.18); border-radius: 99px; padding: 1px 7px; font-size: 9px; color: rgba(255,255,255,0.9); font-weight: 700;">${rankLabels[idx]}</div>
+                        <div style="font-size: 32px; line-height: 1; margin-bottom: 8px;">${skill.icon}</div>
+                        <div style="font-size: 10.5px; color: rgba(255,255,255,0.9); font-weight: 600; line-height: 1.3;">${sanitizeText(skill.category)}</div>
+                      </div>
+                      <div style="background: ${bgColors[idx]}; padding: 11px 10px 13px; text-align: center; border: 1px solid ${borderColors[idx]}; border-top: none; border-radius: 0 0 12px 12px;">
+                        <span style="font-size: 26px; font-weight: 900; color: ${textColors[idx]};">${skill.score.toFixed(1)}</span>
+                        <span style="font-size: 12px; color: #9CA3AF;">/5.0</span>
+                        <div style="margin-top: 6px; height: 4px; background: rgba(0,0,0,0.08); border-radius: 2px; overflow: hidden;">
+                          <div style="height: 100%; background: ${textColors[idx]}; border-radius: 2px; width: ${(skill.score / 5) * 100}%;"></div>
+                        </div>
+                      </div>
+                    </div>
+                  `
+                }).join('')}
+              </div>
+            </div>
+
+          </div>
+
+          <!-- FOOTER -->
+          <div style="padding: 9px 28px 14px; border-top: 1px solid #F3F4F6; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+            <span style="font-size: 9px; color: #C4B5FD; font-weight: 700; letter-spacing: 0.5px;">VALUTOLAB.COM</span>
+            <span style="font-size: 9px; color: #D1D5DB;">Pagina 1 / 3</span>
+          </div>
+
         </div>
       `
 
@@ -359,58 +414,81 @@ export default function DashboardPage() {
       const page2Element = document.createElement('div')
       page2Element.style.width = '210mm'
       page2Element.style.height = '297mm'
-      page2Element.style.padding = '20mm'
+      page2Element.style.padding = '0'
       page2Element.style.backgroundColor = 'white'
       page2Element.style.fontFamily = 'Arial, sans-serif'
       page2Element.style.position = 'relative'
       page2Element.style.boxSizing = 'border-box'
-      
+      page2Element.style.overflow = 'hidden'
+
       page2Element.innerHTML = `
-        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 100px; font-weight: bold; color: rgba(147, 51, 234, 0.08); white-space: nowrap; z-index: 0; pointer-events: none;">
-          ValutoLab
-        </div>
-        <div style="position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column;">
-          <div style="flex: 1; display: flex; flex-direction: column;">
-            <h3 style="font-size: 18px; font-weight: bold; color: #1F2937; margin: 0 0 20px 0;">Profilo Completo delle Competenze</h3>
-            <div style="flex: 1; display: flex; flex-direction: column; gap: 0; padding: 0 5px;">
+        <div style="height: 297mm; display: flex; flex-direction: column; font-family: Arial, sans-serif; background: white; box-sizing: border-box;">
+
+          <!-- HEADER SLIM -->
+          <div style="background: linear-gradient(135deg, #2E1065, #5B21B6, #7C3AED); padding: 14px 28px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div style="width: 28px; height: 28px; background: rgba(255,255,255,0.16); border-radius: 7px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <span style="font-size: 16px; font-weight: 900; color: white;">V</span>
+              </div>
+              <span style="font-size: 14px; font-weight: 700; color: white;">ValutoLab</span>
+              <span style="font-size: 9px; color: rgba(255,255,255,0.4);">·</span>
+              <span style="font-size: 11px; color: rgba(255,255,255,0.65);">Profilo Competenze</span>
+            </div>
+            <span style="font-size: 9.5px; color: rgba(255,255,255,0.45);">${sanitizeText(profile?.full_name) || ''}</span>
+          </div>
+
+          <!-- BODY -->
+          <div style="flex: 1; padding: 18px 28px 14px; display: flex; flex-direction: column;">
+
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-shrink: 0;">
+              <div style="width: 3px; height: 16px; background: linear-gradient(180deg, #7C3AED, #3B82F6); border-radius: 2px;"></div>
+              <span style="font-size: 9.5px; font-weight: 700; color: #6D28D9; text-transform: uppercase; letter-spacing: 2px;">Tutte le Competenze</span>
+            </div>
+
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
               ${allSkills.map((skill, index) => {
                 const color = skillColors[skill.name] || '#8B5CF6'
                 const percentage = (skill.score / 5) * 100
                 const icon = categoryIcons[skill.name] || '⭐'
-                const isLast = index === allSkills.length - 1
+                const isEven = index % 2 === 0
                 return `
-                  <div style="background: white; border-left: 4px solid ${color}; border-radius: 8px; padding: 12px 16px; ${isLast ? '' : 'border-bottom: 1px solid #F3F4F6;'} margin-bottom: ${isLast ? '0' : '8px'}; box-shadow: 0 1px 3px rgba(0,0,0,0.08); display: flex; align-items: center; gap: 12px;">
-                    <div style="display: flex; align-items: center; gap: 10px; width: 180px; flex-shrink: 0;">
-                      <span style="font-size: 22px; line-height: 1;">${icon}</span>
-                      <span style="font-size: 13px; font-weight: 600; color: #1F2937; line-height: 1.2;">${sanitizeText(skill.category)}</span>
+                  <div style="display: flex; align-items: center; gap: 11px; padding: 9px 13px; border-radius: 9px; background: ${isEven ? '#FAFAFA' : 'white'}; border: 1px solid ${isEven ? '#F3F4F6' : '#F9FAFB'};">
+                    <span style="font-size: 10px; font-weight: 700; color: #D1D5DB; width: 16px; flex-shrink: 0; text-align: right;">${index + 1}</span>
+                    <span style="font-size: 19px; line-height: 1; flex-shrink: 0; width: 24px; text-align: center;">${icon}</span>
+                    <span style="font-size: 12px; font-weight: 600; color: #1F2937; width: 155px; flex-shrink: 0; line-height: 1.2;">${sanitizeText(skill.category)}</span>
+                    <div style="flex: 1; background: #F3F4F6; height: 13px; border-radius: 7px; overflow: hidden;">
+                      <div style="height: 100%; background: linear-gradient(90deg, ${color}BB, ${color}); border-radius: 7px; width: ${percentage}%;"></div>
                     </div>
-                    <div style="flex: 1; background: #F3F4F6; height: 20px; border-radius: 10px; overflow: hidden;">
-                      <div style="height: 100%; background: linear-gradient(90deg, ${color}, ${color}dd); border-radius: 10px; width: ${percentage}%;"></div>
-                    </div>
-                    <div style="text-align: right; width: 85px; flex-shrink: 0;">
-                      <div style="font-size: 16px; font-weight: bold; color: ${color}; line-height: 1.2;">${skill.score.toFixed(1)}<span style="font-size: 11px; color: #9CA3AF;">/5.0</span></div>
-                      <div style="font-size: 10px; color: #6B7280; margin-top: 2px;">${Math.round(percentage)}%</div>
+                    <div style="display: flex; align-items: center; gap: 5px; flex-shrink: 0; width: 82px; justify-content: flex-end;">
+                      <span style="font-size: 14px; font-weight: 800; color: ${color};">${skill.score.toFixed(1)}</span>
+                      <span style="font-size: 9px; color: #9CA3AF;">/5</span>
+                      <span style="font-size: 8.5px; background: #F3F4F6; color: #6B7280; padding: 1px 5px; border-radius: 4px; font-weight: 600;">${Math.round(percentage)}%</span>
                     </div>
                   </div>
                 `
               }).join('')}
             </div>
+
           </div>
-          <div style="margin-top: auto; padding-top: 20px; border-top: 2px solid #D1D5DB;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <div>
-                <p style="font-weight: 600; font-size: 13px; color: #6B7280; margin: 0 0 3px 0;">Certificato Verificabile</p>
-                <p style="font-size: 16px; font-weight: bold; color: #9333EA; margin: 0 0 8px 0;">valutolab.com</p>
-                <p style="font-size: 10px; color: #9CA3AF; margin: 0;">ID: ${assessmentId.substring(0, 8)}</p>
-              </div>
+
+          <!-- FOOTER -->
+          <div style="padding: 11px 28px 15px; border-top: 1px solid #F3F4F6; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+            <div>
+              <p style="font-size: 10px; font-weight: 600; color: #6B7280; margin: 0 0 2px 0;">Certificato Verificabile</p>
+              <p style="font-size: 13px; font-weight: 700; color: #7C3AED; margin: 0 0 2px 0;">valutolab.com</p>
+              <p style="font-size: 9px; color: #9CA3AF; margin: 0;">ID: ${assessmentId.substring(0, 8)}</p>
+            </div>
+            <div style="display: flex; align-items: center; gap: 14px;">
               ${qrCodeUrl ? `
                 <div style="text-align: center;">
-                  <img src="${qrCodeUrl}" alt="QR Code" style="width: 90px; height: 90px; border: 2px solid #D1D5DB; border-radius: 8px;" />
-                  <p style="font-size: 10px; color: #6B7280; margin: 5px 0 0 0;">Scansiona per verificare</p>
+                  <img src="${qrCodeUrl}" alt="QR Code" style="width: 68px; height: 68px; border: 1.5px solid #E5E7EB; border-radius: 8px; display: block;" />
+                  <p style="font-size: 8px; color: #9CA3AF; margin: 3px 0 0 0;">Scansiona per verificare</p>
                 </div>
               ` : ''}
+              <span style="font-size: 9px; color: #D1D5DB;">Pagina 2 / 3</span>
             </div>
           </div>
+
         </div>
       `
 
@@ -438,96 +516,106 @@ export default function DashboardPage() {
       const page3Element = document.createElement('div')
       page3Element.style.width = '210mm'
       page3Element.style.height = '297mm'
-      page3Element.style.padding = '18mm 20mm'
+      page3Element.style.padding = '0'
       page3Element.style.backgroundColor = 'white'
       page3Element.style.fontFamily = 'Arial, sans-serif'
       page3Element.style.position = 'relative'
       page3Element.style.boxSizing = 'border-box'
+      page3Element.style.overflow = 'hidden'
 
       page3Element.innerHTML = `
-        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 100px; font-weight: bold; color: rgba(37, 99, 235, 0.05); white-space: nowrap; z-index: 0; pointer-events: none;">
-          ESCO v1.2
-        </div>
-        <div style="position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column;">
-          <div style="border-bottom: 4px solid #2563EB; padding-bottom: 16px; margin-bottom: 20px;">
-            <div style="display: flex; align-items: center; justify-content: space-between;">
-              <div style="display: flex; align-items: center; gap: 14px;">
-                <div style="width: 52px; height: 52px; background: #003399; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                  <span style="font-size: 30px; line-height: 1;">EU</span>
-                </div>
-                <div>
-                  <h2 style="font-size: 22px; font-weight: bold; color: #1E3A5F; margin: 0 0 3px 0;">Profilo ESCO Europeo</h2>
-                  <p style="font-size: 11px; color: #6B7280; margin: 0;">European Skills, Competences, Qualifications and Occupations v1.2 (maggio 2024)</p>
-                </div>
+        <div style="height: 297mm; display: flex; flex-direction: column; font-family: Arial, sans-serif; background: white; box-sizing: border-box;">
+
+          <!-- HEADER SLIM BLU -->
+          <div style="background: linear-gradient(135deg, #1E3A5F 0%, #1D4ED8 60%, #2563EB 100%); padding: 15px 28px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; position: relative; overflow: hidden;">
+            <div style="position: absolute; top: -25px; right: -25px; width: 100px; height: 100px; background: rgba(255,255,255,0.05); border-radius: 50%;"></div>
+            <div style="display: flex; align-items: center; gap: 12px; position: relative; z-index: 1;">
+              <div style="width: 36px; height: 36px; background: rgba(255,255,255,0.14); border: 1.5px solid rgba(255,255,255,0.25); border-radius: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <span style="font-size: 12px; font-weight: 900; color: white; letter-spacing: -0.5px;">EU</span>
               </div>
-              <div style="background: #EFF6FF; border: 2px solid #2563EB; border-radius: 10px; padding: 8px 14px; text-align: center;">
-                <p style="font-size: 10px; font-weight: bold; color: #1D4ED8; margin: 0 0 2px 0; text-transform: uppercase; letter-spacing: 0.5px;">ESCO-Aligned</p>
-                <p style="font-size: 9px; color: #3B82F6; margin: 0;">ValutoLab Certified</p>
+              <div>
+                <p style="color: rgba(255,255,255,0.5); font-size: 9px; margin: 0; text-transform: uppercase; letter-spacing: 1.5px;">Framework Europeo</p>
+                <h2 style="color: white; font-size: 16px; font-weight: 800; margin: 0; line-height: 1.1;">Profilo ESCO v1.2</h2>
               </div>
             </div>
-          </div>
-          ${escoSummary ? `
-          <div style="background: #EFF6FF; border-left: 4px solid #2563EB; border-radius: 8px; padding: 14px 18px; margin-bottom: 20px;">
-            <p style="font-size: 12px; font-weight: bold; color: #1D4ED8; margin: 0 0 6px 0; text-transform: uppercase; letter-spacing: 0.5px;">Analisi del Profilo</p>
-            <p style="font-size: 12px; color: #1E3A5F; line-height: 1.6; margin: 0;">${sanitizeText(escoSummary)}</p>
-          </div>
-          ` : `
-          <div style="background: #EFF6FF; border-left: 4px solid #2563EB; border-radius: 8px; padding: 14px 18px; margin-bottom: 20px;">
-            <p style="font-size: 12px; color: #1E3A5F; line-height: 1.6; margin: 0;">Competenze valutate secondo il framework europeo ESCO v1.2, standard ufficiale della Commissione Europea per il riconoscimento delle competenze nel mercato del lavoro europeo.</p>
-          </div>
-          `}
-          <h3 style="font-size: 14px; font-weight: bold; color: #1F2937; margin: 0 0 12px 0;">Livelli ESCO per Competenza</h3>
-          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 20px;">
-            ${canonicalOrder.map((cat) => {
-              const interp = categoryInterps[cat] as any
-              const escoLevel = interp?.esco_mapping?.esco_level || 'Base'
-              const escoGroup = interp?.esco_mapping?.esco_group || ''
-              const score = interp?.score || 0
-              const colors = escoLevelColors[escoLevel] || escoLevelColors['Base']
-              const icon = categoryIcons[cat] || '⭐'
-              const label = categoryLabels[cat] || cat
-              return `
-                <div style="background: ${colors.bg}; border: 2px solid ${colors.border}; border-radius: 10px; padding: 12px 14px;">
-                  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-                    <span style="font-size: 18px; line-height: 1;">${icon}</span>
-                    <span style="font-size: 12px; font-weight: bold; color: #1F2937; line-height: 1.2;">${sanitizeText(label)}</span>
-                  </div>
-                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                    <span style="font-size: 11px; font-weight: bold; color: ${colors.text};">${colors.label}</span>
-                    <span style="font-size: 12px; font-weight: bold; color: ${colors.text};">${score.toFixed(1)}/5.0</span>
-                  </div>
-                  ${escoGroup ? `<p style="font-size: 9px; color: #6B7280; margin: 0; line-height: 1.3;">${sanitizeText(escoGroup)}</p>` : ''}
-                </div>
-              `
-            }).join('')}
-          </div>
-          <div style="background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px;">
-            <p style="font-size: 11px; font-weight: bold; color: #374151; margin: 0 0 8px 0;">Scala Livelli ESCO:</p>
-            <div style="display: flex; gap: 16px; flex-wrap: wrap;">
-              ${Object.entries(escoLevelColors).map(([level, c]) => `
-                <div style="display: flex; align-items: center; gap: 6px;">
-                  <div style="width: 12px; height: 12px; background: ${c.bg}; border: 2px solid ${c.border}; border-radius: 3px; flex-shrink: 0;"></div>
-                  <span style="font-size: 10px; color: #374151;">${c.label} (${escoLevelCount[level as keyof typeof escoLevelCount]} comp.)</span>
-                </div>
-              `).join('')}
+            <div style="display: flex; align-items: center; gap: 10px; position: relative; z-index: 1;">
+              <div style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 7px; padding: 5px 11px; text-align: center;">
+                <p style="font-size: 8.5px; font-weight: 700; color: rgba(255,255,255,0.8); margin: 0; text-transform: uppercase; letter-spacing: 0.5px;">ESCO-Aligned</p>
+                <p style="font-size: 7.5px; color: rgba(255,255,255,0.5); margin: 0;">ValutoLab Certified</p>
+              </div>
+              <span style="font-size: 9px; color: rgba(255,255,255,0.4);">${sanitizeText(profile?.full_name) || ''}</span>
             </div>
           </div>
-          <div style="background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 8px; padding: 10px 16px; margin-bottom: auto;">
-            <p style="font-size: 10px; color: #6B7280; margin: 0; line-height: 1.6;">
-              <strong style="color: #374151;">Scala di conversione:</strong>
-              1.0-2.0 = Base | 2.1-3.0 = Intermedio | 3.1-4.0 = Avanzato | 4.1-5.0 = Esperto
-            </p>
+
+          <!-- BODY -->
+          <div style="flex: 1; padding: 14px 28px 12px; display: flex; flex-direction: column; overflow: hidden;">
+
+            ${escoSummary ? `
+            <div style="background: #EFF6FF; border-left: 3px solid #2563EB; border-radius: 8px; padding: 11px 15px; margin-bottom: 13px; flex-shrink: 0;">
+              <p style="font-size: 9px; font-weight: 700; color: #1D4ED8; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 1px;">Analisi del Profilo ESCO</p>
+              <p style="font-size: 11px; color: #1E3A5F; line-height: 1.6; margin: 0;">${sanitizeText(escoSummary)}</p>
+            </div>
+            ` : `
+            <div style="background: #EFF6FF; border-left: 3px solid #2563EB; border-radius: 8px; padding: 11px 15px; margin-bottom: 13px; flex-shrink: 0;">
+              <p style="font-size: 11px; color: #1E3A5F; line-height: 1.6; margin: 0;">Competenze valutate secondo il framework ESCO v1.2, standard ufficiale della Commissione Europea per il riconoscimento delle competenze nel mercato del lavoro europeo.</p>
+            </div>
+            `}
+
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-shrink: 0;">
+              <div style="width: 3px; height: 16px; background: linear-gradient(180deg, #1D4ED8, #06B6D4); border-radius: 2px;"></div>
+              <span style="font-size: 9.5px; font-weight: 700; color: #1D4ED8; text-transform: uppercase; letter-spacing: 2px;">Livelli ESCO per Competenza</span>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; flex: 1;">
+              ${canonicalOrder.map((cat) => {
+                const interp = categoryInterps[cat] as any
+                const escoLevel = interp?.esco_mapping?.esco_level || 'Base'
+                const escoGroup = interp?.esco_mapping?.esco_group || ''
+                const score = interp?.score || 0
+                const colors = escoLevelColors[escoLevel] || escoLevelColors['Base']
+                const icon = categoryIcons[cat] || '⭐'
+                const label = categoryLabels[cat] || cat
+                const percentage = (score / 5) * 100
+                return `
+                  <div style="background: ${colors.bg}; border: 1.5px solid ${colors.border}; border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 5px;">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                      <span style="font-size: 15px; line-height: 1; flex-shrink: 0;">${icon}</span>
+                      <span style="font-size: 11px; font-weight: 700; color: #1F2937; line-height: 1.2;">${sanitizeText(label)}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                      <span style="font-size: 9.5px; font-weight: 700; color: ${colors.text}; background: ${colors.border}33; padding: 1px 6px; border-radius: 4px;">${colors.label}</span>
+                      <span style="font-size: 12px; font-weight: 800; color: ${colors.text};">${score.toFixed(1)}</span>
+                    </div>
+                    <div style="height: 3px; background: rgba(0,0,0,0.07); border-radius: 2px; overflow: hidden;">
+                      <div style="height: 100%; background: ${colors.border}; border-radius: 2px; width: ${percentage}%;"></div>
+                    </div>
+                    ${escoGroup ? `<p style="font-size: 8.5px; color: #6B7280; margin: 0; line-height: 1.3;">${sanitizeText(escoGroup)}</p>` : ''}
+                  </div>
+                `
+              }).join('')}
+            </div>
+
           </div>
-          <div style="margin-top: 16px; padding-top: 14px; border-top: 2px solid #DBEAFE; display: flex; justify-content: space-between; align-items: center;">
+
+          <!-- FOOTER -->
+          <div style="padding: 9px 28px 13px; border-top: 1px solid #DBEAFE; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
             <div>
-              <p style="font-size: 10px; color: #6B7280; margin: 0 0 2px 0;">Certificato generato da ValutoLab - valutolab.com</p>
-              <p style="font-size: 9px; color: #9CA3AF; margin: 0;">ID Assessment: ${assessmentId.substring(0, 8)} | ${new Date(assessment?.completed_at || '').toLocaleDateString('it-IT')}</p>
+              <p style="font-size: 9px; color: #6B7280; margin: 0 0 1px 0;">Certificato generato da ValutoLab · valutolab.com</p>
+              <p style="font-size: 8.5px; color: #9CA3AF; margin: 0;">ID: ${assessmentId.substring(0, 8)} · ${new Date(assessment?.completed_at || '').toLocaleDateString('it-IT')}</p>
             </div>
             <div style="text-align: right;">
-              <p style="font-size: 9px; color: #9CA3AF; margin: 0;">Framework: ESCO v1.2</p>
-              <p style="font-size: 9px; color: #9CA3AF; margin: 0;">Commissione Europea, maggio 2024</p>
+              <div style="display: flex; gap: 9px; flex-wrap: wrap; justify-content: flex-end; margin-bottom: 3px;">
+                ${Object.entries(escoLevelColors).map(([level, c]) => `
+                  <div style="display: flex; align-items: center; gap: 4px;">
+                    <div style="width: 8px; height: 8px; background: ${c.bg}; border: 1.5px solid ${c.border}; border-radius: 2px; flex-shrink: 0;"></div>
+                    <span style="font-size: 8px; color: #374151;">${c.label} (${escoLevelCount[level as keyof typeof escoLevelCount]})</span>
+                  </div>
+                `).join('')}
+              </div>
+              <p style="font-size: 8.5px; color: #9CA3AF; margin: 0;">ESCO v1.2 · Commissione Europea, maggio 2024 · Pagina 3 / 3</p>
             </div>
           </div>
+
         </div>
       `
 
