@@ -250,6 +250,7 @@ export default function DashboardPage() {
       }
 
       const topSkills = (results || []).slice(0, 3).map(r => ({
+        name: r.skill_category,
         category: categoryLabels[r.skill_category] || r.skill_category,
         icon: categoryIcons[r.skill_category] || '⭐',
         score: parseFloat(r.final_score)
@@ -263,6 +264,17 @@ export default function DashboardPage() {
 
       const categoryInterps = qualitativeReport?.category_interpretations || {}
       const escoSummary = qualitativeReport?.profile_insights?.esco_profile_summary || null
+
+      // Iniziali professionali per ogni competenza (sostituiscono gli emoji nei template PDF)
+      const skillInitials: Record<string, string> = {
+        communication: 'CO', leadership: 'LE', problem_solving: 'PS',
+        teamwork: 'TW', time_management: 'TM', adaptability: 'AD',
+        creativity: 'CR', critical_thinking: 'CT', empathy: 'EM',
+        resilience: 'RE', negotiation: 'NE', decision_making: 'DC'
+      }
+
+      // Pattern comportamentali dall'analisi AI
+      const behaviorPatterns: string[] = qualitativeReport?.profile_insights?.patterns || []
 
       const shareToken = shareData[assessmentId]?.share_token
       const qrCodeUrl = shareToken 
@@ -296,7 +308,7 @@ export default function DashboardPage() {
         <div style="height: 297mm; display: flex; flex-direction: column; font-family: Arial, sans-serif; background: white; box-sizing: border-box;">
 
           <!-- HEADER FULL-BLEED -->
-          <div style="background: linear-gradient(135deg, #2E1065 0%, #5B21B6 55%, #7C3AED 100%); padding: 30px 28px 26px; position: relative; overflow: hidden; flex-shrink: 0;">
+          <div style="background: linear-gradient(135deg, #2E1065 0%, #5B21B6 55%, #7C3AED 100%); padding: 28px 28px 23px; position: relative; overflow: hidden; flex-shrink: 0;">
             <div style="position: absolute; top: -50px; right: -50px; width: 180px; height: 180px; background: rgba(255,255,255,0.05); border-radius: 50%;"></div>
             <div style="position: absolute; bottom: -30px; right: 110px; width: 100px; height: 100px; background: rgba(255,255,255,0.04); border-radius: 50%;"></div>
             <div style="position: absolute; top: 15px; right: 230px; width: 45px; height: 45px; background: rgba(255,255,255,0.04); border-radius: 50%;"></div>
@@ -323,80 +335,111 @@ export default function DashboardPage() {
           </div>
 
           <!-- BODY -->
-          <div style="flex: 1; padding: 22px 28px 14px; display: flex; flex-direction: column; gap: 17px; overflow: hidden;">
+          <div style="flex: 1; padding: 16px 28px 10px; display: flex; flex-direction: column; gap: 13px; overflow: hidden;">
 
             <!-- Profilo professionale -->
             <div>
-              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 9px;">
-                <div style="width: 3px; height: 16px; background: linear-gradient(180deg, #7C3AED, #3B82F6); border-radius: 2px;"></div>
-                <span style="font-size: 9.5px; font-weight: 700; color: #6D28D9; text-transform: uppercase; letter-spacing: 2px;">Profilo Professionale</span>
+              <div style="display: flex; align-items: center; gap: 7px; margin-bottom: 7px;">
+                <div style="width: 3px; height: 13px; background: linear-gradient(180deg, #7C3AED, #3B82F6); border-radius: 2px;"></div>
+                <span style="font-size: 9px; font-weight: 700; color: #6D28D9; text-transform: uppercase; letter-spacing: 2px;">Profilo Professionale</span>
               </div>
-              <div style="background: linear-gradient(135deg, #F5F3FF, #EDE9FE); border-radius: 10px; padding: 14px 18px; border: 1px solid #C4B5FD;">
-                <p style="font-size: 17px; font-weight: 800; color: #4C1D95; margin: 0; line-height: 1.3;">"${sanitizeText(qualitativeReport?.profile_insights?.suggested_profile) || 'N/A'}"</p>
+              <div style="background: linear-gradient(135deg, #F5F3FF, #EDE9FE); border-radius: 10px; padding: 11px 16px; border: 1px solid #C4B5FD;">
+                <p style="font-size: 16px; font-weight: 800; color: #4C1D95; margin: 0; line-height: 1.3;">"${sanitizeText(qualitativeReport?.profile_insights?.suggested_profile) || 'N/A'}"</p>
               </div>
             </div>
 
             <!-- Sintesi -->
             <div>
-              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 9px;">
-                <div style="width: 3px; height: 16px; background: linear-gradient(180deg, #7C3AED, #3B82F6); border-radius: 2px;"></div>
-                <span style="font-size: 9.5px; font-weight: 700; color: #6D28D9; text-transform: uppercase; letter-spacing: 2px;">Sintesi del Profilo</span>
+              <div style="display: flex; align-items: center; gap: 7px; margin-bottom: 7px;">
+                <div style="width: 3px; height: 13px; background: linear-gradient(180deg, #7C3AED, #3B82F6); border-radius: 2px;"></div>
+                <span style="font-size: 9px; font-weight: 700; color: #6D28D9; text-transform: uppercase; letter-spacing: 2px;">Sintesi del Profilo</span>
               </div>
-              <p style="color: #374151; line-height: 1.75; margin: 0; font-size: 12px; text-align: justify;">${sanitizeText(qualitativeReport?.profile_insights?.summary) || 'Descrizione del profilo professionale non disponibile.'}</p>
+              <p style="color: #374151; line-height: 1.65; margin: 0; font-size: 11.5px; text-align: justify;">${sanitizeText(qualitativeReport?.profile_insights?.summary) || ''}</p>
             </div>
 
-            <!-- Punti di forza -->
+            <!-- Pattern comportamentali -->
+            ${behaviorPatterns.length > 0 ? `
             <div>
-              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 9px;">
-                <div style="width: 3px; height: 16px; background: linear-gradient(180deg, #2563EB, #06B6D4); border-radius: 2px;"></div>
-                <span style="font-size: 9.5px; font-weight: 700; color: #1D4ED8; text-transform: uppercase; letter-spacing: 2px;">Punti di Forza Unici</span>
+              <div style="display: flex; align-items: center; gap: 7px; margin-bottom: 7px;">
+                <div style="width: 3px; height: 13px; background: linear-gradient(180deg, #059669, #06B6D4); border-radius: 2px;"></div>
+                <span style="font-size: 9px; font-weight: 700; color: #047857; text-transform: uppercase; letter-spacing: 2px;">Pattern Comportamentali</span>
               </div>
-              <div style="background: #EFF6FF; border-radius: 10px; padding: 12px 16px; border: 1px solid #BFDBFE;">
-                <p style="color: #1E3A8A; line-height: 1.65; margin: 0; font-size: 12px;">${sanitizeText(qualitativeReport?.profile_insights?.unique_strengths) || 'N/A'}</p>
+              <div style="display: flex; flex-direction: column; gap: 5px;">
+                ${behaviorPatterns.slice(0, 3).map((p: string) => `
+                  <div style="display: flex; align-items: flex-start; gap: 9px; background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 8px; padding: 7px 11px;">
+                    <div style="width: 16px; height: 16px; background: #059669; border-radius: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;">
+                      <span style="color: white; font-size: 9px; font-weight: 900;">&#8250;</span>
+                    </div>
+                    <p style="color: #065F46; font-size: 10.5px; line-height: 1.5; margin: 0;">${sanitizeText(p)}</p>
+                  </div>
+                `).join('')}
               </div>
             </div>
+            ` : ''}
 
-            <!-- Top 3 competenze -->
+            <!-- Top 3 competenze + QR -->
             <div>
-              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 11px;">
-                <div style="width: 3px; height: 16px; background: linear-gradient(180deg, #7C3AED, #3B82F6); border-radius: 2px;"></div>
-                <span style="font-size: 9.5px; font-weight: 700; color: #6D28D9; text-transform: uppercase; letter-spacing: 2px;">Top 3 Competenze</span>
+              <div style="display: flex; align-items: center; gap: 7px; margin-bottom: 9px;">
+                <div style="width: 3px; height: 13px; background: linear-gradient(180deg, #7C3AED, #3B82F6); border-radius: 2px;"></div>
+                <span style="font-size: 9px; font-weight: 700; color: #6D28D9; text-transform: uppercase; letter-spacing: 2px;">Top 3 Competenze</span>
               </div>
-              <div style="display: flex; gap: 10px;">
-                ${topSkills.map((skill, idx) => {
-                  const gradients = [
-                    'linear-gradient(150deg, #4C1D95, #7C3AED)',
-                    'linear-gradient(150deg, #1E40AF, #3B82F6)',
-                    'linear-gradient(150deg, #155E75, #0891B2)'
-                  ]
-                  const textColors = ['#6D28D9', '#1D4ED8', '#0E7490']
-                  const borderColors = ['#C4B5FD', '#BFDBFE', '#A5F3FC']
-                  const bgColors = ['#F5F3FF', '#EFF6FF', '#ECFEFF']
-                  const rankLabels = ['1°', '2°', '3°']
-                  return `
-                    <div style="flex: 1; border-radius: 12px; overflow: hidden; box-shadow: 0 3px 14px rgba(0,0,0,0.09);">
-                      <div style="background: ${gradients[idx]}; padding: 18px 10px 14px; text-align: center; position: relative;">
-                        <div style="position: absolute; top: 7px; right: 9px; background: rgba(255,255,255,0.18); border-radius: 99px; padding: 1px 7px; font-size: 9px; color: rgba(255,255,255,0.9); font-weight: 700;">${rankLabels[idx]}</div>
-                        <div style="font-size: 32px; line-height: 1; margin-bottom: 8px;">${skill.icon}</div>
-                        <div style="font-size: 10.5px; color: rgba(255,255,255,0.9); font-weight: 600; line-height: 1.3;">${sanitizeText(skill.category)}</div>
-                      </div>
-                      <div style="background: ${bgColors[idx]}; padding: 11px 10px 13px; text-align: center; border: 1px solid ${borderColors[idx]}; border-top: none; border-radius: 0 0 12px 12px;">
-                        <span style="font-size: 26px; font-weight: 900; color: ${textColors[idx]};">${skill.score.toFixed(1)}</span>
-                        <span style="font-size: 12px; color: #9CA3AF;">/5.0</span>
-                        <div style="margin-top: 6px; height: 4px; background: rgba(0,0,0,0.08); border-radius: 2px; overflow: hidden;">
-                          <div style="height: 100%; background: ${textColors[idx]}; border-radius: 2px; width: ${(skill.score / 5) * 100}%;"></div>
+              <div style="display: flex; gap: 10px; align-items: flex-start;">
+                <div style="flex: 1; display: flex; gap: 9px;">
+                  ${topSkills.map((skill, idx) => {
+                    const gradients = [
+                      'linear-gradient(150deg, #4C1D95, #7C3AED)',
+                      'linear-gradient(150deg, #1E40AF, #3B82F6)',
+                      'linear-gradient(150deg, #155E75, #0891B2)'
+                    ]
+                    const textColors = ['#6D28D9', '#1D4ED8', '#0E7490']
+                    const borderColors = ['#C4B5FD', '#BFDBFE', '#A5F3FC']
+                    const bgColors = ['#F5F3FF', '#EFF6FF', '#ECFEFF']
+                    const rankLabels = ['1°', '2°', '3°']
+                    const initial = (skillInitials[skill.name] || skill.category.substring(0, 2).toUpperCase())
+                    return `
+                      <div style="flex: 1; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.09);">
+                        <div style="background: ${gradients[idx]}; padding: 14px 10px 12px; text-align: center; position: relative;">
+                          <div style="position: absolute; top: 6px; right: 8px; background: rgba(255,255,255,0.18); border-radius: 99px; padding: 1px 6px; font-size: 8.5px; color: rgba(255,255,255,0.9); font-weight: 700;">${rankLabels[idx]}</div>
+                          <div style="width: 36px; height: 36px; background: rgba(255,255,255,0.18); border: 1.5px solid rgba(255,255,255,0.32); border-radius: 9px; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px;">
+                            <span style="color: white; font-size: 13px; font-weight: 900; letter-spacing: -0.5px;">${initial}</span>
+                          </div>
+                          <div style="font-size: 10px; color: rgba(255,255,255,0.9); font-weight: 600; line-height: 1.3;">${sanitizeText(skill.category)}</div>
+                        </div>
+                        <div style="background: ${bgColors[idx]}; padding: 9px 10px 11px; text-align: center; border: 1px solid ${borderColors[idx]}; border-top: none; border-radius: 0 0 12px 12px;">
+                          <span style="font-size: 23px; font-weight: 900; color: ${textColors[idx]};">${skill.score.toFixed(1)}</span>
+                          <span style="font-size: 11px; color: #9CA3AF;">/5.0</span>
+                          <div style="margin-top: 5px; height: 4px; background: rgba(0,0,0,0.08); border-radius: 2px; overflow: hidden;">
+                            <div style="height: 100%; background: ${textColors[idx]}; border-radius: 2px; width: ${(skill.score / 5) * 100}%;"></div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  `
-                }).join('')}
+                    `
+                  }).join('')}
+                </div>
+                ${qrCodeUrl ? `
+                <div style="flex-shrink: 0; text-align: center; background: #FAFAFA; border: 1px solid #E5E7EB; border-radius: 12px; padding: 11px 10px 9px;">
+                  <img src="${qrCodeUrl}" alt="QR" style="width: 74px; height: 74px; display: block; border-radius: 6px;" />
+                  <p style="font-size: 8px; color: #9CA3AF; margin: 5px 0 0 0; line-height: 1.4;">Scansiona<br>per verificare</p>
+                </div>
+                ` : ''}
+              </div>
+            </div>
+
+            <!-- Punti di forza unici -->
+            <div>
+              <div style="display: flex; align-items: center; gap: 7px; margin-bottom: 7px;">
+                <div style="width: 3px; height: 13px; background: linear-gradient(180deg, #2563EB, #06B6D4); border-radius: 2px;"></div>
+                <span style="font-size: 9px; font-weight: 700; color: #1D4ED8; text-transform: uppercase; letter-spacing: 2px;">Punti di Forza Unici</span>
+              </div>
+              <div style="background: #EFF6FF; border-radius: 10px; padding: 10px 14px; border: 1px solid #BFDBFE;">
+                <p style="color: #1E3A8A; line-height: 1.6; margin: 0; font-size: 11.5px;">${sanitizeText(qualitativeReport?.profile_insights?.unique_strengths) || 'N/A'}</p>
               </div>
             </div>
 
           </div>
 
           <!-- FOOTER -->
-          <div style="padding: 9px 28px 14px; border-top: 1px solid #F3F4F6; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+          <div style="padding: 8px 28px 12px; border-top: 1px solid #F3F4F6; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
             <span style="font-size: 9px; color: #C4B5FD; font-weight: 700; letter-spacing: 0.5px;">VALUTOLAB.COM</span>
             <span style="font-size: 9px; color: #D1D5DB;">Pagina 1 / 3</span>
           </div>
@@ -438,32 +481,46 @@ export default function DashboardPage() {
           </div>
 
           <!-- BODY -->
-          <div style="flex: 1; padding: 18px 28px 14px; display: flex; flex-direction: column;">
+          <div style="flex: 1; padding: 15px 28px 12px; display: flex; flex-direction: column;">
 
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-shrink: 0;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-shrink: 0;">
               <div style="width: 3px; height: 16px; background: linear-gradient(180deg, #7C3AED, #3B82F6); border-radius: 2px;"></div>
-              <span style="font-size: 9.5px; font-weight: 700; color: #6D28D9; text-transform: uppercase; letter-spacing: 2px;">Tutte le Competenze</span>
+              <span style="font-size: 9.5px; font-weight: 700; color: #6D28D9; text-transform: uppercase; letter-spacing: 2px;">Analisi Dettagliata delle Competenze</span>
             </div>
 
-            <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
-              ${allSkills.map((skill, index) => {
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 7px; flex: 1;">
+              ${allSkills.map((skill) => {
                 const color = skillColors[skill.name] || '#8B5CF6'
                 const percentage = (skill.score / 5) * 100
-                const icon = categoryIcons[skill.name] || '⭐'
-                const isEven = index % 2 === 0
+                const interp = (categoryInterps as any)[skill.name] || {}
+                const level: string = interp.level || (skill.score >= 4.1 ? 'Esperto' : skill.score >= 3.1 ? 'Avanzato' : skill.score >= 2.1 ? 'Intermedio' : 'Base')
+                const description: string = interp.description || ''
+                const initial = (skillInitials[skill.name] || skill.category.substring(0, 2).toUpperCase())
+                const levelConfig: Record<string, { bg: string; text: string; border: string }> = {
+                  'Esperto':    { bg: '#DCFCE7', text: '#15803D', border: '#16A34A' },
+                  'Avanzato':   { bg: '#DBEAFE', text: '#1D4ED8', border: '#2563EB' },
+                  'Intermedio': { bg: '#FEF9C3', text: '#A16207', border: '#CA8A04' },
+                  'Base':       { bg: '#F3F4F6', text: '#6B7280', border: '#9CA3AF' }
+                }
+                const lc = levelConfig[level] || levelConfig['Base']
                 return `
-                  <div style="display: flex; align-items: center; gap: 11px; padding: 9px 13px; border-radius: 9px; background: ${isEven ? '#FAFAFA' : 'white'}; border: 1px solid ${isEven ? '#F3F4F6' : '#F9FAFB'};">
-                    <span style="font-size: 10px; font-weight: 700; color: #D1D5DB; width: 16px; flex-shrink: 0; text-align: right;">${index + 1}</span>
-                    <span style="font-size: 19px; line-height: 1; flex-shrink: 0; width: 24px; text-align: center;">${icon}</span>
-                    <span style="font-size: 12px; font-weight: 600; color: #1F2937; width: 155px; flex-shrink: 0; line-height: 1.2;">${sanitizeText(skill.category)}</span>
-                    <div style="flex: 1; background: #F3F4F6; height: 13px; border-radius: 7px; overflow: hidden;">
-                      <div style="height: 100%; background: linear-gradient(90deg, ${color}BB, ${color}); border-radius: 7px; width: ${percentage}%;"></div>
+                  <div style="background: white; border: 1px solid #E5E7EB; border-radius: 10px; padding: 10px 13px 10px 10px; display: flex; flex-direction: column; gap: 6px; border-left: 3px solid ${color};">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                      <div style="width: 28px; height: 28px; background: ${color}; border-radius: 7px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <span style="color: white; font-size: 10px; font-weight: 900; letter-spacing: -0.5px;">${initial}</span>
+                      </div>
+                      <div style="flex: 1; min-width: 0;">
+                        <div style="font-size: 11.5px; font-weight: 700; color: #1F2937; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${sanitizeText(skill.category)}</div>
+                      </div>
+                      <div style="text-align: right; flex-shrink: 0;">
+                        <span style="font-size: 8.5px; background: ${lc.bg}; color: ${lc.text}; padding: 1px 5px; border-radius: 4px; font-weight: 700; border: 1px solid ${lc.border}44;">${level}</span>
+                        <div style="font-size: 13px; font-weight: 800; color: ${color}; text-align: right; margin-top: 1px; line-height: 1.2;">${skill.score.toFixed(1)}<span style="font-size: 9px; color: #9CA3AF; font-weight: 400;">/5</span></div>
+                      </div>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 5px; flex-shrink: 0; width: 82px; justify-content: flex-end;">
-                      <span style="font-size: 14px; font-weight: 800; color: ${color};">${skill.score.toFixed(1)}</span>
-                      <span style="font-size: 9px; color: #9CA3AF;">/5</span>
-                      <span style="font-size: 8.5px; background: #F3F4F6; color: #6B7280; padding: 1px 5px; border-radius: 4px; font-weight: 600;">${Math.round(percentage)}%</span>
+                    <div style="background: #F3F4F6; height: 7px; border-radius: 4px; overflow: hidden;">
+                      <div style="height: 100%; background: linear-gradient(90deg, ${color}88, ${color}); border-radius: 4px; width: ${percentage}%;"></div>
                     </div>
+                    ${description ? `<p style="font-size: 9.5px; color: #6B7280; margin: 0; line-height: 1.5; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${sanitizeText(description)}</p>` : ''}
                   </div>
                 `
               }).join('')}
@@ -566,30 +623,42 @@ export default function DashboardPage() {
               <span style="font-size: 9.5px; font-weight: 700; color: #1D4ED8; text-transform: uppercase; letter-spacing: 2px;">Livelli ESCO per Competenza</span>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; flex: 1;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; flex: 1; align-content: start;">
               ${canonicalOrder.map((cat) => {
-                const interp = categoryInterps[cat] as any
-                const escoLevel = interp?.esco_mapping?.esco_level || 'Base'
-                const escoGroup = interp?.esco_mapping?.esco_group || ''
-                const score = interp?.score || 0
+                const interp = (categoryInterps as any)[cat] || {}
+                const escoLevel: string = interp?.esco_mapping?.esco_level || 'Base'
+                const escoSkillsDemonstrated: string[] = interp?.esco_mapping?.esco_skills_demonstrated || []
+                const escoGroup: string = interp?.esco_mapping?.esco_group || ''
+                const score: number = interp?.score || 0
+                const description: string = interp?.description || ''
                 const colors = escoLevelColors[escoLevel] || escoLevelColors['Base']
-                const icon = categoryIcons[cat] || '⭐'
                 const label = categoryLabels[cat] || cat
+                const initial = (skillInitials[cat] || label.substring(0, 2).toUpperCase())
+                const skillColor = skillColors[cat] || '#8B5CF6'
                 const percentage = (score / 5) * 100
+                const displaySkills = escoSkillsDemonstrated.slice(0, 2).join(' · ')
                 return `
-                  <div style="background: ${colors.bg}; border: 1.5px solid ${colors.border}; border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 5px;">
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                      <span style="font-size: 15px; line-height: 1; flex-shrink: 0;">${icon}</span>
-                      <span style="font-size: 11px; font-weight: 700; color: #1F2937; line-height: 1.2;">${sanitizeText(label)}</span>
+                  <div style="background: ${colors.bg}; border: 1.5px solid ${colors.border}; border-radius: 10px; padding: 10px 11px; display: flex; flex-direction: column; gap: 5px; min-height: 0;">
+                    <!-- Header: icon + name -->
+                    <div style="display: flex; align-items: center; gap: 7px;">
+                      <div style="width: 26px; height: 26px; background: ${skillColor}; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <span style="color: white; font-size: 9.5px; font-weight: 900; letter-spacing: -0.5px;">${initial}</span>
+                      </div>
+                      <span style="font-size: 10.5px; font-weight: 700; color: #1F2937; line-height: 1.2; flex: 1;">${sanitizeText(label)}</span>
                     </div>
+                    <!-- Level badge + score on same line -->
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                      <span style="font-size: 9.5px; font-weight: 700; color: ${colors.text}; background: ${colors.border}33; padding: 1px 6px; border-radius: 4px;">${colors.label}</span>
-                      <span style="font-size: 12px; font-weight: 800; color: ${colors.text};">${score.toFixed(1)}</span>
+                      <span style="font-size: 8.5px; font-weight: 700; color: ${colors.text}; background: ${colors.border}22; padding: 1px 6px; border-radius: 4px; border: 1px solid ${colors.border}66;">${colors.label}</span>
+                      <span style="font-size: 12px; font-weight: 900; color: ${colors.text};">${score.toFixed(1)}<span style="font-size: 8px; color: #9CA3AF; font-weight: 400;">/5</span></span>
                     </div>
-                    <div style="height: 3px; background: rgba(0,0,0,0.07); border-radius: 2px; overflow: hidden;">
-                      <div style="height: 100%; background: ${colors.border}; border-radius: 2px; width: ${percentage}%;"></div>
+                    <!-- Progress bar -->
+                    <div style="height: 4px; background: rgba(0,0,0,0.07); border-radius: 2px; overflow: hidden;">
+                      <div style="height: 100%; background: ${skillColor}; border-radius: 2px; width: ${percentage}%;"></div>
                     </div>
-                    ${escoGroup ? `<p style="font-size: 8.5px; color: #6B7280; margin: 0; line-height: 1.3;">${sanitizeText(escoGroup)}</p>` : ''}
+                    <!-- Description (1 line) -->
+                    ${description ? `<p style="font-size: 8.5px; color: #374151; margin: 0; line-height: 1.4; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">${sanitizeText(description)}</p>` : ''}
+                    <!-- ESCO skills demonstrated -->
+                    ${displaySkills ? `<p style="font-size: 8px; color: ${colors.text}; margin: 0; line-height: 1.3; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; opacity: 0.85;">${sanitizeText(displaySkills)}</p>` : (escoGroup ? `<p style="font-size: 8px; color: #6B7280; margin: 0; line-height: 1.3;">${sanitizeText(escoGroup)}</p>` : '')}
                   </div>
                 `
               }).join('')}
