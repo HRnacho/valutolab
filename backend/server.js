@@ -11,11 +11,12 @@ import leadershipRoutes from './routes/leadership.js';
 import organizationsRoutes from './routes/organizations.js';
 import trialRoutes from './routes/trial.js';
 import trialB2cRoutes from './routes/trial-b2c.js';
+import trackingRoutes from './routes/tracking.js';
 
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 10000;
+const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
@@ -28,7 +29,7 @@ const supabase = createClient(
 app.get('/health', (req, res) => {
   res.json({ 
     status: 'ok', 
-    message: 'ValutoLab Backend running on port 10000',
+    message: `ValutoLab Backend running on port ${PORT}`,
     timestamp: new Date().toISOString()
   });
 });
@@ -49,6 +50,7 @@ app.use('/api/leadership', leadershipRoutes);
 app.use('/api/organizations', organizationsRoutes);
 app.use('/api/v1/trial', trialRoutes);
 app.use('/api/trial-b2c', trialB2cRoutes);
+app.use('/', trackingRoutes);
 
 app.listen(PORT, () => {
   console.log(`ValutoLab Backend running on port ${PORT}`);
@@ -59,4 +61,5 @@ app.listen(PORT, () => {
   console.log(`Leadership Assessment: http://localhost:${PORT}/api/leadership`);
   console.log(`Organizations: http://localhost:${PORT}/api/organizations`);
   console.log(`Trial Aziende: http://localhost:${PORT}/api/v1/trial`);
+  console.log(`Tracking/Inviti: http://localhost:${PORT}/invito/:campaign`);
 });

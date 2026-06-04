@@ -644,8 +644,7 @@ export default function DashboardPage() {
   }
 
   const handlePrintPDF = (assessmentId: string) => {
-    router.push(`/dashboard/results/${assessmentId}`)
-    setTimeout(() => window.print(), 1000)
+    router.push(`/dashboard/results/$000)
   }
 
   const handleShareEmail = (assessmentId: string) => {

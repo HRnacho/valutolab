@@ -1,12 +1,12 @@
 import express from 'express';
-import { createClient } from '@supabase/supabase-js';
+import pg from 'pg';
+import { Resend } from 'resend';
 
 const router = express.Router();
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
-);
+const db = new pg.Pool({
+  connectionString: process.env.DATABASE_URL
+});
 
 // ============================================
 // 1. CREA ORGANIZZAZIONE
@@ -22,44 +22,24 @@ router.post('/create', async (req, res) => {
       });
     }
 
-    // Crea organizzazione con TUTTI i campi
-    const { data: org, error: orgError } = await supabase
-      .from('organizations')
-      .insert({
-        name: name,
-        contact_email: contactEmail,
-        partita_iva: partitaIva,
-        referent_name: referentName,
-        referent_role: referentRole,
-        subscription_tier: 'starter',
-        subscription_status: 'active',
-        assessment_quota: 20,
-        used_assessments: 0
-      })
-      .select()
-      .single();
+    const orgResult = await db.query(
+      `INSERT INTO organizations 
+         (name, contact_email, partita_iva, referent_name, referent_role, user_id,
+          subscription_tier, subscription_status, assessment_quota, used_assessments)
+       VALUES ($1, $2, $3, $4, $5, $6, 'starter', 'active', 20, 0)
+       RETURNING *`,
+      [name, contactEmail, partitaIva, referentName, referentRole, userId]
+    );
 
-    if (orgError) {
-      console.error('Supabase error:', orgError);
-      throw orgError;
-    }
+    const org = orgResult.rows[0];
 
-    // Aggiungi utente come owner
-    const { error: memberError } = await supabase
-      .from('organization_members')
-      .insert({
-        organization_id: org.id,
-        user_id: userId,
-        role: 'owner',
-        can_view_results: true,
-        can_create_invites: true,
-        can_manage_members: true
-      });
-
-    if (memberError) {
-      console.error('Member error:', memberError);
-      throw memberError;
-    }
+    await db.query(
+      `INSERT INTO organization_members 
+         (organization_id, user_id, role, can_view_results, can_create_invites, can_manage_members, joined_at)
+       VALUES ($1, $2, 'owner', true, true, true, NOW())
+       ON CONFLICT (organization_id, user_id) DO NOTHING`,
+      [org.id, userId]
+    );
 
     res.json({
       success: true,
@@ -84,26 +64,41 @@ router.get('/user/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
 
-    // Trova organizzazioni dell'utente
-    const { data: memberships, error: memberError } = await supabase
-      .from('organization_members')
-      .select(`
-        *,
-        organizations (*)
-      `)
-      .eq('user_id', userId);
-
-    if (memberError) throw memberError;
+    const result = await db.query(
+      `SELECT 
+         o.*,
+         om.role,
+         om.can_view_results,
+         om.can_create_invites,
+         om.can_manage_members
+       FROM organization_members om
+       JOIN organizations o ON o.id = om.organization_id
+       WHERE om.user_id = $1`,
+      [userId]
+    );
 
     res.json({
       success: true,
-      organizations: memberships.map(m => ({
-        ...m.organizations,
-        role: m.role,
+      organizations: result.rows.map(row => ({
+        id: row.id,
+        name: row.name,
+        contact_email: row.contact_email,
+        partita_iva: row.partita_iva,
+        referent_name: row.referent_name,
+        referent_role: row.referent_role,
+        user_id: row.user_id,
+        subscription_tier: row.subscription_tier,
+        subscription_status: row.subscription_status,
+        assessment_quota: row.assessment_quota,
+        used_assessments: row.used_assessments,
+        quota_reset_date: row.quota_reset_date,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+        role: row.role,
         permissions: {
-          can_view_results: m.can_view_results,
-          can_create_invites: m.can_create_invites,
-          can_manage_members: m.can_manage_members
+          can_view_results: row.can_view_results,
+          can_create_invites: row.can_create_invites,
+          can_manage_members: row.can_manage_members
         }
       }))
     });
@@ -125,41 +120,40 @@ router.get('/:orgId', async (req, res) => {
   try {
     const { orgId } = req.params;
 
-    const { data: org, error } = await supabase
-      .from('organizations')
-      .select('*')
-      .eq('id', orgId)
-      .single();
+    const orgResult = await db.query(
+      'SELECT * FROM organizations WHERE id = $1',
+      [orgId]
+    );
 
-    if (error) throw error;
+    if (orgResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Organizzazione non trovata' });
+    }
 
-    // Conta membri
-    const { count: memberCount } = await supabase
-      .from('organization_members')
-      .select('*', { count: 'exact', head: true })
-      .eq('organization_id', orgId);
+    const org = orgResult.rows[0];
 
-    // Conta inviti
-    const { count: inviteCount } = await supabase
-      .from('candidate_invites')
-      .select('*', { count: 'exact', head: true })
-      .eq('organization_id', orgId);
+    const memberCount = await db.query(
+      'SELECT COUNT(*) FROM organization_members WHERE organization_id = $1',
+      [orgId]
+    );
 
-    // Conta completati
-    const { count: completedCount } = await supabase
-      .from('candidate_invites')
-      .select('*', { count: 'exact', head: true })
-      .eq('organization_id', orgId)
-      .eq('status', 'completed');
+    const inviteCount = await db.query(
+      'SELECT COUNT(*) FROM candidate_invites WHERE organization_id = $1',
+      [orgId]
+    );
+
+    const completedCount = await db.query(
+      "SELECT COUNT(*) FROM candidate_invites WHERE organization_id = $1 AND status = 'completed'",
+      [orgId]
+    );
 
     res.json({
       success: true,
       organization: {
         ...org,
         stats: {
-          members: memberCount || 0,
-          invites: inviteCount || 0,
-          completed: completedCount || 0,
+          members: parseInt(memberCount.rows[0].count) || 0,
+          invites: parseInt(inviteCount.rows[0].count) || 0,
+          completed: parseInt(completedCount.rows[0].count) || 0,
           quota_remaining: org.assessment_quota - org.used_assessments
         }
       }
@@ -190,12 +184,12 @@ router.post('/:orgId/invite', async (req, res) => {
       });
     }
 
-    // Verifica quota disponibile
-    const { data: org } = await supabase
-      .from('organizations')
-      .select('assessment_quota, used_assessments')
-      .eq('id', orgId)
-      .single();
+    const orgResult = await db.query(
+      'SELECT assessment_quota, used_assessments, name FROM organizations WHERE id = $1',
+      [orgId]
+    );
+
+    const org = orgResult.rows[0];
 
     if (org.used_assessments >= org.assessment_quota) {
       return res.status(403).json({
@@ -204,45 +198,81 @@ router.post('/:orgId/invite', async (req, res) => {
       });
     }
 
-    // Verifica permessi utente
-    const { data: member } = await supabase
-      .from('organization_members')
-      .select('can_create_invites')
-      .eq('organization_id', orgId)
-      .eq('user_id', userId)
-      .single();
+    const memberResult = await db.query(
+      'SELECT can_create_invites FROM organization_members WHERE organization_id = $1 AND user_id = $2',
+      [orgId, userId]
+    );
 
-    if (!member || !member.can_create_invites) {
+    if (memberResult.rows.length === 0 || !memberResult.rows[0].can_create_invites) {
       return res.status(403).json({
         success: false,
         message: 'Non hai i permessi per invitare candidati'
       });
     }
 
-    // Crea invito
-    const { data: invite, error } = await supabase
-      .from('candidate_invites')
-      .insert({
-        organization_id: orgId,
-        invited_by: userId,
-        candidate_email: candidateEmail,
-        candidate_name: candidateName,
-        assessment_type: assessmentType || 'internal',
-        notes: notes,
-        status: 'pending'
-      })
-      .select()
-      .single();
+    const inviteResult = await db.query(
+      `INSERT INTO candidate_invites 
+         (organization_id, invited_by, candidate_email, candidate_name, assessment_type, notes, status)
+       VALUES ($1, $2, $3, $4, $5, $6, 'pending')
+       RETURNING *`,
+      [orgId, userId, candidateEmail, candidateName, assessmentType || 'internal', notes]
+    );
 
-    if (error) throw error;
+    const invite = inviteResult.rows[0];
 
-    // TODO: Invia email invito
-    // await sendInviteEmail(candidateEmail, invite.invite_token);
+    // Invia email al candidato
+    try {
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      const assessmentUrl = `https://valutolab.com/invito/${invite.invite_token}`;
+
+      await resend.emails.send({
+        from: 'ValutoLab <info@valutolab.com>',
+        to: candidateEmail,
+        subject: `📋 ${org.name} ti invita a completare un Assessment`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="text-align: center; margin-bottom: 32px;">
+              <h1 style="color: #4F46E5;">ValutoLab</h1>
+            </div>
+
+            <h2>Ciao ${candidateName || candidateEmail}! 👋</h2>
+
+            <p><strong>${org.name}</strong> ti ha invitato a completare un assessment professionale delle soft skills.</p>
+
+            <div style="background: #F3F4F6; border-radius: 8px; padding: 24px; margin: 24px 0;">
+              <h3 style="margin-top: 0; color: #1F2937;">📋 Cosa ti aspetta</h3>
+              <p>✅ <strong>60 domande</strong> di autovalutazione</p>
+              <p>✅ <strong>15 minuti</strong> per completarlo</p>
+              <p>✅ <strong>Report personalizzato</strong> delle tue competenze</p>
+            </div>
+
+            <div style="text-align: center; margin: 32px 0;">
+              <a href="${assessmentUrl}" 
+                 style="background: #4F46E5; color: white; padding: 16px 40px; border-radius: 8px; text-decoration: none; font-size: 18px; font-weight: bold;">
+                Inizia l'Assessment →
+              </a>
+            </div>
+
+            <p style="color: #6B7280; font-size: 14px;">
+              Se il bottone non funziona, copia questo link nel browser:<br/>
+              <a href="${assessmentUrl}">${assessmentUrl}</a>
+            </p>
+
+            <p style="color: #9CA3AF; font-size: 12px; margin-top: 32px;">
+              Hai ricevuto questa email perché ${org.name} ti ha invitato tramite ValutoLab.
+            </p>
+          </div>
+        `
+      });
+    } catch (emailError) {
+      console.error('Email sending error:', emailError);
+      // Non blocchiamo la risposta se l'email fallisce
+    }
 
     res.json({
       success: true,
       invite,
-      message: 'Invito creato con successo'
+      message: 'Invito creato e email inviata al candidato'
     });
 
   } catch (error) {
@@ -263,30 +293,26 @@ router.get('/:orgId/invites', async (req, res) => {
     const { orgId } = req.params;
     const { status } = req.query;
 
-    let query = supabase
-      .from('candidate_invites')
-      .select(`
-        *,
-        assessments (
-          id,
-          total_score,
-          completed_at
-        )
-      `)
-      .eq('organization_id', orgId)
-      .order('created_at', { ascending: false });
+    let query = `
+      SELECT ci.*, a.id as assessment_id, a.total_score, a.completed_at as assessment_completed_at
+      FROM candidate_invites ci
+      LEFT JOIN assessments a ON a.id = ci.assessment_id
+      WHERE ci.organization_id = $1
+    `;
+    const values = [orgId];
 
     if (status) {
-      query = query.eq('status', status);
+      query += ` AND ci.status = $2`;
+      values.push(status);
     }
 
-    const { data: invites, error } = await query;
+    query += ' ORDER BY ci.created_at DESC';
 
-    if (error) throw error;
+    const result = await db.query(query, values);
 
     res.json({
       success: true,
-      invites
+      invites: result.rows
     });
 
   } catch (error) {
@@ -306,21 +332,20 @@ router.get('/invite/:token/validate', async (req, res) => {
   try {
     const { token } = req.params;
 
-    const { data: invite, error } = await supabase
-      .from('candidate_invites')
-      .select(`
-        *,
-        organizations (name)
-      `)
-      .eq('invite_token', token)
-      .single();
+    const result = await db.query(
+      `SELECT ci.*, o.name as organization_name
+       FROM candidate_invites ci
+       JOIN organizations o ON o.id = ci.organization_id
+       WHERE ci.invite_token = $1`,
+      [token]
+    );
 
-    if (error) throw error;
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Invito non trovato' });
+    }
 
-    // Verifica se scaduto
+    const invite = result.rows[0];
     const isExpired = new Date(invite.expires_at) < new Date();
-    
-    // Verifica se già completato
     const isCompleted = invite.status === 'completed';
 
     res.json({
@@ -330,7 +355,7 @@ router.get('/invite/:token/validate', async (req, res) => {
         expired: isExpired,
         completed: isCompleted,
         candidate_name: invite.candidate_name,
-        organization_name: invite.organizations.name,
+        organization_name: invite.organization_name,
         assessment_type: invite.assessment_type
       }
     });
@@ -352,35 +377,24 @@ router.post('/invite/:token/complete', async (req, res) => {
     const { token } = req.params;
     const { assessmentId } = req.body;
 
-    // Aggiorna invito
-    const { error: inviteError } = await supabase
-      .from('candidate_invites')
-      .update({
-        status: 'completed',
-        completed_at: new Date().toISOString(),
-        assessment_id: assessmentId
-      })
-      .eq('invite_token', token);
+    const inviteResult = await db.query(
+      `UPDATE candidate_invites 
+       SET status = 'completed', completed_at = NOW(), assessment_id = $1
+       WHERE invite_token = $2
+       RETURNING organization_id`,
+      [assessmentId, token]
+    );
 
-    if (inviteError) throw inviteError;
+    if (inviteResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Invito non trovato' });
+    }
 
-    // Incrementa used_assessments
-    const { data: invite } = await supabase
-      .from('candidate_invites')
-      .select('organization_id')
-      .eq('invite_token', token)
-      .single();
+    const orgId = inviteResult.rows[0].organization_id;
 
-    const { data: org } = await supabase
-      .from('organizations')
-      .select('used_assessments')
-      .eq('id', invite.organization_id)
-      .single();
-
-    await supabase
-      .from('organizations')
-      .update({ used_assessments: org.used_assessments + 1 })
-      .eq('id', invite.organization_id);
+    await db.query(
+      'UPDATE organizations SET used_assessments = used_assessments + 1 WHERE id = $1',
+      [orgId]
+    );
 
     res.json({
       success: true,
@@ -404,20 +418,17 @@ router.get('/:orgId/members', async (req, res) => {
   try {
     const { orgId } = req.params;
 
-    const { data: members, error } = await supabase
-      .from('organization_members')
-      .select(`
-        *,
-        user_profiles (full_name, avatar_url)
-      `)
-      .eq('organization_id', orgId)
-      .order('joined_at', { ascending: false });
-
-    if (error) throw error;
+    const result = await db.query(
+      `SELECT om.*
+       FROM organization_members om
+       WHERE om.organization_id = $1
+       ORDER BY om.joined_at DESC`,
+      [orgId]
+    );
 
     res.json({
       success: true,
-      members
+      members: result.rows
     });
 
   } catch (error) {

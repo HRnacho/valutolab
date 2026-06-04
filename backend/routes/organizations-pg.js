@@ -1,0 +1,227 @@
+import express from 'express';
+import db from '../config/database.js';
+
+const router = express.Router();
+
+// POST /api/organizations/create
+router.post('/create', async (req, res) => {
+  try {
+    const { userId, name, partitaIva, referentName, referentRole, contactEmail } = req.body;
+
+    if (!userId || !name || !contactEmail) {
+      return res.status(400).json({ success: false, message: 'Campi obbligatori: userId, name, contactEmail' });
+    }
+
+    const result = await db.query(
+      `INSERT INTO organizations 
+       (name, contact_email, partita_iva, referent_name, referent_role, subscription_tier, subscription_status, assessment_quota, used_assessments)
+       VALUES ($1, $2, $3, $4, $5, 'starter', 'active', 20, 0)
+       RETURNING *`,
+      [name, contactEmail, partitaIva, referentName, referentRole]
+    );
+    const org = result.rows[0];
+
+    await db.query(
+      `INSERT INTO organization_members 
+       (organization_id, user_id, role, can_view_results, can_create_invites, can_manage_members)
+       VALUES ($1, $2, 'owner', true, true, true)`,
+      [org.id, userId]
+    );
+
+    res.json({ success: true, organization: org, message: 'Organizzazione creata con successo' });
+  } catch (error) {
+    console.error('Error creating organization:', error);
+    res.status(500).json({ success: false, message: 'Errore nella creazione', error: error.message });
+  }
+});
+
+// GET /api/organizations/user/:userId
+router.get('/user/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const result = await db.query(
+      `SELECT om.*, o.* FROM organization_members om
+       JOIN organizations o ON om.organization_id = o.id
+       WHERE om.user_id = $1`,
+      [userId]
+    );
+    res.json({
+      success: true,
+      organizations: result.rows.map(r => ({
+        id: r.organization_id,
+        name: r.name,
+        contact_email: r.contact_email,
+        role: r.role,
+        permissions: {
+          can_view_results: r.can_view_results,
+          can_create_invites: r.can_create_invites,
+          can_manage_members: r.can_manage_members
+        }
+      }))
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Errore nel recupero', error: error.message });
+  }
+});
+
+// GET /api/organizations/:orgId
+router.get('/:orgId', async (req, res) => {
+  try {
+    const { orgId } = req.params;
+    const result = await db.query('SELECT * FROM organizations WHERE id = $1', [orgId]);
+    if (result.rows.length === 0) return res.status(404).json({ success: false, message: 'Organizzazione non trovata' });
+    const org = result.rows[0];
+
+    const memberCount = await db.query('SELECT COUNT(*) FROM organization_members WHERE organization_id = $1', [orgId]);
+    const inviteCount = await db.query('SELECT COUNT(*) FROM candidate_invites WHERE organization_id = $1', [orgId]);
+    const completedCount = await db.query("SELECT COUNT(*) FROM candidate_invites WHERE organization_id = $1 AND status = 'completed'", [orgId]);
+
+    res.json({
+      success: true,
+      organization: {
+        ...org,
+        stats: {
+          members: parseInt(memberCount.rows[0].count),
+          invites: parseInt(inviteCount.rows[0].count),
+          completed: parseInt(completedCount.rows[0].count),
+          quota_remaining: org.assessment_quota - org.used_assessments
+        }
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Errore nel recupero', error: error.message });
+  }
+});
+
+// POST /api/organizations/:orgId/invite
+router.post('/:orgId/invite', async (req, res) => {
+  try {
+    const { orgId } = req.params;
+    const { userId, candidateEmail, candidateName, assessmentType, notes } = req.body;
+
+    if (!candidateEmail) return res.status(400).json({ success: false, message: 'Email candidato obbligatoria' });
+
+    const orgResult = await db.query('SELECT assessment_quota, used_assessments FROM organizations WHERE id = $1', [orgId]);
+    const org = orgResult.rows[0];
+    if (org.used_assessments >= org.assessment_quota) {
+      return res.status(403).json({ success: false, message: 'Quota mensile assessment esaurita' });
+    }
+
+    const memberResult = await db.query(
+      'SELECT can_create_invites FROM organization_members WHERE organization_id = $1 AND user_id = $2',
+      [orgId, userId]
+    );
+    if (!memberResult.rows[0]?.can_create_invites) {
+      return res.status(403).json({ success: false, message: 'Non hai i permessi per invitare candidati' });
+    }
+
+    const result = await db.query(
+      `INSERT INTO candidate_invites 
+       (organization_id, invited_by, candidate_email, candidate_name, assessment_type, notes, status)
+       VALUES ($1, $2, $3, $4, $5, $6, 'pending')
+       RETURNING *`,
+      [orgId, userId, candidateEmail, candidateName, assessmentType || 'internal', notes]
+    );
+
+    res.json({ success: true, invite: result.rows[0], message: 'Invito creato con successo' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Errore nella creazione', error: error.message });
+  }
+});
+
+// GET /api/organizations/:orgId/invites
+router.get('/:orgId/invites', async (req, res) => {
+  try {
+    const { orgId } = req.params;
+    const { status } = req.query;
+
+    let query = `SELECT ci.*, a.id as assessment_id, a.total_score, a.completed_at as assessment_completed_at
+                 FROM candidate_invites ci
+                 LEFT JOIN assessments a ON ci.assessment_id = a.id
+                 WHERE ci.organization_id = $1`;
+    const values = [orgId];
+
+    if (status) { query += ` AND ci.status = $2`; values.push(status); }
+    query += ' ORDER BY ci.created_at DESC';
+
+    const result = await db.query(query, values);
+    res.json({ success: true, invites: result.rows });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Errore nel recupero', error: error.message });
+  }
+});
+
+// GET /api/organizations/invite/:token/validate
+router.get('/invite/:token/validate', async (req, res) => {
+  try {
+    const { token } = req.params;
+    const result = await db.query(
+      `SELECT ci.*, o.name as organization_name 
+       FROM candidate_invites ci
+       JOIN organizations o ON ci.organization_id = o.id
+       WHERE ci.invite_token = $1`,
+      [token]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ success: false, message: 'Invito non trovato' });
+
+    const invite = result.rows[0];
+    const isExpired = new Date(invite.expires_at) < new Date();
+    const isCompleted = invite.status === 'completed';
+
+    res.json({
+      success: true,
+      invite: {
+        valid: !isExpired && !isCompleted,
+        expired: isExpired,
+        completed: isCompleted,
+        candidate_name: invite.candidate_name,
+        organization_name: invite.organization_name,
+        assessment_type: invite.assessment_type
+      }
+    });
+  } catch (error) {
+    res.status(404).json({ success: false, message: 'Invito non trovato o non valido' });
+  }
+});
+
+// POST /api/organizations/invite/:token/complete
+router.post('/invite/:token/complete', async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { assessmentId } = req.body;
+
+    await db.query(
+      `UPDATE candidate_invites SET status = 'completed', completed_at = NOW(), assessment_id = $1 WHERE invite_token = $2`,
+      [assessmentId, token]
+    );
+
+    const inviteResult = await db.query('SELECT organization_id FROM candidate_invites WHERE invite_token = $1', [token]);
+    const orgId = inviteResult.rows[0].organization_id;
+
+    await db.query('UPDATE organizations SET used_assessments = used_assessments + 1 WHERE id = $1', [orgId]);
+
+    res.json({ success: true, message: 'Invito completato con successo' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Errore nel completamento', error: error.message });
+  }
+});
+
+// GET /api/organizations/:orgId/members
+router.get('/:orgId/members', async (req, res) => {
+  try {
+    const { orgId } = req.params;
+    const result = await db.query(
+      `SELECT om.*, up.full_name, up.avatar_url 
+       FROM organization_members om
+       LEFT JOIN user_profiles up ON om.user_id = up.id
+       WHERE om.organization_id = $1
+       ORDER BY om.joined_at DESC`,
+      [orgId]
+    );
+    res.json({ success: true, members: result.rows });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Errore nel recupero', error: error.message });
+  }
+});
+
+export default router;
