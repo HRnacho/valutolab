@@ -644,7 +644,7 @@ export default function DashboardPage() {
   }
 
   const handlePrintPDF = (assessmentId: string) => {
-    router.push(`/dashboard/results/$000)
+    router.push(`/dashboard/results/${assessmentId}`)
   }
 
   const handleShareEmail = (assessmentId: string) => {
