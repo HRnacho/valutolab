@@ -16,14 +16,8 @@ const db = new pg.Pool({
   connectionString: process.env.DATABASE_URL
 });
 
-function generatePassword() {
-  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$';
-  let password = '';
-  for (let i = 0; i < 12; i++) {
-    password += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return password;
-}
+// Le password non vengono più generate né inviate via email.
+// Al loro posto si usa un link di attivazione monouso generato da Supabase.
 
 router.post('/create', async (req, res) => {
   const { company_name, contact_name, contact_email, contact_phone, partita_iva, referent_role, notes } = req.body;
@@ -79,8 +73,6 @@ router.post('/activate/:id', async (req, res) => {
     const quota = assessment_quota || trial.assessment_quota || 20;
     const expiresAt = new Date(Date.now() + (days || 30) * 24 * 60 * 60 * 1000);
 
-    const password = generatePassword();
-
     let userId;
 
     const { data: existingUsers } = await supabase.auth.admin.listUsers({ perPage: 1000 });
@@ -88,12 +80,10 @@ router.post('/activate/:id', async (req, res) => {
 
     if (existingUser) {
       userId = existingUser.id;
-      const { error: updateError } = await supabase.auth.admin.updateUserById(userId, { password });
-      if (updateError) throw updateError;
     } else {
+      // Crea utente senza password: l'accesso avviene solo tramite link monouso
       const { data: authData, error: authError } = await supabase.auth.admin.createUser({
         email: trial.contact_email,
-        password,
         email_confirm: true,
         user_metadata: {
           full_name: trial.contact_name,
@@ -105,6 +95,16 @@ router.post('/activate/:id', async (req, res) => {
       if (authError) throw authError;
       userId = authData.user.id;
     }
+
+    // Genera link di attivazione monouso (valido 72h) — nessuna password in chiaro
+    const FRONTEND_URL = process.env.FRONTEND_URL || 'https://valutolab.com';
+    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+      type: 'recovery',
+      email: trial.contact_email,
+      options: { redirectTo: `${FRONTEND_URL}/dashboard` }
+    });
+    if (linkError) throw linkError;
+    const activationLink = linkData.properties.action_link;
 
     await db.query(
       `UPDATE trial_organizations 
@@ -130,25 +130,28 @@ router.post('/activate/:id', async (req, res) => {
     await resend.emails.send({
       from: 'ValutoLab <info@valutolab.com>',
       to: trial.contact_email,
-      subject: 'Il tuo Trial ValutoLab è Attivo - Credenziali di Accesso',
+      subject: 'Il tuo Trial ValutoLab è Attivo — Accedi ora',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <h1 style="color: #4F46E5;">ValutoLab</h1>
           <h2>Ciao ${trial.contact_name}!</h2>
-          <p>Il tuo trial per <strong>${trial.company_name}</strong> è attivo!</p>
+          <p>Il tuo trial per <strong>${trial.company_name}</strong> è attivo.</p>
           <div style="background: #F3F4F6; border-radius: 8px; padding: 24px; margin: 24px 0;">
-            <p>${quota} assessment disponibili</p>
-            <p>Valido fino al ${expiresAt.toLocaleDateString('it-IT')}</p>
+            <p><strong>${quota}</strong> assessment disponibili</p>
+            <p>Valido fino al <strong>${expiresAt.toLocaleDateString('it-IT')}</strong></p>
           </div>
-          <div style="background: #EEF2FF; border: 2px solid #4F46E5; border-radius: 8px; padding: 24px; margin: 24px 0;">
-            <p><strong>URL:</strong> valutolab.com/login</p>
-            <p><strong>Email:</strong> ${trial.contact_email}</p>
-            <p><strong>Password:</strong> ${password}</p>
+          <p>Clicca il pulsante qui sotto per impostare la tua password e accedere alla piattaforma.
+             Il link è valido per <strong>72 ore</strong> e può essere usato una sola volta.</p>
+          <div style="text-align: center; margin: 32px 0;">
+            <a href="${activationLink}"
+               style="background: #4F46E5; color: white; padding: 16px 40px; border-radius: 8px; text-decoration: none; font-size: 18px; font-weight: bold;">
+              Attiva il tuo account
+            </a>
           </div>
-          <a href="https://valutolab.com/login" 
-             style="background: #4F46E5; color: white; padding: 16px 40px; border-radius: 8px; text-decoration: none; font-size: 18px; font-weight: bold;">
-            Accedi alla Piattaforma
-          </a>
+          <p style="font-size: 12px; color: #6B7280;">
+            Se il pulsante non funziona, copia e incolla questo link nel browser:<br>
+            <span style="word-break: break-all;">${activationLink}</span>
+          </p>
           <p>Il Team ValutoLab</p>
         </div>
       `

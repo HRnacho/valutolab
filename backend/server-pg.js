@@ -10,6 +10,8 @@ import leadershipRoutes from './routes/leadership.js';
 import organizationsRoutes from './routes/organizations-pg.js';
 import trialRoutes from './routes/trial-pg.js';
 import trackingRouter from './routes/tracking.js';
+import { strictLimiter, generalLimiter } from './middleware/rateLimiter.js';
+import { errorHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
 
@@ -32,6 +34,12 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Rate limiting: stretto su endpoint che inviano email/creano account,
+// generale su tutto il resto delle API pubbliche
+app.use('/api/v1/trial/create', strictLimiter);
+app.use('/api/v1/trial/activate', strictLimiter);
+app.use('/api', generalLimiter);
+
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
@@ -49,6 +57,9 @@ app.use('/api/leadership', leadershipRoutes);
 app.use('/api/organizations', organizationsRoutes);
 app.use('/', trackingRouter);
 app.use('/api/v1/trial', trialRoutes);
+
+// Error handler centralizzato — deve stare DOPO tutte le route
+app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`✅ ValutoLab Backend PG running on port ${PORT}`);

@@ -159,6 +159,17 @@ export default function DashboardPage() {
     fetchData()
   }, [router])
 
+  // Escapa caratteri HTML per prevenire XSS nei template innerHTML del PDF
+  const sanitizeText = (value: unknown): string => {
+    const str = value == null ? '' : String(value)
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#x27;')
+  }
+
   const handleGeneratePDF = async (assessmentId: string) => {
     setGeneratingPDF(assessmentId)
     try {
@@ -298,7 +309,7 @@ export default function DashboardPage() {
           <div style="background: linear-gradient(to right, #F3E8FF, #DBEAFE); padding: 20px 25px; border-radius: 10px; margin-bottom: 25px;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <div style="flex: 1;">
-                <h3 style="font-size: 24px; font-weight: bold; color: #1F2937; margin: 0 0 12px 0;">${profile?.full_name || 'Utente ValutoLab'}</h3>
+                <h3 style="font-size: 24px; font-weight: bold; color: #1F2937; margin: 0 0 12px 0;">${sanitizeText(profile?.full_name) || 'Utente ValutoLab'}</h3>
                 <p style="font-weight: 600; color: #6B7280; margin: 0 0 3px 0; font-size: 13px;">Data Valutazione:</p>
                 <p style="color: #9CA3AF; font-size: 13px; margin: 0;">${new Date(assessment?.completed_at || '').toLocaleDateString('it-IT')}</p>
               </div>
@@ -311,16 +322,16 @@ export default function DashboardPage() {
           <div style="margin-bottom: 25px;">
             <h3 style="font-size: 18px; font-weight: bold; color: #1F2937; margin: 0 0 12px 0;">Profilo Professionale</h3>
             <div style="background-color: #F3E8FF; padding: 18px 20px; border-radius: 10px; border-left: 4px solid #9333EA; margin-bottom: 15px;">
-              <p style="font-size: 20px; font-weight: bold; color: #7C3AED; margin: 0; line-height: 1.3;">${qualitativeReport?.profile_insights?.suggested_profile || 'N/A'}</p>
+              <p style="font-size: 20px; font-weight: bold; color: #7C3AED; margin: 0; line-height: 1.3;">${sanitizeText(qualitativeReport?.profile_insights?.suggested_profile) || 'N/A'}</p>
             </div>
             <div style="background-color: #F9FAFB; padding: 16px 20px; border-radius: 10px; border: 1px solid #E5E7EB;">
-              <p style="color: #374151; line-height: 1.7; margin: 0; font-size: 13px; text-align: justify;">${qualitativeReport?.profile_insights?.summary || 'Descrizione del profilo professionale non disponibile.'}</p>
+              <p style="color: #374151; line-height: 1.7; margin: 0; font-size: 13px; text-align: justify;">${sanitizeText(qualitativeReport?.profile_insights?.summary) || 'Descrizione del profilo professionale non disponibile.'}</p>
             </div>
           </div>
           <div style="margin-bottom: 25px;">
             <h3 style="font-size: 18px; font-weight: bold; color: #1F2937; margin: 0 0 12px 0;">La Tua Unicita</h3>
             <div style="background-color: #DBEAFE; padding: 18px 20px; border-radius: 10px; border-left: 4px solid #3B82F6;">
-              <p style="color: #374151; line-height: 1.5; margin: 0; font-size: 14px;">${qualitativeReport?.profile_insights?.unique_strengths || 'N/A'}</p>
+              <p style="color: #374151; line-height: 1.5; margin: 0; font-size: 14px;">${sanitizeText(qualitativeReport?.profile_insights?.unique_strengths) || 'N/A'}</p>
             </div>
           </div>
           <div>
@@ -329,7 +340,7 @@ export default function DashboardPage() {
               ${topSkills.map((skill) => `
                 <div style="flex: 1; text-align: center; padding: 28px 15px 26px 15px; border-radius: 10px; background: linear-gradient(135deg, #F3E8FF, #DBEAFE); min-height: 165px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
                   <div style="font-size: 44px; margin-bottom: 16px; line-height: 1.5; display: flex; align-items: center; justify-content: center; min-height: 70px;">${skill.icon}</div>
-                  <div style="font-weight: 600; color: #1F2937; margin-bottom: 10px; font-size: 14px; line-height: 1.4;">${skill.category}</div>
+                  <div style="font-weight: 600; color: #1F2937; margin-bottom: 10px; font-size: 14px; line-height: 1.4;">${sanitizeText(skill.category)}</div>
                   <div style="font-size: 24px; font-weight: bold; color: #7C3AED; line-height: 1.3;">${skill.score.toFixed(1)}<span style="font-size: 15px; color: #9CA3AF;">/5.0</span></div>
                 </div>
               `).join('')}
@@ -371,7 +382,7 @@ export default function DashboardPage() {
                   <div style="background: white; border-left: 4px solid ${color}; border-radius: 8px; padding: 12px 16px; ${isLast ? '' : 'border-bottom: 1px solid #F3F4F6;'} margin-bottom: ${isLast ? '0' : '8px'}; box-shadow: 0 1px 3px rgba(0,0,0,0.08); display: flex; align-items: center; gap: 12px;">
                     <div style="display: flex; align-items: center; gap: 10px; width: 180px; flex-shrink: 0;">
                       <span style="font-size: 22px; line-height: 1;">${icon}</span>
-                      <span style="font-size: 13px; font-weight: 600; color: #1F2937; line-height: 1.2;">${skill.category}</span>
+                      <span style="font-size: 13px; font-weight: 600; color: #1F2937; line-height: 1.2;">${sanitizeText(skill.category)}</span>
                     </div>
                     <div style="flex: 1; background: #F3F4F6; height: 20px; border-radius: 10px; overflow: hidden;">
                       <div style="height: 100%; background: linear-gradient(90deg, ${color}, ${color}dd); border-radius: 10px; width: ${percentage}%;"></div>
@@ -458,7 +469,7 @@ export default function DashboardPage() {
           ${escoSummary ? `
           <div style="background: #EFF6FF; border-left: 4px solid #2563EB; border-radius: 8px; padding: 14px 18px; margin-bottom: 20px;">
             <p style="font-size: 12px; font-weight: bold; color: #1D4ED8; margin: 0 0 6px 0; text-transform: uppercase; letter-spacing: 0.5px;">Analisi del Profilo</p>
-            <p style="font-size: 12px; color: #1E3A5F; line-height: 1.6; margin: 0;">${escoSummary}</p>
+            <p style="font-size: 12px; color: #1E3A5F; line-height: 1.6; margin: 0;">${sanitizeText(escoSummary)}</p>
           </div>
           ` : `
           <div style="background: #EFF6FF; border-left: 4px solid #2563EB; border-radius: 8px; padding: 14px 18px; margin-bottom: 20px;">
@@ -479,13 +490,13 @@ export default function DashboardPage() {
                 <div style="background: ${colors.bg}; border: 2px solid ${colors.border}; border-radius: 10px; padding: 12px 14px;">
                   <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
                     <span style="font-size: 18px; line-height: 1;">${icon}</span>
-                    <span style="font-size: 12px; font-weight: bold; color: #1F2937; line-height: 1.2;">${label}</span>
+                    <span style="font-size: 12px; font-weight: bold; color: #1F2937; line-height: 1.2;">${sanitizeText(label)}</span>
                   </div>
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                     <span style="font-size: 11px; font-weight: bold; color: ${colors.text};">${colors.label}</span>
                     <span style="font-size: 12px; font-weight: bold; color: ${colors.text};">${score.toFixed(1)}/5.0</span>
                   </div>
-                  ${escoGroup ? `<p style="font-size: 9px; color: #6B7280; margin: 0; line-height: 1.3;">${escoGroup}</p>` : ''}
+                  ${escoGroup ? `<p style="font-size: 9px; color: #6B7280; margin: 0; line-height: 1.3;">${sanitizeText(escoGroup)}</p>` : ''}
                 </div>
               `
             }).join('')}
