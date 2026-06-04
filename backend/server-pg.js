@@ -16,7 +16,20 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors({ origin: '*', credentials: true }));
+const ALLOWED_ORIGINS = [
+  'https://valutolab.com',
+  'https://www.valutolab.com',
+  ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : [])
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // allow requests with no origin (curl, mobile apps, same-origin)
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+    callback(new Error(`CORS: origin ${origin} not allowed`));
+  },
+  credentials: true
+}));
 app.use(express.json());
 
 app.get('/health', (req, res) => {

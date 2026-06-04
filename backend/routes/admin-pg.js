@@ -1,8 +1,12 @@
 import express from 'express';
 import { createClient } from '@supabase/supabase-js';
 import db from '../config/database.js';
+import { requireAdmin } from '../middleware/requireAdmin.js';
 
 const router = express.Router();
+
+// Protegge tutti gli endpoint /api/admin/*
+router.use(requireAdmin);
 
 // Supabase SOLO per auth.admin
 const supabase = createClient(
