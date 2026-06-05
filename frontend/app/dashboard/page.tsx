@@ -225,14 +225,14 @@ export default function DashboardPage() {
         'Base':       { bg: '#F3F4F6', border: '#9CA3AF', text: '#6B7280', label: '○ Base' },
       }
 
-      const topSkills = (results || []).slice(0, 3).map(r => ({
+      const topSkills = (results as any[] || []).slice(0, 3).map((r: any) => ({
         name: r.skill_category,
         category: categoryLabels[r.skill_category] || r.skill_category,
         icon: categoryIcons[r.skill_category] || '⭐',
         score: parseFloat(r.final_score)
       }))
 
-      const allSkills = (results || []).map(r => ({
+      const allSkills = (results as any[] || []).map((r: any) => ({
         category: categoryLabels[r.skill_category] || r.skill_category,
         name: r.skill_category,
         score: parseFloat(r.final_score)
@@ -720,7 +720,7 @@ export default function DashboardPage() {
         creativity: 'Creatività', critical_thinking: 'Pensiero Critico', empathy: 'Empatia',
         resilience: 'Resilienza', negotiation: 'Negoziazione', decision_making: 'Decision Making'
       }
-      const topSkills = (results || []).map(r => ({ name: categoryLabels[r.skill_category] || r.skill_category, score: Math.round(parseFloat(r.final_score) * 20) }))
+      const topSkills = (results as any[] || []).map((r: any) => ({ name: categoryLabels[r.skill_category] || r.skill_category, score: Math.round(parseFloat(r.final_score) * 20) }))
       setBadgeModal({ open: true, assessmentId, userName: profile?.full_name || 'Utente ValutoLab', score: assessment?.total_score || 0, topSkills, shareToken: shareData[assessmentId]?.share_token || '' })
     } catch (error) {
       showMessage('error', 'Errore nel caricamento dei dati')
