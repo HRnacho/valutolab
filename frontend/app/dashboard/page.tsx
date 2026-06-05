@@ -305,7 +305,7 @@ export default function DashboardPage() {
               </div>
               <div style="text-align: center; background: rgba(255,255,255,0.1); border: 1.5px solid rgba(255,255,255,0.2); border-radius: 16px; padding: 16px 22px; flex-shrink: 0; margin-left: 20px;">
                 <p style="color: rgba(255,255,255,0.55); font-size: 9px; margin: 0 0 3px 0; text-transform: uppercase; letter-spacing: 1.5px;">Score Totale</p>
-                <p style="color: white; font-size: 50px; font-weight: 900; margin: 0; line-height: 1; letter-spacing: -2px;">${assessment?.total_score?.toFixed(1)}</p>
+                <p style="color: white; font-size: 50px; font-weight: 900; margin: 0; line-height: 1; letter-spacing: -2px;">${Number(assessment?.total_score).toFixed(1)}</p>
                 <p style="color: rgba(255,255,255,0.4); font-size: 12px; margin: 1px 0 0 0;">/ 5.0</p>
               </div>
             </div>
@@ -383,7 +383,7 @@ export default function DashboardPage() {
                           <div style="font-size: 10px; color: rgba(255,255,255,0.9); font-weight: 600; line-height: 1.3;">${sanitizeText(skill.category)}</div>
                         </div>
                         <div style="background: ${bgColors[idx]}; padding: 9px 10px 11px; text-align: center; border: 1px solid ${borderColors[idx]}; border-top: none; border-radius: 0 0 12px 12px;">
-                          <span style="font-size: 23px; font-weight: 900; color: ${textColors[idx]};">${skill.score.toFixed(1)}</span>
+                          <span style="font-size: 23px; font-weight: 900; color: ${textColors[idx]};">${Number(skill.score).toFixed(1)}</span>
                           <span style="font-size: 11px; color: #9CA3AF;">/5.0</span>
                           <div style="margin-top: 5px; height: 4px; background: rgba(0,0,0,0.08); border-radius: 2px; overflow: hidden;">
                             <div style="height: 100%; background: ${textColors[idx]}; border-radius: 2px; width: ${(skill.score / 5) * 100}%;"></div>
@@ -491,7 +491,7 @@ export default function DashboardPage() {
                       </div>
                       <div style="text-align: right; flex-shrink: 0;">
                         <span style="font-size: 8.5px; background: ${lc.bg}; color: ${lc.text}; padding: 1px 5px; border-radius: 4px; font-weight: 700; border: 1px solid ${lc.border}44;">${level}</span>
-                        <div style="font-size: 13px; font-weight: 800; color: ${color}; text-align: right; margin-top: 1px; line-height: 1.2;">${skill.score.toFixed(1)}<span style="font-size: 9px; color: #9CA3AF; font-weight: 400;">/5</span></div>
+                        <div style="font-size: 13px; font-weight: 800; color: ${color}; text-align: right; margin-top: 1px; line-height: 1.2;">${Number(skill.score).toFixed(1)}<span style="font-size: 9px; color: #9CA3AF; font-weight: 400;">/5</span></div>
                       </div>
                     </div>
                     <div style="background: #F3F4F6; height: 7px; border-radius: 4px; overflow: hidden;">
@@ -626,7 +626,7 @@ export default function DashboardPage() {
                     <!-- Level badge + score on same line -->
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                       <span style="font-size: 8.5px; font-weight: 700; color: ${colors.text}; background: ${colors.border}22; padding: 1px 6px; border-radius: 4px; border: 1px solid ${colors.border}66;">${colors.label}</span>
-                      <span style="font-size: 12px; font-weight: 900; color: ${colors.text};">${score.toFixed(1)}<span style="font-size: 8px; color: #9CA3AF; font-weight: 400;">/5</span></span>
+                      <span style="font-size: 12px; font-weight: 900; color: ${colors.text};">${Number(score).toFixed(1)}<span style="font-size: 8px; color: #9CA3AF; font-weight: 400;">/5</span></span>
                     </div>
                     <!-- Progress bar -->
                     <div style="height: 4px; background: rgba(0,0,0,0.07); border-radius: 2px; overflow: hidden;">
@@ -947,7 +947,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="bg-gradient-to-r from-purple-100 to-blue-100 rounded-lg p-4 mb-4">
                       <p className="text-sm text-gray-600 mb-1">Punteggio Generale</p>
-                      <p className="text-3xl font-bold text-gray-900">{assessment.total_score?.toFixed(1)}<span className="text-lg text-gray-600">/5.0</span></p>
+                      <p className="text-3xl font-bold text-gray-900">{Number(assessment.total_score).toFixed(1)}<span className="text-lg text-gray-600">/5.0</span></p>
                     </div>
                     <div className="space-y-3">
                       <button onClick={() => router.push(`/dashboard/results/${assessment.id}`)} className="w-full bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-purple-700 transition">
@@ -1009,7 +1009,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="bg-gradient-to-r from-yellow-100 to-orange-100 rounded-lg p-4 mb-4">
                     <p className="text-sm text-gray-600 mb-1">Punteggio Leadership</p>
-                    <p className="text-3xl font-bold text-gray-900">{assessment.total_score?.toFixed(1)}<span className="text-lg text-gray-600">/5.0</span></p>
+                    <p className="text-3xl font-bold text-gray-900">{Number(assessment.total_score).toFixed(1)}<span className="text-lg text-gray-600">/5.0</span></p>
                   </div>
                   <div className="space-y-2">
                     <button onClick={() => router.push(`/leadership/${assessment.id}/results`)} className="w-full bg-gradient-to-r from-yellow-500 to-orange-600 text-white px-4 py-2 rounded-lg font-semibold hover:from-yellow-600 hover:to-orange-700 transition">
