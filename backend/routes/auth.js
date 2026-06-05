@@ -394,9 +394,9 @@ router.get('/google/callback', async (req, res) => {
       method:  'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body:    new URLSearchParams({
-        code:          code as string,
-        client_id:     process.env.GOOGLE_CLIENT_ID!,
-        client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+        code:          code,
+        client_id:     process.env.GOOGLE_CLIENT_ID,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET,
         redirect_uri:  `${process.env.BACKEND_URL || 'https://api.valutolab.com'}/api/auth/google/callback`,
         grant_type:    'authorization_code'
       })
