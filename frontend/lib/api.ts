@@ -5,23 +5,58 @@
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || ''
 
+const LS_ACCESS  = 'jwt_access_token'
+const LS_REFRESH = 'jwt_refresh_token'
+
 function getToken(): string | null {
   if (typeof window === 'undefined') return null
-  return localStorage.getItem('jwt_access_token')
+  return localStorage.getItem(LS_ACCESS)
+}
+
+async function tryRefresh(): Promise<string | null> {
+  const refreshToken = localStorage.getItem(LS_REFRESH)
+  if (!refreshToken) return null
+  try {
+    const res = await fetch(`${API_URL}/api/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refreshToken })
+    })
+    if (!res.ok) {
+      localStorage.removeItem(LS_ACCESS)
+      localStorage.removeItem(LS_REFRESH)
+      return null
+    }
+    const data = await res.json()
+    localStorage.setItem(LS_ACCESS,  data.access_token)
+    localStorage.setItem(LS_REFRESH, data.refresh_token)
+    return data.access_token
+  } catch {
+    return null
+  }
 }
 
 async function request<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const token = getToken()
-  const headers: Record<string, string> = {
+  let token = getToken()
+  const buildHeaders = (t: string | null): Record<string, string> => ({
     'Content-Type': 'application/json',
-    ...(options.headers as Record<string, string> ?? {})
-  }
-  if (token) headers['Authorization'] = `Bearer ${token}`
+    ...(options.headers as Record<string, string> ?? {}),
+    ...(t ? { Authorization: `Bearer ${t}` } : {})
+  })
 
-  const res = await fetch(`${API_URL}${path}`, { ...options, headers })
+  let res = await fetch(`${API_URL}${path}`, { ...options, headers: buildHeaders(token) })
+
+  // Token scaduto: prova il refresh una volta sola
+  if (res.status === 401 && token) {
+    token = await tryRefresh()
+    if (token) {
+      res = await fetch(`${API_URL}${path}`, { ...options, headers: buildHeaders(token) })
+    }
+  }
+
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
     throw new Error((err as any).message || `HTTP ${res.status}`)

@@ -35,7 +35,7 @@ interface ShareData {
 
 export default function DashboardPage() {
   const router = useRouter()
-  const { user: authUser, logout } = useAuth()
+  const { user: authUser, logout, loading: authLoading } = useAuth()
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
   const [assessments, setAssessments] = useState<Assessment[]>([])
@@ -74,6 +74,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const fetchData = async () => {
+      if (authLoading) return        // AuthContext ancora in caricamento
       const user = authUser
       if (!user) {
         router.push('/login')
@@ -146,7 +147,7 @@ export default function DashboardPage() {
     }
 
     fetchData()
-  }, [router])
+  }, [router, authUser, authLoading])
 
   // Escapa caratteri HTML per prevenire XSS nei template innerHTML del PDF
   const sanitizeText = (value: unknown): string => {
