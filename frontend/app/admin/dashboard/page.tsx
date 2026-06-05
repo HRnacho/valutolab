@@ -130,7 +130,7 @@ Il Team ValutoLab`
 // ==================== MAIN COMPONENT ====================
 export default function AdminDashboard() {
   const router = useRouter()
-  const { user: authUser, logout } = useAuth()
+  const { user: authUser, logout, loading: authLoading } = useAuth()
   const [loading, setLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
   const [currentAdminEmail, setCurrentAdminEmail] = useState('')
@@ -186,6 +186,7 @@ export default function AdminDashboard() {
   // ==================== EFFECTS ====================
   useEffect(() => {
     const checkAdmin = async () => {
+      if (authLoading) return
       const user = authUser
       if (!user) {
         router.push('/login')
@@ -205,7 +206,7 @@ export default function AdminDashboard() {
     }
 
     checkAdmin()
-  }, [router])
+  }, [router, authUser, authLoading])
 
   useEffect(() => {
     if (message) {
