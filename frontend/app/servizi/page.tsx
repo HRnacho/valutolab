@@ -24,15 +24,12 @@ export default function ServiziPage() {
   }
 
   const handleStartLeadershipAssessment = async () => {
+    if (!user) { router.push('/login'); return }
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://valutolab-backend.onrender.com'
-      
-      // Crea nuovo leadership assessment
       const response = await fetch(`${apiUrl}/api/leadership/start`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id })
       })
 

@@ -110,9 +110,9 @@ export default function DashboardPage() {
       }
       setLeadershipResponsesCount(leadershipCounts)
 
-      const completedIds = (assessmentsData || [])
-        .filter(a => a.status === 'completed')
-        .map(a => a.id)
+      const completedIds = (assessmentsData as Assessment[])
+        .filter((a: Assessment) => a.status === 'completed')
+        .map((a: Assessment) => a.id)
 
       if (completedIds.length > 0) {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://valutolab-backend.onrender.com'
