@@ -12,6 +12,7 @@ import organizationsRoutes from './routes/organizations.js';
 import trialRoutes from './routes/trial.js';
 import trialB2cRoutes from './routes/trial-b2c.js';
 import trackingRoutes from './routes/tracking.js';
+import authRoutes from './routes/auth.js';
 
 dotenv.config();
 
@@ -41,6 +42,7 @@ app.get('/api/v1/test', (req, res) => {
   });
 });
 
+app.use('/api/auth', authRoutes);
 app.use('/api/assessments', assessmentsRouter);
 app.use('/api/ai-reports', aiReportsRouter);
 app.use('/api', situationalRouter);
