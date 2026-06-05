@@ -1,20 +1,41 @@
 import './globals.css'
 import type { Metadata } from 'next'
 import Script from 'next/script'
+import { Space_Grotesk, IBM_Plex_Sans, JetBrains_Mono } from 'next/font/google'
 import { AuthProvider } from '@/lib/AuthContext'
 
+const spaceGrotesk = Space_Grotesk({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600', '700'],
+  variable: '--font-space-grotesk',
+  display: 'swap',
+})
+
+const ibmPlexSans = IBM_Plex_Sans({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600', '700'],
+  variable: '--font-ibm-plex-sans',
+  display: 'swap',
+})
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-jetbrains-mono',
+  display: 'swap',
+})
+
 export const metadata: Metadata = {
-  title: 'ValutoLab - Piattaforma Valutazione Soft Skills',
-  description: 'Valuta e sviluppa le competenze trasversali del tuo team',
+  title: 'ValutoLab — Assessment delle competenze trasversali ESCO',
+  description: 'Dodici competenze trasversali mappate sullo standard europeo ESCO v1.2. Assessment professionale, report vettoriale, badge verificabile.',
 }
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="it">
+    <html
+      lang="it"
+      className={`${spaceGrotesk.variable} ${ibmPlexSans.variable} ${jetbrainsMono.variable}`}
+    >
       <body>
         <AuthProvider>
           {children}
