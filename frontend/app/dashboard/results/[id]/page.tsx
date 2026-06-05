@@ -177,7 +177,7 @@ export default function ResultsPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
               <p className="text-white/80 text-sm mb-2">Punteggio Generale</p>
-              <p className="text-6xl font-bold mb-2">{assessment?.total_score.toFixed(1)}</p>
+              <p className="text-6xl font-bold mb-2">{Number(assessment?.total_score).toFixed(1)}</p>
               <p className="text-white/80 text-lg">su 5.0</p>
             </div>
             
