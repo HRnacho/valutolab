@@ -14,6 +14,7 @@ import trialB2cRoutes from './routes/trial-b2c.js';
 import trackingRoutes from './routes/tracking.js';
 import authRoutes from './routes/auth.js';
 import dataRouter from './routes/data.js';
+import reportsRouter from './routes/reports.js';
 
 dotenv.config();
 
@@ -45,6 +46,7 @@ app.get('/api/v1/test', (req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/data', dataRouter);
+app.use('/api/reports', reportsRouter);
 app.use('/api/assessments', assessmentsRouter);
 app.use('/api/ai-reports', aiReportsRouter);
 app.use('/api', situationalRouter);

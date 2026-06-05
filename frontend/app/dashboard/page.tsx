@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -6,8 +6,6 @@ import { useAuth } from '@/lib/AuthContext'
 import { api } from '@/lib/api'
 import BadgeGenerator from '@/components/BadgeGenerator'
 import QRCodeGenerator from '@/components/QRCodeGenerator'
-import jsPDF from 'jspdf'
-import html2canvas from 'html2canvas'
 import QRCode from 'qrcode'
 
 interface Assessment {
@@ -163,523 +161,35 @@ export default function DashboardPage() {
   const handleGeneratePDF = async (assessmentId: string) => {
     setGeneratingPDF(assessmentId)
     try {
-      const [assessmentRes, profileRes, reportRes, resultsRes] = await Promise.all([
-        api.assessments.get(assessmentId),
-        api.profile.get(),
-        api.assessments.report.get(assessmentId),
-        api.assessments.results.get(assessmentId)
-      ])
-      const assessment       = assessmentRes.assessment
-      const profile          = profileRes.profile
-      const qualitativeReport = reportRes.report
-      const results          = resultsRes.results
-
-      const categoryLabels: Record<string, string> = {
-        communication: 'Comunicazione',
-        leadership: 'Leadership',
-        problem_solving: 'Problem Solving',
-        teamwork: 'Lavoro di Squadra',
-        time_management: 'Gestione del Tempo',
-        adaptability: 'Adattabilità',
-        creativity: 'Creatività',
-        critical_thinking: 'Pensiero Critico',
-        empathy: 'Empatia',
-        resilience: 'Resilienza',
-        negotiation: 'Negoziazione',
-        decision_making: 'Decision Making'
-      }
-
-      const categoryIcons: Record<string, string> = {
-        communication: '💬',
-        leadership: '👑',
-        problem_solving: '🧩',
-        teamwork: '🤝',
-        time_management: '⏰',
-        adaptability: '🔄',
-        creativity: '🎨',
-        critical_thinking: '🧠',
-        empathy: '❤️',
-        resilience: '💪',
-        negotiation: '🤝',
-        decision_making: '⚖️'
-      }
-
-      const skillColors: Record<string, string> = {
-        adaptability: '#06B6D4',
-        leadership: '#8B5CF6',
-        problem_solving: '#EC4899',
-        time_management: '#F59E0B',
-        communication: '#3B82F6',
-        empathy: '#14B8A6',
-        negotiation: '#A855F7',
-        decision_making: '#84CC16',
-        critical_thinking: '#6366F1',
-        teamwork: '#10B981',
-        creativity: '#F43F5E',
-        resilience: '#EF4444'
-      }
-
-      const escoLevelColors: Record<string, { bg: string; border: string; text: string; label: string }> = {
-        'Esperto':    { bg: '#DCFCE7', border: '#16A34A', text: '#15803D', label: '★ Esperto' },
-        'Avanzato':   { bg: '#DBEAFE', border: '#2563EB', text: '#1D4ED8', label: '▲ Avanzato' },
-        'Intermedio': { bg: '#FEF9C3', border: '#CA8A04', text: '#A16207', label: '● Intermedio' },
-        'Base':       { bg: '#F3F4F6', border: '#9CA3AF', text: '#6B7280', label: '○ Base' },
-      }
-
-      const topSkills = (results as any[] || []).slice(0, 3).map((r: any) => ({
-        name: r.skill_category,
-        category: categoryLabels[r.skill_category] || r.skill_category,
-        icon: categoryIcons[r.skill_category] || '⭐',
-        score: parseFloat(r.final_score)
-      }))
-
-      const allSkills = (results as any[] || []).map((r: any) => ({
-        category: categoryLabels[r.skill_category] || r.skill_category,
-        name: r.skill_category,
-        score: parseFloat(r.final_score)
-      }))
-
-      const categoryInterps = qualitativeReport?.category_interpretations || {}
-      const escoSummary = qualitativeReport?.profile_insights?.esco_profile_summary || null
-
-      // Iniziali professionali per ogni competenza (sostituiscono gli emoji nei template PDF)
-      const skillInitials: Record<string, string> = {
-        communication: 'CO', leadership: 'LE', problem_solving: 'PS',
-        teamwork: 'TW', time_management: 'TM', adaptability: 'AD',
-        creativity: 'CR', critical_thinking: 'CT', empathy: 'EM',
-        resilience: 'RE', negotiation: 'NE', decision_making: 'DC'
-      }
-
-      // Pattern comportamentali dall'analisi AI
-      const behaviorPatterns: string[] = qualitativeReport?.profile_insights?.patterns || []
-
-      const shareToken = shareData[assessmentId]?.share_token
-      const qrCodeUrl = shareToken 
-        ? await QRCode.toDataURL(`https://valutolab.com/profile/${shareToken}`, {
-            width: 200,
-            margin: 2,
-            color: { dark: '#8B5CF6', light: '#FFFFFF' }
-          })
-        : ''
-
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
+      const token = localStorage.getItem('jwt_access_token')
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || ''
+      const response = await fetch(`${apiBase}/api/reports/${assessmentId}/pdf`, {
+        headers: { Authorization: `Bearer ${token}` },
       })
 
-      const imgWidth = 210
-      const imgHeight = 297
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}))
+        throw new Error((err as any).message || `Errore ${response.status}`)
+      }
 
-      const page1Element = document.createElement('div')
-      page1Element.style.width = '210mm'
-      page1Element.style.height = '297mm'
-      page1Element.style.padding = '0'
-      page1Element.style.backgroundColor = 'white'
-      page1Element.style.fontFamily = 'Arial, sans-serif'
-      page1Element.style.position = 'relative'
-      page1Element.style.boxSizing = 'border-box'
-      page1Element.style.overflow = 'hidden'
-
-      page1Element.innerHTML = `
-        <div style="height: 297mm; display: flex; flex-direction: column; font-family: Arial, sans-serif; background: white; box-sizing: border-box;">
-
-          <!-- HEADER FULL-BLEED -->
-          <div style="background: linear-gradient(135deg, #2E1065 0%, #5B21B6 55%, #7C3AED 100%); padding: 28px 28px 23px; position: relative; overflow: hidden; flex-shrink: 0;">
-            <div style="position: absolute; top: -50px; right: -50px; width: 180px; height: 180px; background: rgba(255,255,255,0.05); border-radius: 50%;"></div>
-            <div style="position: absolute; bottom: -30px; right: 110px; width: 100px; height: 100px; background: rgba(255,255,255,0.04); border-radius: 50%;"></div>
-            <div style="position: absolute; top: 15px; right: 230px; width: 45px; height: 45px; background: rgba(255,255,255,0.04); border-radius: 50%;"></div>
-
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; position: relative; z-index: 1;">
-              <div style="flex: 1;">
-                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 18px;">
-                  <div style="width: 40px; height: 40px; background: rgba(255,255,255,0.15); border: 1.5px solid rgba(255,255,255,0.3); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                    <span style="font-size: 24px; font-weight: 900; color: white; line-height: 1;">V</span>
-                  </div>
-                  <span style="font-size: 22px; font-weight: 800; color: white; letter-spacing: -0.3px;">ValutoLab</span>
-                  <span style="font-size: 9px; color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.1); padding: 2px 9px; border-radius: 99px; border: 1px solid rgba(255,255,255,0.15); letter-spacing: 0.5px;">Soft Skills</span>
-                </div>
-                <p style="color: rgba(255,255,255,0.5); font-size: 9.5px; margin: 0 0 5px 0; text-transform: uppercase; letter-spacing: 2px;">Certificato di Valutazione Professionale</p>
-                <h2 style="color: white; font-size: 28px; font-weight: 800; margin: 0 0 7px 0; line-height: 1.1;">${sanitizeText(profile?.full_name) || 'Utente ValutoLab'}</h2>
-                <p style="color: rgba(255,255,255,0.5); font-size: 11px; margin: 0;">${new Date(assessment?.completed_at || '').toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-              </div>
-              <div style="text-align: center; background: rgba(255,255,255,0.1); border: 1.5px solid rgba(255,255,255,0.2); border-radius: 16px; padding: 16px 22px; flex-shrink: 0; margin-left: 20px;">
-                <p style="color: rgba(255,255,255,0.55); font-size: 9px; margin: 0 0 3px 0; text-transform: uppercase; letter-spacing: 1.5px;">Score Totale</p>
-                <p style="color: white; font-size: 50px; font-weight: 900; margin: 0; line-height: 1; letter-spacing: -2px;">${Number(assessment?.total_score).toFixed(1)}</p>
-                <p style="color: rgba(255,255,255,0.4); font-size: 12px; margin: 1px 0 0 0;">/ 5.0</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- BODY -->
-          <div style="flex: 1; padding: 16px 28px 10px; display: flex; flex-direction: column; gap: 13px; overflow: hidden;">
-
-            <!-- Profilo professionale -->
-            <div>
-              <div style="display: flex; align-items: center; gap: 7px; margin-bottom: 7px;">
-                <div style="width: 3px; height: 13px; background: linear-gradient(180deg, #7C3AED, #3B82F6); border-radius: 2px;"></div>
-                <span style="font-size: 9px; font-weight: 700; color: #6D28D9; text-transform: uppercase; letter-spacing: 2px;">Profilo Professionale</span>
-              </div>
-              <div style="background: linear-gradient(135deg, #F5F3FF, #EDE9FE); border-radius: 10px; padding: 11px 16px; border: 1px solid #C4B5FD;">
-                <p style="font-size: 16px; font-weight: 800; color: #4C1D95; margin: 0; line-height: 1.3;">"${sanitizeText(qualitativeReport?.profile_insights?.suggested_profile) || 'N/A'}"</p>
-              </div>
-            </div>
-
-            <!-- Sintesi -->
-            <div>
-              <div style="display: flex; align-items: center; gap: 7px; margin-bottom: 7px;">
-                <div style="width: 3px; height: 13px; background: linear-gradient(180deg, #7C3AED, #3B82F6); border-radius: 2px;"></div>
-                <span style="font-size: 9px; font-weight: 700; color: #6D28D9; text-transform: uppercase; letter-spacing: 2px;">Sintesi del Profilo</span>
-              </div>
-              <p style="color: #374151; line-height: 1.65; margin: 0; font-size: 11.5px; text-align: justify;">${sanitizeText(qualitativeReport?.profile_insights?.summary) || ''}</p>
-            </div>
-
-            <!-- Pattern comportamentali -->
-            ${behaviorPatterns.length > 0 ? `
-            <div>
-              <div style="display: flex; align-items: center; gap: 7px; margin-bottom: 7px;">
-                <div style="width: 3px; height: 13px; background: linear-gradient(180deg, #059669, #06B6D4); border-radius: 2px;"></div>
-                <span style="font-size: 9px; font-weight: 700; color: #047857; text-transform: uppercase; letter-spacing: 2px;">Pattern Comportamentali</span>
-              </div>
-              <div style="display: flex; flex-direction: column; gap: 5px;">
-                ${behaviorPatterns.slice(0, 3).map((p: string) => `
-                  <div style="display: flex; align-items: flex-start; gap: 9px; background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 8px; padding: 7px 11px;">
-                    <div style="width: 16px; height: 16px; background: #059669; border-radius: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;">
-                      <span style="color: white; font-size: 9px; font-weight: 900;">&#8250;</span>
-                    </div>
-                    <p style="color: #065F46; font-size: 10.5px; line-height: 1.5; margin: 0;">${sanitizeText(p)}</p>
-                  </div>
-                `).join('')}
-              </div>
-            </div>
-            ` : ''}
-
-            <!-- Top 3 competenze + QR -->
-            <div>
-              <div style="display: flex; align-items: center; gap: 7px; margin-bottom: 9px;">
-                <div style="width: 3px; height: 13px; background: linear-gradient(180deg, #7C3AED, #3B82F6); border-radius: 2px;"></div>
-                <span style="font-size: 9px; font-weight: 700; color: #6D28D9; text-transform: uppercase; letter-spacing: 2px;">Top 3 Competenze</span>
-              </div>
-              <div style="display: flex; gap: 10px; align-items: flex-start;">
-                <div style="flex: 1; display: flex; gap: 9px;">
-                  ${topSkills.map((skill, idx) => {
-                    const gradients = [
-                      'linear-gradient(150deg, #4C1D95, #7C3AED)',
-                      'linear-gradient(150deg, #1E40AF, #3B82F6)',
-                      'linear-gradient(150deg, #155E75, #0891B2)'
-                    ]
-                    const textColors = ['#6D28D9', '#1D4ED8', '#0E7490']
-                    const borderColors = ['#C4B5FD', '#BFDBFE', '#A5F3FC']
-                    const bgColors = ['#F5F3FF', '#EFF6FF', '#ECFEFF']
-                    const rankLabels = ['1°', '2°', '3°']
-                    const initial = (skillInitials[skill.name] || skill.category.substring(0, 2).toUpperCase())
-                    return `
-                      <div style="flex: 1; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.09);">
-                        <div style="background: ${gradients[idx]}; padding: 14px 10px 12px; text-align: center; position: relative;">
-                          <div style="position: absolute; top: 6px; right: 8px; background: rgba(255,255,255,0.18); border-radius: 99px; padding: 1px 6px; font-size: 8.5px; color: rgba(255,255,255,0.9); font-weight: 700;">${rankLabels[idx]}</div>
-                          <div style="width: 36px; height: 36px; background: rgba(255,255,255,0.18); border: 1.5px solid rgba(255,255,255,0.32); border-radius: 9px; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px;">
-                            <span style="color: white; font-size: 13px; font-weight: 900; letter-spacing: -0.5px;">${initial}</span>
-                          </div>
-                          <div style="font-size: 10px; color: rgba(255,255,255,0.9); font-weight: 600; line-height: 1.3;">${sanitizeText(skill.category)}</div>
-                        </div>
-                        <div style="background: ${bgColors[idx]}; padding: 9px 10px 11px; text-align: center; border: 1px solid ${borderColors[idx]}; border-top: none; border-radius: 0 0 12px 12px;">
-                          <span style="font-size: 23px; font-weight: 900; color: ${textColors[idx]};">${Number(skill.score).toFixed(1)}</span>
-                          <span style="font-size: 11px; color: #9CA3AF;">/5.0</span>
-                          <div style="margin-top: 5px; height: 4px; background: rgba(0,0,0,0.08); border-radius: 2px; overflow: hidden;">
-                            <div style="height: 100%; background: ${textColors[idx]}; border-radius: 2px; width: ${(skill.score / 5) * 100}%;"></div>
-                          </div>
-                        </div>
-                      </div>
-                    `
-                  }).join('')}
-                </div>
-                ${qrCodeUrl ? `
-                <div style="flex-shrink: 0; text-align: center; background: #FAFAFA; border: 1px solid #E5E7EB; border-radius: 12px; padding: 11px 10px 9px;">
-                  <img src="${qrCodeUrl}" alt="QR" style="width: 74px; height: 74px; display: block; border-radius: 6px;" />
-                  <p style="font-size: 8px; color: #9CA3AF; margin: 5px 0 0 0; line-height: 1.4;">Scansiona<br>per verificare</p>
-                </div>
-                ` : ''}
-              </div>
-            </div>
-
-            <!-- Punti di forza unici -->
-            <div>
-              <div style="display: flex; align-items: center; gap: 7px; margin-bottom: 7px;">
-                <div style="width: 3px; height: 13px; background: linear-gradient(180deg, #2563EB, #06B6D4); border-radius: 2px;"></div>
-                <span style="font-size: 9px; font-weight: 700; color: #1D4ED8; text-transform: uppercase; letter-spacing: 2px;">Punti di Forza Unici</span>
-              </div>
-              <div style="background: #EFF6FF; border-radius: 10px; padding: 10px 14px; border: 1px solid #BFDBFE;">
-                <p style="color: #1E3A8A; line-height: 1.6; margin: 0; font-size: 11.5px;">${sanitizeText(qualitativeReport?.profile_insights?.unique_strengths) || 'N/A'}</p>
-              </div>
-            </div>
-
-          </div>
-
-          <!-- FOOTER -->
-          <div style="padding: 8px 28px 12px; border-top: 1px solid #F3F4F6; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
-            <span style="font-size: 9px; color: #C4B5FD; font-weight: 700; letter-spacing: 0.5px;">VALUTOLAB.COM</span>
-            <span style="font-size: 9px; color: #D1D5DB;">Pagina 1 / 3</span>
-          </div>
-
-        </div>
-      `
-
-      document.body.appendChild(page1Element)
-      const canvas1 = await html2canvas(page1Element, { scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff' })
-      pdf.addImage(canvas1.toDataURL('image/png'), 'PNG', 0, 0, imgWidth, imgHeight)
-      document.body.removeChild(page1Element)
-
-      pdf.addPage()
-
-      const page2Element = document.createElement('div')
-      page2Element.style.width = '210mm'
-      page2Element.style.height = '297mm'
-      page2Element.style.padding = '0'
-      page2Element.style.backgroundColor = 'white'
-      page2Element.style.fontFamily = 'Arial, sans-serif'
-      page2Element.style.position = 'relative'
-      page2Element.style.boxSizing = 'border-box'
-      page2Element.style.overflow = 'hidden'
-
-      page2Element.innerHTML = `
-        <div style="height: 297mm; display: flex; flex-direction: column; font-family: Arial, sans-serif; background: white; box-sizing: border-box;">
-
-          <!-- HEADER SLIM -->
-          <div style="background: linear-gradient(135deg, #2E1065, #5B21B6, #7C3AED); padding: 14px 28px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <div style="width: 28px; height: 28px; background: rgba(255,255,255,0.16); border-radius: 7px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                <span style="font-size: 16px; font-weight: 900; color: white;">V</span>
-              </div>
-              <span style="font-size: 14px; font-weight: 700; color: white;">ValutoLab</span>
-              <span style="font-size: 9px; color: rgba(255,255,255,0.4);">·</span>
-              <span style="font-size: 11px; color: rgba(255,255,255,0.65);">Profilo Competenze</span>
-            </div>
-            <span style="font-size: 9.5px; color: rgba(255,255,255,0.45);">${sanitizeText(profile?.full_name) || ''}</span>
-          </div>
-
-          <!-- BODY -->
-          <div style="flex: 1; padding: 15px 28px 12px; display: flex; flex-direction: column;">
-
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-shrink: 0;">
-              <div style="width: 3px; height: 16px; background: linear-gradient(180deg, #7C3AED, #3B82F6); border-radius: 2px;"></div>
-              <span style="font-size: 9.5px; font-weight: 700; color: #6D28D9; text-transform: uppercase; letter-spacing: 2px;">Analisi Dettagliata delle Competenze</span>
-            </div>
-
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 7px; flex: 1;">
-              ${allSkills.map((skill) => {
-                const color = skillColors[skill.name] || '#8B5CF6'
-                const percentage = (skill.score / 5) * 100
-                const interp = (categoryInterps as any)[skill.name] || {}
-                const level: string = interp.level || (skill.score >= 4.1 ? 'Esperto' : skill.score >= 3.1 ? 'Avanzato' : skill.score >= 2.1 ? 'Intermedio' : 'Base')
-                const description: string = interp.description || ''
-                const initial = (skillInitials[skill.name] || skill.category.substring(0, 2).toUpperCase())
-                const levelConfig: Record<string, { bg: string; text: string; border: string }> = {
-                  'Esperto':    { bg: '#DCFCE7', text: '#15803D', border: '#16A34A' },
-                  'Avanzato':   { bg: '#DBEAFE', text: '#1D4ED8', border: '#2563EB' },
-                  'Intermedio': { bg: '#FEF9C3', text: '#A16207', border: '#CA8A04' },
-                  'Base':       { bg: '#F3F4F6', text: '#6B7280', border: '#9CA3AF' }
-                }
-                const lc = levelConfig[level] || levelConfig['Base']
-                return `
-                  <div style="background: white; border: 1px solid #E5E7EB; border-radius: 10px; padding: 10px 13px 10px 10px; display: flex; flex-direction: column; gap: 6px; border-left: 3px solid ${color};">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                      <div style="width: 28px; height: 28px; background: ${color}; border-radius: 7px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                        <span style="color: white; font-size: 10px; font-weight: 900; letter-spacing: -0.5px;">${initial}</span>
-                      </div>
-                      <div style="flex: 1; min-width: 0;">
-                        <div style="font-size: 11.5px; font-weight: 700; color: #1F2937; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${sanitizeText(skill.category)}</div>
-                      </div>
-                      <div style="text-align: right; flex-shrink: 0;">
-                        <span style="font-size: 8.5px; background: ${lc.bg}; color: ${lc.text}; padding: 1px 5px; border-radius: 4px; font-weight: 700; border: 1px solid ${lc.border}44;">${level}</span>
-                        <div style="font-size: 13px; font-weight: 800; color: ${color}; text-align: right; margin-top: 1px; line-height: 1.2;">${Number(skill.score).toFixed(1)}<span style="font-size: 9px; color: #9CA3AF; font-weight: 400;">/5</span></div>
-                      </div>
-                    </div>
-                    <div style="background: #F3F4F6; height: 7px; border-radius: 4px; overflow: hidden;">
-                      <div style="height: 100%; background: linear-gradient(90deg, ${color}88, ${color}); border-radius: 4px; width: ${percentage}%;"></div>
-                    </div>
-                    ${description ? `<p style="font-size: 9.5px; color: #6B7280; margin: 0; line-height: 1.5; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${sanitizeText(description)}</p>` : ''}
-                  </div>
-                `
-              }).join('')}
-            </div>
-
-          </div>
-
-          <!-- FOOTER -->
-          <div style="padding: 11px 28px 15px; border-top: 1px solid #F3F4F6; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
-            <div>
-              <p style="font-size: 10px; font-weight: 600; color: #6B7280; margin: 0 0 2px 0;">Certificato Verificabile</p>
-              <p style="font-size: 13px; font-weight: 700; color: #7C3AED; margin: 0 0 2px 0;">valutolab.com</p>
-              <p style="font-size: 9px; color: #9CA3AF; margin: 0;">ID: ${assessmentId.substring(0, 8)}</p>
-            </div>
-            <div style="display: flex; align-items: center; gap: 14px;">
-              ${qrCodeUrl ? `
-                <div style="text-align: center;">
-                  <img src="${qrCodeUrl}" alt="QR Code" style="width: 68px; height: 68px; border: 1.5px solid #E5E7EB; border-radius: 8px; display: block;" />
-                  <p style="font-size: 8px; color: #9CA3AF; margin: 3px 0 0 0;">Scansiona per verificare</p>
-                </div>
-              ` : ''}
-              <span style="font-size: 9px; color: #D1D5DB;">Pagina 2 / 3</span>
-            </div>
-          </div>
-
-        </div>
-      `
-
-      document.body.appendChild(page2Element)
-      const canvas2 = await html2canvas(page2Element, { scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff' })
-      pdf.addImage(canvas2.toDataURL('image/png'), 'PNG', 0, 0, imgWidth, imgHeight)
-      document.body.removeChild(page2Element)
-
-      pdf.addPage()
-
-      const escoLevelCount = { Esperto: 0, Avanzato: 0, Intermedio: 0, Base: 0 }
-      Object.values(categoryInterps).forEach((interp: any) => {
-        const lvl = interp?.esco_mapping?.esco_level
-        if (lvl && escoLevelCount.hasOwnProperty(lvl)) {
-          escoLevelCount[lvl as keyof typeof escoLevelCount]++
-        }
-      })
-
-      const canonicalOrder = [
-        'communication','leadership','problem_solving','teamwork',
-        'time_management','adaptability','creativity','critical_thinking',
-        'empathy','resilience','negotiation','decision_making'
-      ]
-
-      const page3Element = document.createElement('div')
-      page3Element.style.width = '210mm'
-      page3Element.style.height = '297mm'
-      page3Element.style.padding = '0'
-      page3Element.style.backgroundColor = 'white'
-      page3Element.style.fontFamily = 'Arial, sans-serif'
-      page3Element.style.position = 'relative'
-      page3Element.style.boxSizing = 'border-box'
-      page3Element.style.overflow = 'hidden'
-
-      page3Element.innerHTML = `
-        <div style="height: 297mm; display: flex; flex-direction: column; font-family: Arial, sans-serif; background: white; box-sizing: border-box;">
-
-          <!-- HEADER SLIM BLU -->
-          <div style="background: linear-gradient(135deg, #1E3A5F 0%, #1D4ED8 60%, #2563EB 100%); padding: 15px 28px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; position: relative; overflow: hidden;">
-            <div style="position: absolute; top: -25px; right: -25px; width: 100px; height: 100px; background: rgba(255,255,255,0.05); border-radius: 50%;"></div>
-            <div style="display: flex; align-items: center; gap: 12px; position: relative; z-index: 1;">
-              <div style="width: 36px; height: 36px; background: rgba(255,255,255,0.14); border: 1.5px solid rgba(255,255,255,0.25); border-radius: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                <span style="font-size: 12px; font-weight: 900; color: white; letter-spacing: -0.5px;">EU</span>
-              </div>
-              <div>
-                <p style="color: rgba(255,255,255,0.5); font-size: 9px; margin: 0; text-transform: uppercase; letter-spacing: 1.5px;">Framework Europeo</p>
-                <h2 style="color: white; font-size: 16px; font-weight: 800; margin: 0; line-height: 1.1;">Profilo ESCO v1.2</h2>
-              </div>
-            </div>
-            <div style="display: flex; align-items: center; gap: 10px; position: relative; z-index: 1;">
-              <div style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 7px; padding: 5px 11px; text-align: center;">
-                <p style="font-size: 8.5px; font-weight: 700; color: rgba(255,255,255,0.8); margin: 0; text-transform: uppercase; letter-spacing: 0.5px;">ESCO-Aligned</p>
-                <p style="font-size: 7.5px; color: rgba(255,255,255,0.5); margin: 0;">ValutoLab Certified</p>
-              </div>
-              <span style="font-size: 9px; color: rgba(255,255,255,0.4);">${sanitizeText(profile?.full_name) || ''}</span>
-            </div>
-          </div>
-
-          <!-- BODY -->
-          <div style="flex: 1; padding: 14px 28px 12px; display: flex; flex-direction: column; overflow: hidden;">
-
-            ${escoSummary ? `
-            <div style="background: #EFF6FF; border-left: 3px solid #2563EB; border-radius: 8px; padding: 11px 15px; margin-bottom: 13px; flex-shrink: 0;">
-              <p style="font-size: 9px; font-weight: 700; color: #1D4ED8; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 1px;">Analisi del Profilo ESCO</p>
-              <p style="font-size: 11px; color: #1E3A5F; line-height: 1.6; margin: 0;">${sanitizeText(escoSummary)}</p>
-            </div>
-            ` : `
-            <div style="background: #EFF6FF; border-left: 3px solid #2563EB; border-radius: 8px; padding: 11px 15px; margin-bottom: 13px; flex-shrink: 0;">
-              <p style="font-size: 11px; color: #1E3A5F; line-height: 1.6; margin: 0;">Competenze valutate secondo il framework ESCO v1.2, standard ufficiale della Commissione Europea per il riconoscimento delle competenze nel mercato del lavoro europeo.</p>
-            </div>
-            `}
-
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-shrink: 0;">
-              <div style="width: 3px; height: 16px; background: linear-gradient(180deg, #1D4ED8, #06B6D4); border-radius: 2px;"></div>
-              <span style="font-size: 9.5px; font-weight: 700; color: #1D4ED8; text-transform: uppercase; letter-spacing: 2px;">Livelli ESCO per Competenza</span>
-            </div>
-
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; flex: 1; align-content: start;">
-              ${canonicalOrder.map((cat) => {
-                const interp = (categoryInterps as any)[cat] || {}
-                const escoLevel: string = interp?.esco_mapping?.esco_level || 'Base'
-                const escoSkillsDemonstrated: string[] = interp?.esco_mapping?.esco_skills_demonstrated || []
-                const escoGroup: string = interp?.esco_mapping?.esco_group || ''
-                const score: number = interp?.score || 0
-                const description: string = interp?.description || ''
-                const colors = escoLevelColors[escoLevel] || escoLevelColors['Base']
-                const label = categoryLabels[cat] || cat
-                const initial = (skillInitials[cat] || label.substring(0, 2).toUpperCase())
-                const skillColor = skillColors[cat] || '#8B5CF6'
-                const percentage = (score / 5) * 100
-                const displaySkills = escoSkillsDemonstrated.slice(0, 2).join(' · ')
-                return `
-                  <div style="background: ${colors.bg}; border: 1.5px solid ${colors.border}; border-radius: 10px; padding: 10px 11px; display: flex; flex-direction: column; gap: 5px; min-height: 0;">
-                    <!-- Header: icon + name -->
-                    <div style="display: flex; align-items: center; gap: 7px;">
-                      <div style="width: 26px; height: 26px; background: ${skillColor}; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                        <span style="color: white; font-size: 9.5px; font-weight: 900; letter-spacing: -0.5px;">${initial}</span>
-                      </div>
-                      <span style="font-size: 10.5px; font-weight: 700; color: #1F2937; line-height: 1.2; flex: 1;">${sanitizeText(label)}</span>
-                    </div>
-                    <!-- Level badge + score on same line -->
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                      <span style="font-size: 8.5px; font-weight: 700; color: ${colors.text}; background: ${colors.border}22; padding: 1px 6px; border-radius: 4px; border: 1px solid ${colors.border}66;">${colors.label}</span>
-                      <span style="font-size: 12px; font-weight: 900; color: ${colors.text};">${Number(score).toFixed(1)}<span style="font-size: 8px; color: #9CA3AF; font-weight: 400;">/5</span></span>
-                    </div>
-                    <!-- Progress bar -->
-                    <div style="height: 4px; background: rgba(0,0,0,0.07); border-radius: 2px; overflow: hidden;">
-                      <div style="height: 100%; background: ${skillColor}; border-radius: 2px; width: ${percentage}%;"></div>
-                    </div>
-                    <!-- Description (1 line) -->
-                    ${description ? `<p style="font-size: 8.5px; color: #374151; margin: 0; line-height: 1.4; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">${sanitizeText(description)}</p>` : ''}
-                    <!-- ESCO skills demonstrated -->
-                    ${displaySkills ? `<p style="font-size: 8px; color: ${colors.text}; margin: 0; line-height: 1.3; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; opacity: 0.85;">${sanitizeText(displaySkills)}</p>` : (escoGroup ? `<p style="font-size: 8px; color: #6B7280; margin: 0; line-height: 1.3;">${sanitizeText(escoGroup)}</p>` : '')}
-                  </div>
-                `
-              }).join('')}
-            </div>
-
-          </div>
-
-          <!-- FOOTER -->
-          <div style="padding: 9px 28px 13px; border-top: 1px solid #DBEAFE; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
-            <div>
-              <p style="font-size: 9px; color: #6B7280; margin: 0 0 1px 0;">Certificato generato da ValutoLab · valutolab.com</p>
-              <p style="font-size: 8.5px; color: #9CA3AF; margin: 0;">ID: ${assessmentId.substring(0, 8)} · ${new Date(assessment?.completed_at || '').toLocaleDateString('it-IT')}</p>
-            </div>
-            <div style="text-align: right;">
-              <div style="display: flex; gap: 9px; flex-wrap: wrap; justify-content: flex-end; margin-bottom: 3px;">
-                ${Object.entries(escoLevelColors).map(([level, c]) => `
-                  <div style="display: flex; align-items: center; gap: 4px;">
-                    <div style="width: 8px; height: 8px; background: ${c.bg}; border: 1.5px solid ${c.border}; border-radius: 2px; flex-shrink: 0;"></div>
-                    <span style="font-size: 8px; color: #374151;">${c.label} (${escoLevelCount[level as keyof typeof escoLevelCount]})</span>
-                  </div>
-                `).join('')}
-              </div>
-              <p style="font-size: 8.5px; color: #9CA3AF; margin: 0;">ESCO v1.2 · Commissione Europea, maggio 2024 · Pagina 3 / 3</p>
-            </div>
-          </div>
-
-        </div>
-      `
-
-      document.body.appendChild(page3Element)
-      const canvas3 = await html2canvas(page3Element, { scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff' })
-      pdf.addImage(canvas3.toDataURL('image/png'), 'PNG', 0, 0, imgWidth, imgHeight)
-      document.body.removeChild(page3Element)
-
-      pdf.save(`ValutoLab_Certificato_${profile?.full_name || 'Utente'}.pdf`)
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `valutolab-report-${assessmentId.substring(0, 8)}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
       showMessage('success', 'PDF scaricato con successo!')
-
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error generating PDF:', error)
-      showMessage('error', 'Errore nella generazione del PDF')
+      showMessage('error', error.message || 'Errore nella generazione del PDF')
     } finally {
       setGeneratingPDF(null)
     }
   }
+
 
   const handleToggleShare = async (assessmentId: string) => {
     if (!user || !shareData[assessmentId]) return
@@ -717,8 +227,8 @@ export default function DashboardPage() {
       const results    = resultsRes.results?.slice(0, 3)
       const categoryLabels: Record<string, string> = {
         communication: 'Comunicazione', leadership: 'Leadership', problem_solving: 'Problem Solving',
-        teamwork: 'Lavoro di Squadra', time_management: 'Gestione del Tempo', adaptability: 'Adattabilità',
-        creativity: 'Creatività', critical_thinking: 'Pensiero Critico', empathy: 'Empatia',
+        teamwork: 'Lavoro di Squadra', time_management: 'Gestione del Tempo', adaptability: 'AdattabilitÃ ',
+        creativity: 'CreativitÃ ', critical_thinking: 'Pensiero Critico', empathy: 'Empatia',
         resilience: 'Resilienza', negotiation: 'Negoziazione', decision_making: 'Decision Making'
       }
       const topSkills = (results as any[] || []).map((r: any) => ({ name: categoryLabels[r.skill_category] || r.skill_category, score: Math.round(parseFloat(r.final_score) * 20) }))
