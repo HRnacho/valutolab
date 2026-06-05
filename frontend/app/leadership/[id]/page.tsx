@@ -1,9 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
 import { useRouter, useParams } from 'next/navigation'
 import { useAuth } from '@/lib/AuthContext'
+import { api } from '@/lib/api'
 
 interface Question {
   id: string
@@ -56,22 +56,13 @@ export default function LeadershipAssessmentPage() {
         }
 
        // Carica risposte salvate
-const { data: savedResponses, error: responsesError } = await supabase
-  .from('leadership_responses')
-  .select('question_id, answer')
-  .eq('assessment_id', assessmentId)
+        const responsesRes = await api.leadership.responses.list(assessmentId)
+        const savedResponses = responsesRes.responses || []
 
-console.log('Loading saved responses for assessment:', assessmentId)
-console.log('Saved responses:', savedResponses)
-console.log('Responses error:', responsesError)
-
-if (savedResponses && savedResponses.length > 0) {
-  const answersMap: Record<string, string> = {}
-  savedResponses.forEach(r => {
-    answersMap[r.question_id] = r.answer
-  })
-  console.log('Answers map:', answersMap)
-  setAnswers(answersMap)
+        if (savedResponses.length > 0) {
+          const answersMap: Record<string, string> = {}
+          savedResponses.forEach((r: any) => { answersMap[r.question_id] = r.answer })
+          setAnswers(answersMap)
 }
 
         setLoading(false)

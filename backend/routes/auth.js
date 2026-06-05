@@ -361,4 +361,89 @@ router.post('/reset-password', async (req, res, next) => {
   }
 });
 
+// ── GET /api/auth/google ────────────────────────────────────────────────────
+// Avvia il flusso OAuth 2.0 Google (redirect a Google)
+router.get('/google', (req, res) => {
+  if (!process.env.GOOGLE_CLIENT_ID) {
+    return res.status(503).json({ success: false, message: 'Google OAuth non configurato' });
+  }
+  const params = new URLSearchParams({
+    client_id:     process.env.GOOGLE_CLIENT_ID,
+    redirect_uri:  `${process.env.BACKEND_URL || 'https://api.valutolab.com'}/api/auth/google/callback`,
+    response_type: 'code',
+    scope:         'openid email profile',
+    access_type:   'offline',
+    prompt:        'select_account'
+  });
+  res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`);
+});
+
+// ── GET /api/auth/google/callback ───────────────────────────────────────────
+// Google redirige qui con il codice di autorizzazione
+router.get('/google/callback', async (req, res) => {
+  const frontendUrl = process.env.FRONTEND_URL || 'https://valutolab.com';
+  const { code, error: oauthError } = req.query;
+
+  if (oauthError || !code) {
+    return res.redirect(`${frontendUrl}/login?error=oauth_cancelled`);
+  }
+
+  try {
+    // 1. Scambia il codice con i token Google
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body:    new URLSearchParams({
+        code:          code as string,
+        client_id:     process.env.GOOGLE_CLIENT_ID!,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+        redirect_uri:  `${process.env.BACKEND_URL || 'https://api.valutolab.com'}/api/auth/google/callback`,
+        grant_type:    'authorization_code'
+      })
+    });
+    const googleTokens = await tokenRes.json() as any;
+    if (!googleTokens.access_token) throw new Error('Token Google non ricevuto');
+
+    // 2. Recupera info utente da Google
+    const infoRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: { Authorization: `Bearer ${googleTokens.access_token}` }
+    });
+    const googleUser = await infoRes.json() as any;
+    if (!googleUser.email) throw new Error('Email Google non ricevuta');
+
+    const email = googleUser.email.toLowerCase().trim();
+
+    // 3. Trova o crea utente nel DB locale
+    let { rows } = await db.query(
+      'SELECT id, email, full_name, role, supabase_id FROM users WHERE email = $1',
+      [email]
+    );
+
+    let user = rows[0];
+    if (!user) {
+      const tempHash = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10);
+      const result  = await db.query(
+        `INSERT INTO users (email, password_hash, full_name, role, is_active)
+         VALUES ($1, $2, $3, 'user', true)
+         RETURNING id, email, full_name, role, supabase_id`,
+        [email, tempHash, googleUser.name || email]
+      );
+      user = result.rows[0];
+    }
+
+    // 4. Emette JWT custom
+    const accessToken  = generateAccessToken(user);
+    const refreshToken = generateRefreshToken();
+    await saveRefreshToken(user.id, refreshToken);
+
+    // 5. Redirige al frontend con i token in query string
+    const params = new URLSearchParams({ access_token: accessToken, refresh_token: refreshToken });
+    res.redirect(`${frontendUrl}/auth/callback?${params}`);
+
+  } catch (err: any) {
+    console.error('Google OAuth error:', err.message);
+    res.redirect(`${frontendUrl}/login?error=oauth_failed`);
+  }
+});
+
 export default router;

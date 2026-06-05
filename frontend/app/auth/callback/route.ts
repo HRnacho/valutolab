@@ -1,24 +1,44 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+/**
+ * Callback OAuth Google — riceve i JWT dal backend e li salva in localStorage.
+ * Il backend redirige qui con ?access_token=...&refresh_token=...
+ * Non usa più Supabase.
+ */
 import { NextResponse } from 'next/server';
 
 export async function GET(request: Request) {
-  const requestUrl = new URL(request.url);
-  const code = requestUrl.searchParams.get('code');
+  const url    = new URL(request.url);
+  const error  = url.searchParams.get('error');
 
-  if (code) {
-    const supabase = createRouteHandlerClient({ cookies });
-    
-    try {
-      await supabase.auth.exchangeCodeForSession(code);
-    } catch (error) {
-      console.error('Error exchanging code for session:', error);
-      return NextResponse.redirect(
-        `${requestUrl.origin}/login?error=auth_error`
-      );
-    }
+  if (error) {
+    return NextResponse.redirect(`${url.origin}/login?error=${error}`);
   }
 
-  // Redirect to dashboard after successful authentication
-  return NextResponse.redirect(`${requestUrl.origin}/dashboard`);
+  const accessToken  = url.searchParams.get('access_token');
+  const refreshToken = url.searchParams.get('refresh_token');
+
+  if (!accessToken || !refreshToken) {
+    return NextResponse.redirect(`${url.origin}/login?error=missing_tokens`);
+  }
+
+  // Salva i token via pagina HTML inline (localStorage non è accessibile nei Route Handler)
+  const html = `<!DOCTYPE html>
+<html>
+<head><title>Accesso in corso...</title></head>
+<body>
+<script>
+  try {
+    localStorage.setItem('jwt_access_token',  '${accessToken}');
+    localStorage.setItem('jwt_refresh_token', '${refreshToken}');
+    window.location.replace('/dashboard');
+  } catch(e) {
+    window.location.replace('/login?error=storage_error');
+  }
+</script>
+<p>Reindirizzamento in corso...</p>
+</body>
+</html>`;
+
+  return new Response(html, {
+    headers: { 'Content-Type': 'text/html; charset=utf-8' }
+  });
 }

@@ -1,9 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/AuthContext'
+import { api } from '@/lib/api'
 import BadgeGenerator from '@/components/BadgeGenerator'
 import QRCodeGenerator from '@/components/QRCodeGenerator'
 import jsPDF from 'jspdf'
@@ -82,42 +82,30 @@ export default function DashboardPage() {
 
       setUser(user)
 
-      const { data: assessmentsData } = await supabase
-        .from('assessments')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
+      const [assessmentsRes, leadershipRes] = await Promise.all([
+        api.assessments.list(),
+        api.leadership.list()
+      ])
+      const assessmentsData = assessmentsRes.assessments || []
+      const leadershipData  = leadershipRes.assessments  || []
 
-      setAssessments(assessmentsData || [])
-
-      const { data: leadershipData } = await supabase
-        .from('leadership_assessments')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-
-      setLeadershipAssessments(leadershipData || [])
+      setAssessments(assessmentsData)
+      setLeadershipAssessments(leadershipData)
 
       const counts: Record<string, number> = {}
-      for (const assessment of assessmentsData || []) {
+      for (const assessment of assessmentsData) {
         if (assessment.status === 'in_progress') {
-          const { count } = await supabase
-            .from('assessment_responses')
-            .select('*', { count: 'exact', head: true })
-            .eq('assessment_id', assessment.id)
-          counts[assessment.id] = count || 0
+          const r = await api.assessments.responses.count(assessment.id)
+          counts[assessment.id] = r.count || 0
         }
       }
       setResponsesCount(counts)
 
       const leadershipCounts: Record<string, number> = {}
-      for (const assessment of leadershipData || []) {
+      for (const assessment of leadershipData) {
         if (assessment.status === 'in_progress') {
-          const { count } = await supabase
-            .from('leadership_responses')
-            .select('*', { count: 'exact', head: true })
-            .eq('assessment_id', assessment.id)
-          leadershipCounts[assessment.id] = count || 0
+          const r = await api.leadership.responses.count(assessment.id)
+          leadershipCounts[assessment.id] = r.count || 0
         }
       }
       setLeadershipResponsesCount(leadershipCounts)
@@ -174,29 +162,16 @@ export default function DashboardPage() {
   const handleGeneratePDF = async (assessmentId: string) => {
     setGeneratingPDF(assessmentId)
     try {
-      const { data: assessment } = await supabase
-        .from('assessments')
-        .select('total_score, completed_at')
-        .eq('id', assessmentId)
-        .single()
-
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('full_name')
-        .eq('id', user.id)
-        .single()
-
-      const { data: qualitativeReport } = await supabase
-        .from('qualitative_reports')
-        .select('profile_insights, category_interpretations')
-        .eq('assessment_id', assessmentId)
-        .single()
-
-      const { data: results } = await supabase
-        .from('combined_assessment_results')
-        .select('skill_category, final_score')
-        .eq('assessment_id', assessmentId)
-        .order('final_score', { ascending: false })
+      const [assessmentRes, profileRes, reportRes, resultsRes] = await Promise.all([
+        api.assessments.get(assessmentId),
+        api.profile.get(),
+        api.assessments.report.get(assessmentId),
+        api.assessments.results.get(assessmentId)
+      ])
+      const assessment       = assessmentRes.assessment
+      const profile          = profileRes.profile
+      const qualitativeReport = reportRes.report
+      const results          = resultsRes.results
 
       const categoryLabels: Record<string, string> = {
         communication: 'Comunicazione',
@@ -731,9 +706,14 @@ export default function DashboardPage() {
 
   const handleOpenBadge = async (assessmentId: string) => {
     try {
-      const { data: assessment } = await supabase.from('assessments').select('total_score').eq('id', assessmentId).single()
-      const { data: profile } = await supabase.from('user_profiles').select('full_name').eq('id', user.id).single()
-      const { data: results } = await supabase.from('combined_assessment_results').select('skill_category, final_score').eq('assessment_id', assessmentId).order('final_score', { ascending: false }).limit(3)
+      const [assessmentRes, profileRes, resultsRes] = await Promise.all([
+        api.assessments.get(assessmentId),
+        api.profile.get(),
+        api.assessments.results.get(assessmentId)
+      ])
+      const assessment = assessmentRes.assessment
+      const profile    = profileRes.profile
+      const results    = resultsRes.results?.slice(0, 3)
       const categoryLabels: Record<string, string> = {
         communication: 'Comunicazione', leadership: 'Leadership', problem_solving: 'Problem Solving',
         teamwork: 'Lavoro di Squadra', time_management: 'Gestione del Tempo', adaptability: 'Adattabilità',
@@ -749,7 +729,8 @@ export default function DashboardPage() {
 
   const handleOpenQR = async (assessmentId: string) => {
     try {
-      const { data: profile } = await supabase.from('user_profiles').select('full_name').eq('id', user.id).single()
+      const profileRes = await api.profile.get()
+      const profile = profileRes.profile
       const shareToken = shareData[assessmentId]?.share_token
       if (!shareToken) { showMessage('error', 'Errore: token di condivisione non trovato'); return }
       setQrModal({ open: true, profileUrl: `https://valutolab.com/profile/${shareToken}`, userName: profile?.full_name || 'Utente ValutoLab' })
@@ -759,16 +740,11 @@ export default function DashboardPage() {
   }
 
   const handleStartNewAssessment = async () => {
-    const isTrial = user?.user_metadata?.role === 'trial_user'
+    const isTrial = user?.role === 'trial_user'
     if (isTrial) {
       try {
-        const { data: newAssessment, error } = await supabase
-          .from('assessments')
-          .insert({ user_id: user.id, status: 'in_progress' })
-          .select()
-          .single()
-        if (error) throw error
-        router.push(`/assessment/${newAssessment.id}`)
+        const res = await api.assessments.create()
+        router.push(`/assessment/${res.assessment.id}`)
       } catch (error) {
         console.error('Error starting assessment:', error)
         alert("Errore nell'avvio dell'assessment. Riprova.")
@@ -781,10 +757,7 @@ export default function DashboardPage() {
   const handleDeleteLeadership = async (assessmentId: string) => {
     setDeleting(assessmentId)
     try {
-      await supabase.from('leadership_responses').delete().eq('assessment_id', assessmentId)
-      await supabase.from('leadership_results').delete().eq('assessment_id', assessmentId)
-      await supabase.from('leadership_ai_reports').delete().eq('assessment_id', assessmentId)
-      await supabase.from('leadership_assessments').delete().eq('id', assessmentId)
+      await api.leadership.delete(assessmentId)
       setLeadershipAssessments(leadershipAssessments.filter(a => a.id !== assessmentId))
       showMessage('success', 'Leadership assessment eliminato')
     } catch (error) {
@@ -797,12 +770,7 @@ export default function DashboardPage() {
   const handleDeleteAssessment = async (assessmentId: string) => {
     setDeleting(assessmentId)
     try {
-      await supabase.from('assessment_responses').delete().eq('assessment_id', assessmentId)
-      await supabase.from('situational_responses').delete().eq('assessment_id', assessmentId)
-      await supabase.from('assessment_results').delete().eq('assessment_id', assessmentId)
-      await supabase.from('qualitative_reports').delete().eq('assessment_id', assessmentId)
-      await supabase.from('shared_profiles').delete().eq('assessment_id', assessmentId)
-      await supabase.from('assessments').delete().eq('id', assessmentId)
+      await api.assessments.delete(assessmentId)
       setAssessments(assessments.filter(a => a.id !== assessmentId))
       showMessage('success', 'Assessment eliminato')
     } catch (error) {

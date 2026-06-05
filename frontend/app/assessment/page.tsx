@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/AuthContext'
+import { api } from '@/lib/api'
 
 export default function AssessmentInfoPage() {
   const router = useRouter()
@@ -18,30 +18,14 @@ export default function AssessmentInfoPage() {
         return
       }
 
-      const { data: existingAssessment } = await supabase
-        .from('assessments')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('status', 'in_progress')
-        .single()
-
-      if (existingAssessment) {
-        router.push(`/assessment/${existingAssessment.id}`)
+      const inProgressRes = await api.assessments.inProgress()
+      if (inProgressRes.assessment) {
+        router.push(`/assessment/${inProgressRes.assessment.id}`)
         return
       }
 
-      const { data: newAssessment, error } = await supabase
-        .from('assessments')
-        .insert({
-          user_id: user.id,
-          status: 'in_progress'
-        })
-        .select()
-        .single()
-
-      if (error) throw error
-
-      router.push(`/assessment/${newAssessment.id}`)
+      const newRes = await api.assessments.create()
+      router.push(`/assessment/${newRes.assessment.id}`)
     } catch (error) {
       console.error('Error starting assessment:', error)
       alert('Errore nell\'avvio dell\'assessment. Riprova.')

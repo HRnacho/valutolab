@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { supabase } from '@/lib/supabase'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || ''
 
@@ -44,23 +43,9 @@ export default function RegisterPage() {
     }
   }
 
-  // Google OAuth rimane su Supabase fino alla Fase 4
-  const handleGoogleSignUp = async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/dashboard`,
-          queryParams: { access_type: 'offline', prompt: 'consent' }
-        }
-      })
-      if (error) throw error
-    } catch (err: any) {
-      setError(err.message || 'Errore durante la registrazione con Google')
-      setLoading(false)
-    }
+  const handleGoogleSignUp = () => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || ''
+    window.location.href = `${apiUrl}/api/auth/google`
   }
 
   return (

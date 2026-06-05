@@ -1,9 +1,9 @@
 'use client'
 
 import { useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/AuthContext'
+import { api } from '@/lib/api'
 
 export default function ServiziPage() {
   const router = useRouter()
@@ -15,22 +15,11 @@ export default function ServiziPage() {
 
   const handleStartBaseAssessment = async () => {
     try {
-      // Crea nuovo assessment base
-      const { data: newAssessment, error } = await supabase
-        .from('assessments')
-        .insert({
-          user_id: user.id,
-          status: 'in_progress'
-        })
-        .select()
-        .single()
-
-      if (error) throw error
-
-      router.push(`/assessment/${newAssessment.id}`)
+      const res = await api.assessments.create()
+      router.push(`/assessment/${res.assessment.id}`)
     } catch (error) {
       console.error('Error starting base assessment:', error)
-      alert('Errore nell\'avvio dell\'assessment base')
+      alert("Errore nell'avvio dell'assessment base")
     }
   }
 

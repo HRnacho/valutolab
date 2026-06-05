@@ -1,9 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
 import { useRouter, useParams } from 'next/navigation'
 import { useAuth } from '@/lib/AuthContext'
+import { api } from '@/lib/api'
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Cell } from 'recharts'
 import ShareSection from '@/components/ShareSection'
 
@@ -61,35 +61,22 @@ export default function ResultsPage() {
 
         setUserId(user.id)
 
-        const { data: assessmentData } = await supabase
-          .from('assessments')
-          .select('*')
-          .eq('id', assessmentId)
-          .single()
+        const [assessmentRes, resultsRes, reportRes] = await Promise.all([
+          api.assessments.get(assessmentId),
+          api.assessments.results.get(assessmentId),
+          api.assessments.report.get(assessmentId)
+        ])
 
-        if (!assessmentData) {
+        if (!assessmentRes.assessment) {
           router.push('/dashboard')
           return
         }
 
-        setAssessment(assessmentData)
+        setAssessment(assessmentRes.assessment)
+        setResults(resultsRes.results || [])
 
-        const { data: resultsData } = await supabase
-          .from('combined_assessment_results')
-          .select('*')
-          .eq('assessment_id', assessmentId)
-          .order('skill_category')
-
-        setResults(resultsData || [])
-
-        const { data: reportData } = await supabase
-          .from('qualitative_reports')
-          .select('*')
-          .eq('assessment_id', assessmentId)
-          .single()
-
-        if (reportData) {
-          setQualitativeReport(reportData)
+        if (reportRes.report) {
+          setQualitativeReport(reportRes.report)
         } else {
           generateReport()
         }

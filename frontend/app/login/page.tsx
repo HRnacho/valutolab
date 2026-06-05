@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/AuthContext'
-import { supabase } from '@/lib/supabase'
 
 export default function LoginPage() {
   const router          = useRouter()
@@ -35,20 +34,9 @@ export default function LoginPage() {
     setSubmitting(false)
   }
 
-  // Google OAuth rimane su Supabase fino alla Fase 4
-  const handleGoogleLogin = async () => {
-    setSubmitting(true)
-    setError('')
-    try {
-      const { error: oauthError } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo: `${window.location.origin}/auth/callback` }
-      })
-      if (oauthError) throw oauthError
-    } catch {
-      setError('Errore durante il login con Google')
-      setSubmitting(false)
-    }
+  const handleGoogleLogin = () => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || ''
+    window.location.href = `${apiUrl}/api/auth/google`
   }
 
   if (loading) return null // evita flash

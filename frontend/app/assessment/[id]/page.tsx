@@ -1,9 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
 import { useRouter, useParams } from 'next/navigation'
 import { useAuth } from '@/lib/AuthContext'
+import { api } from '@/lib/api'
 import { questions } from '@/data/questions'
 import SituationalQuestion from '@/components/SituationalQuestion'
 
@@ -49,11 +49,8 @@ export default function AssessmentPage() {
         return
       }
 
-      const { data: assessment } = await supabase
-        .from('assessments')
-        .select('*')
-        .eq('id', assessmentId)
-        .single()
+      const assessmentRes = await api.assessments.get(assessmentId)
+      const assessment = assessmentRes.assessment
 
       if (!assessment) {
         router.push('/dashboard')
@@ -65,19 +62,16 @@ export default function AssessmentPage() {
         return
       }
 
-      const { data: existingAnswers } = await supabase
-        .from('assessment_responses')
-        .select('*')
-        .eq('assessment_id', assessmentId)
+      const responsesRes = await api.assessments.responses.list(assessmentId)
+      const existingAnswers = responsesRes.responses || []
 
-      if (existingAnswers && existingAnswers.length > 0) {
+      if (existingAnswers.length > 0) {
         const answersMap: Record<string, number> = {}
-        existingAnswers.forEach((ans) => {
+        existingAnswers.forEach((ans: any) => {
           answersMap[ans.question_id] = ans.answer_value
         })
         setAnswers(answersMap)
-        
-        const firstUnansweredIndex = questions.findIndex(q => !answersMap[q.id])
+        const firstUnansweredIndex = questions.findIndex((q: any) => !answersMap[q.id])
         if (firstUnansweredIndex !== -1) {
           setCurrentQuestionIndex(firstUnansweredIndex)
         } else {
@@ -117,17 +111,11 @@ export default function AssessmentPage() {
 
     if (!user) return
 
-    await supabase
-      .from('assessment_responses')
-      .upsert({
-        assessment_id: assessmentId,
-        user_id: user.id,
-        question_id: question.id,
-        answer_value: value,
-        skill_category: question.category
-      }, {
-        onConflict: 'assessment_id,question_id'
-      })
+    await api.assessments.responses.upsert(assessmentId, {
+      question_id:    question.id,
+      answer_value:   value,
+      skill_category: question.category
+    })
 
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1)
@@ -230,35 +218,17 @@ export default function AssessmentPage() {
       })
 
       const results = Object.entries(categoryScores).map(([category, data]) => ({
-        assessment_id: assessmentId,
-        user_id: user.id,
         skill_category: category,
-        score: parseFloat((data.total / data.count).toFixed(2)),
-        percentile: null,
-        strengths: [],
-        improvements: []
+        score:          parseFloat((data.total / data.count).toFixed(2)),
+        percentile:     null,
+        strengths:      [],
+        improvements:   []
       }))
 
-      const { error: resultsError } = await supabase
-        .from('assessment_results')
-        .upsert(results, {
-          onConflict: 'assessment_id,skill_category'
-        })
-
-      if (resultsError) throw resultsError
+      await api.assessments.results.upsert(assessmentId, results)
 
       const totalScore = results.reduce((sum, r) => sum + r.score, 0) / results.length
-
-      const { error: updateError } = await supabase
-        .from('assessments')
-        .update({
-          status: 'completed',
-          total_score: parseFloat(totalScore.toFixed(2)),
-          completed_at: new Date().toISOString()
-        })
-        .eq('id', assessmentId)
-
-      if (updateError) throw updateError
+      await api.assessments.complete(assessmentId, parseFloat(totalScore.toFixed(2)))
 
       router.push(`/dashboard/results/${assessmentId}`)
     } catch (error) {
