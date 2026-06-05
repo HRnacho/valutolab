@@ -126,7 +126,7 @@ export default function LeadershipResultsPage() {
           <div className="bg-gradient-to-r from-yellow-100 to-orange-100 rounded-xl p-6 text-center">
             <p className="text-sm text-gray-600 mb-2">Punteggio Generale Leadership</p>
             <p className="text-6xl font-bold text-gray-900">
-              {assessment?.total_score?.toFixed(1)}
+              {Number(assessment?.total_score).toFixed(1)}
               <span className="text-3xl text-gray-600">/5.0</span>
             </p>
           </div>
@@ -166,7 +166,7 @@ export default function LeadershipResultsPage() {
                       <span className="text-2xl">{dimensionIcons[result.dimension]}</span>
                       <span className="font-semibold text-gray-900">{result.dimension_name}</span>
                     </div>
-                    <span className="text-2xl font-bold text-yellow-600">{score.toFixed(1)}</span>
+                    <span className="text-2xl font-bold text-yellow-600">{Number(score).toFixed(1)}</span>
                   </div>
                   
                   <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
@@ -175,7 +175,7 @@ export default function LeadershipResultsPage() {
                       style={{ width: `${percentage}%` }}
                     >
                       {percentage >= 30 && (
-                        <span className="text-white text-xs font-bold">{percentage.toFixed(0)}%</span>
+                        <span className="text-white text-xs font-bold">{Number(percentage).toFixed(0)}%</span>
                       )}
                     </div>
                   </div>

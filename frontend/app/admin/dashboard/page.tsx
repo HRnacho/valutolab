@@ -556,7 +556,7 @@ export default function AdminDashboard() {
       Utente: a.userName,
       Email: a.userEmail,
       Status: a.status === 'completed' ? 'Completato' : 'In corso',
-      Punteggio: a.total_score?.toFixed(1) || '-',
+      Punteggio: a.total_score != null ? Number(a.total_score).toFixed(1) : '-',
       'Data Creazione': new Date(a.created_at).toLocaleDateString('it-IT'),
       'Data Completamento': a.completed_at ? new Date(a.completed_at).toLocaleDateString('it-IT') : '-'
     }))
@@ -1065,7 +1065,7 @@ export default function AdminDashboard() {
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                          {assessment.total_score ? <span className="font-semibold">{assessment.total_score.toFixed(1)}/5.0</span> : '-'}
+                          {assessment.total_score != null ? <span className="font-semibold">{Number(assessment.total_score).toFixed(1)}/5.0</span> : '-'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                           {new Date(assessment.created_at).toLocaleDateString('it-IT')}
