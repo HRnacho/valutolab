@@ -1,6 +1,7 @@
 import './globals.css'
 import type { Metadata } from 'next'
 import Script from 'next/script'
+import { AuthProvider } from '@/lib/AuthContext'
 
 export const metadata: Metadata = {
   title: 'ValutoLab - Piattaforma Valutazione Soft Skills',
@@ -14,11 +15,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="it">
-      <body>{children}
-          <Script 
-      src="https://embeds.iubenda.com/widgets/4675d4fe-7785-4585-b3e6-3b3c700d9431.js"
-      strategy="lazyOnload"
-    />
+      <body>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+        <Script
+          src="https://embeds.iubenda.com/widgets/4675d4fe-7785-4585-b3e6-3b3c700d9431.js"
+          strategy="lazyOnload"
+        />
       </body>
     </html>
   )
