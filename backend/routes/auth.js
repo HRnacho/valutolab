@@ -440,7 +440,7 @@ router.get('/google/callback', async (req, res) => {
     const params = new URLSearchParams({ access_token: accessToken, refresh_token: refreshToken });
     res.redirect(`${frontendUrl}/auth/callback?${params}`);
 
-  } catch (err: any) {
+  } catch (err) {
     console.error('Google OAuth error:', err.message);
     res.redirect(`${frontendUrl}/login?error=oauth_failed`);
   }
