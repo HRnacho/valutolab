@@ -62,11 +62,11 @@ router.get('/:assessmentId/pdf', async (req, res, next) => {
 
     // ── 4. Fetch report qualitativo (può essere null) ──────────────────────
     const { rows: reportRows } = await db.query(
-      `SELECT * FROM qualitative_reports WHERE assessment_id = $1 LIMIT 1`,
+      `SELECT profile_insights, category_interpretations FROM qualitative_reports WHERE assessment_id = $1 LIMIT 1`,
       [assessmentId]
     );
-    // qualitative_reports.report_data è jsonb
-    const qualitativeReport = reportRows[0]?.report_data ?? null;
+    // Le colonne sono jsonb separati, non un singolo report_data
+    const qualitativeReport = reportRows[0] ?? null;
 
     // ── 5. Genera HTML ─────────────────────────────────────────────────────
     const html = buildReportHtml({ profile, assessment, results, qualitativeReport });

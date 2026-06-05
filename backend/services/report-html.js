@@ -135,7 +135,7 @@ function renderScorePage(results) {
     <div style="flex:1;"></div>
     <div style="border-top:1px solid #D9D0BC;padding-top:16px;display:flex;justify-content:space-between;">
       <span style="font-family:monospace;font-size:9px;color:#94A0B5;">ESCO v1.2 · valutolab.com</span>
-      <span style="font-family:monospace;font-size:9px;color:#BCC4D2;">2 / 5</span>
+      <span style="font-family:monospace;font-size:9px;color:#BCC4D2;">2 / 4</span>
     </div>
   </div>`
 }
@@ -190,7 +190,7 @@ function renderInsightsPage(profileInsights) {
     <div style="flex:1;"></div>
     <div style="border-top:1px solid #D9D0BC;padding-top:16px;display:flex;justify-content:space-between;">
       <span style="font-family:monospace;font-size:9px;color:#94A0B5;">ESCO v1.2 · valutolab.com</span>
-      <span style="font-family:monospace;font-size:9px;color:#BCC4D2;">3 / 5</span>
+      <span style="font-family:monospace;font-size:9px;color:#BCC4D2;">3 / 4</span>
     </div>
   </div>`
 }
@@ -301,7 +301,7 @@ function renderCertPage(profile, assessment) {
         <p style="font-family:monospace;font-size:9px;color:#94A0B5;letter-spacing:0.12em;text-transform:uppercase;">ESCO v1.2 · Commissione Europea, maggio 2024</p>
         <p style="font-family:monospace;font-size:9px;color:#BCC4D2;margin-top:2px;">valutolab.com · Verificabile online</p>
       </div>
-      <span style="font-family:monospace;font-size:9px;color:#BCC4D2;">5 / 5</span>
+      <span style="font-family:monospace;font-size:9px;color:#BCC4D2;">4 / 4</span>
     </div>
   </div>`
 }
@@ -311,8 +311,11 @@ function renderCertPage(profile, assessment) {
 export function buildReportHtml({ profile, assessment, results, qualitativeReport }) {
   const cover    = renderCover(profile, assessment)
   const scores   = renderScorePage(results)
-  const insights = qualitativeReport ? renderInsightsPage(qualitativeReport.profile_insights) : ''
-  const devPlan  = qualitativeReport ? renderDevelopmentPage(qualitativeReport.development_plan) : ''
+  // profile_insights è una colonna jsonb diretta (non annidato in report_data)
+  const insights = qualitativeReport?.profile_insights
+    ? renderInsightsPage(qualitativeReport.profile_insights)
+    : ''
+  // Piano di sviluppo escluso dal report HR (visibile solo ai candidati online)
   const cert     = renderCertPage(profile, assessment)
 
   return `<!DOCTYPE html>
@@ -363,7 +366,6 @@ export function buildReportHtml({ profile, assessment, results, qualitativeRepor
   ${cover}
   ${scores}
   ${insights}
-  ${devPlan}
   ${cert}
 </body>
 </html>`
