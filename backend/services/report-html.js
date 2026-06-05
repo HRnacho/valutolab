@@ -59,6 +59,45 @@ function fmt(n, decimals = 1) {
   return Number(n).toFixed(decimals).replace('.', ',')
 }
 
+// Prende solo la prima frase completa (fino al primo punto)
+function firstSentence(text, fallbackLen = 110) {
+  if (!text) return ''
+  const dot = text.search(/[.!?]/)
+  if (dot > 10 && dot < 200) return text.substring(0, dot + 1)
+  return text.substring(0, fallbackLen) + (text.length > fallbackLen ? '…' : '')
+}
+
+// SVG donut ring per il punteggio
+function scoreRing(score, level) {
+  const lc = LEVEL_COLORS[level]
+  const r = 46
+  const circ = 2 * Math.PI * r  // 289.0
+  const filled = (parseFloat(score) / 5) * circ
+  const scoreLabel = fmt(score)
+  return `<svg width="130" height="130" viewBox="0 0 130 130" style="flex-shrink:0;">
+    <!-- Track -->
+    <circle cx="65" cy="65" r="${r}" fill="none" stroke="#ECE6D8" stroke-width="9"/>
+    <!-- Arc progresso -->
+    <circle cx="65" cy="65" r="${r}" fill="none"
+      stroke="${lc.fill}"
+      stroke-width="9"
+      stroke-linecap="round"
+      stroke-dasharray="${filled.toFixed(1)} ${circ.toFixed(1)}"
+      transform="rotate(-90 65 65)"/>
+    <!-- Score number -->
+    <text x="65" y="60" text-anchor="middle"
+      font-family="Helvetica Neue, Helvetica, Arial, sans-serif"
+      font-size="28" font-weight="300" letter-spacing="-1" fill="#0E1A2B">${scoreLabel}</text>
+    <!-- /5,0 -->
+    <text x="65" y="76" text-anchor="middle"
+      font-family="monospace" font-size="11" fill="#94A0B5">/5,0</text>
+    <!-- Level label -->
+    <text x="65" y="94" text-anchor="middle"
+      font-family="monospace" font-size="9" font-weight="700"
+      letter-spacing="1.5" fill="${lc.fill}">${level.toUpperCase()}</text>
+  </svg>`
+}
+
 // ── WORDMARK ─────────────────────────────────────────────────────────────────
 
 function wordmark(size = 24) {
@@ -122,23 +161,21 @@ function renderPage1(profile, assessment, profileInsights) {
 
   return `
   <div class="page">
-    <!-- Wordmark -->
-    <div style="margin-bottom:24px;">${wordmark(26)}</div>
-
-    <!-- Eyebrow -->
-    <p style="font-family:monospace;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:#6F7E96;margin-bottom:12px;">Assessment · Competenze Trasversali</p>
-
-    <!-- Nome -->
-    <h1 style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:42px;font-weight:700;letter-spacing:-0.03em;color:#0E1A2B;line-height:1.05;margin-bottom:8px;">${esc(profile.full_name || 'Utente ValutoLab')}</h1>
-    <p style="font-family:monospace;font-size:12px;color:#6F7E96;margin-bottom:16px;">${esc(date)}</p>
-
-    <!-- Score + Level inline -->
-    <div style="display:flex;align-items:center;gap:20px;">
-      <div style="display:flex;align-items:baseline;gap:6px;">
-        <span style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:64px;font-weight:300;letter-spacing:-0.04em;color:#0E1A2B;line-height:1;">${totalScore}</span>
-        <span style="font-family:monospace;font-size:15px;color:#94A0B5;">/5,0</span>
+    <!-- Header: wordmark + ring affiancati -->
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;">
+      <div style="flex:1;">
+        <!-- Wordmark -->
+        <div style="margin-bottom:20px;">${wordmark(26)}</div>
+        <!-- Eyebrow -->
+        <p style="font-family:monospace;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:#6F7E96;margin-bottom:10px;">Assessment · Competenze Trasversali</p>
+        <!-- Nome -->
+        <h1 style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:40px;font-weight:700;letter-spacing:-0.03em;color:#0E1A2B;line-height:1.05;margin-bottom:6px;">${esc(profile.full_name || 'Utente ValutoLab')}</h1>
+        <p style="font-family:monospace;font-size:12px;color:#6F7E96;">${esc(date)}</p>
       </div>
-      <span style="display:inline-block;background:${lc.fill};color:#FBF8F2;font-family:monospace;font-size:11px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;padding:6px 14px;border-radius:2px;">${level}</span>
+      <!-- Score ring -->
+      <div style="flex-shrink:0;margin-left:16px;">
+        ${scoreRing(assessment.total_score, level)}
+      </div>
     </div>
 
     ${profileBlock}
@@ -180,8 +217,8 @@ function renderPage2(results, categoryInterps) {
         <span style="display:inline-block;background:${lc.fill};color:#FBF8F2;font-family:monospace;font-size:8.5px;font-weight:600;letter-spacing:0.10em;text-transform:uppercase;padding:2px 7px;border-radius:2px;white-space:nowrap;flex-shrink:0;">${level}</span>
       </div>
 
-      <!-- Descrizione -->
-      ${description ? `<p style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:11px;color:#4E5E78;line-height:1.55;margin:0;flex:1;overflow:hidden;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;">${esc(description)}</p>` : '<div style="flex:1;"></div>'}
+      <!-- Descrizione: prima frase completa -->
+      ${description ? `<p style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:11px;color:#4E5E78;line-height:1.6;margin:0;flex:1;">${esc(firstSentence(description))}</p>` : '<div style="flex:1;"></div>'}
 
       <!-- Barra score -->
       <div style="margin-top:4px;">
