@@ -401,14 +401,14 @@ router.get('/google/callback', async (req, res) => {
         grant_type:    'authorization_code'
       })
     });
-    const googleTokens = await tokenRes.json() as any;
+    const googleTokens = await tokenRes.json();
     if (!googleTokens.access_token) throw new Error('Token Google non ricevuto');
 
     // 2. Recupera info utente da Google
     const infoRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
       headers: { Authorization: `Bearer ${googleTokens.access_token}` }
     });
-    const googleUser = await infoRes.json() as any;
+    const googleUser = await infoRes.json();
     if (!googleUser.email) throw new Error('Email Google non ricevuta');
 
     const email = googleUser.email.toLowerCase().trim();
