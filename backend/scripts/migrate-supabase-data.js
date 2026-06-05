@@ -146,16 +146,17 @@ const migrations = [
   {
     name: 'combined_assessment_results',
     migrate: async () => {
-      const rows = await fetchAll('combined_assessment_results', 'id,assessment_id,skill_category,likert_score,sjt_score,final_score,created_at');
+      // Supabase non ha colonna 'id' in questa tabella — il VPS la genera
+      const rows = await fetchAll('combined_assessment_results', 'assessment_id,skill_category,likert_score,sjt_score,final_score,created_at');
       log(`📋 ${rows.length} righe trovate`);
       if (DRY_RUN) return rows.length;
       let count = 0;
       for (const r of rows) {
         const { rowCount } = await db.query(
-          `INSERT INTO combined_assessment_results (id, assessment_id, skill_category, likert_score, sjt_score, final_score, created_at)
-           VALUES ($1,$2,$3,$4,$5,$6,$7)
+          `INSERT INTO combined_assessment_results (assessment_id, skill_category, likert_score, sjt_score, final_score, created_at)
+           VALUES ($1,$2,$3,$4,$5,$6)
            ON CONFLICT (assessment_id, skill_category) DO NOTHING`,
-          [r.id, r.assessment_id, r.skill_category, r.likert_score, r.sjt_score, r.final_score, r.created_at]
+          [r.assessment_id, r.skill_category, r.likert_score, r.sjt_score, r.final_score, r.created_at]
         );
         count += rowCount;
       }
@@ -308,16 +309,25 @@ const migrations = [
   {
     name: 'leadership_ai_reports',
     migrate: async () => {
-      const rows = await fetchAll('leadership_ai_reports', 'id,assessment_id,user_id,report_data,ai_model,created_at');
+      // Supabase ha colonne separate invece di report_data JSONB; user_id non esiste
+      const rows = await fetchAll('leadership_ai_reports', 'id,assessment_id,leadership_style,style_description,key_strengths,development_areas,action_plan,created_at');
       log(`📋 ${rows.length} righe trovate`);
       if (DRY_RUN) return rows.length;
       let count = 0;
       for (const r of rows) {
+        // Combina le colonne Supabase in report_data JSONB per il VPS
+        const reportData = {
+          leadership_style:   r.leadership_style,
+          style_description:  r.style_description,
+          key_strengths:      r.key_strengths,
+          development_areas:  r.development_areas,
+          action_plan:        r.action_plan
+        };
         const { rowCount } = await db.query(
-          `INSERT INTO leadership_ai_reports (id, assessment_id, user_id, report_data, ai_model, created_at)
-           VALUES ($1,$2,$3,$4,$5,$6)
+          `INSERT INTO leadership_ai_reports (id, assessment_id, report_data, created_at)
+           VALUES ($1,$2,$3,$4)
            ON CONFLICT (assessment_id) DO NOTHING`,
-          [r.id, r.assessment_id, r.user_id, JSON.stringify(r.report_data), r.ai_model, r.created_at]
+          [r.id, r.assessment_id, JSON.stringify(reportData), r.created_at]
         );
         count += rowCount;
       }
