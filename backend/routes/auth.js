@@ -1,3 +1,4 @@
+import 'dotenv/config';   // carica .env prima di leggere process.env
 import express from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
@@ -7,19 +8,22 @@ import db from '../config/database.js';
 const router = express.Router();
 
 // ── Costanti ────────────────────────────────────────────────────────────────
-const ACCESS_SECRET        = process.env.JWT_SECRET;
-const REFRESH_SECRET       = process.env.JWT_REFRESH_SECRET;
-const ACCESS_EXPIRES       = process.env.JWT_ACCESS_EXPIRES   || '15m';
-const REFRESH_EXPIRES_DAYS = parseInt(process.env.JWT_REFRESH_EXPIRES_DAYS || '7', 10);
+// Lette tramite getter lazy: se dotenv viene caricato dopo il modulo
+// (tipico con ESM import-hoisting), i valori sono comunque corretti
+// al momento della prima chiamata a una route.
+const getAccessSecret  = () => process.env.JWT_SECRET;
+const ACCESS_EXPIRES       = () => process.env.JWT_ACCESS_EXPIRES   || '15m';
+const REFRESH_EXPIRES_DAYS = () => parseInt(process.env.JWT_REFRESH_EXPIRES_DAYS || '7', 10);
 const BCRYPT_ROUNDS        = 12;
 
 // ── Helper ──────────────────────────────────────────────────────────────────
 function generateAccessToken(user) {
-  if (!ACCESS_SECRET) throw new Error('JWT_SECRET non configurato');
+  const secret = getAccessSecret();
+  if (!secret) throw new Error('JWT_SECRET non configurato nel file .env');
   return jwt.sign(
     { sub: user.id, email: user.email, role: user.role },
-    ACCESS_SECRET,
-    { expiresIn: ACCESS_EXPIRES }
+    secret,
+    { expiresIn: ACCESS_EXPIRES() }
   );
 }
 
@@ -32,7 +36,7 @@ function hashToken(token) {
 }
 
 async function saveRefreshToken(userId, token) {
-  const expiresAt = new Date(Date.now() + REFRESH_EXPIRES_DAYS * 86_400_000);
+  const expiresAt = new Date(Date.now() + REFRESH_EXPIRES_DAYS() * 86_400_000);
   await db.query(
     `INSERT INTO refresh_tokens (user_id, token_hash, expires_at)
      VALUES ($1, $2, $3)`,
@@ -202,7 +206,7 @@ router.get('/me', async (req, res, next) => {
 
     let decoded;
     try {
-      decoded = jwt.verify(authHeader.slice(7), ACCESS_SECRET);
+      decoded = jwt.verify(authHeader.slice(7), getAccessSecret());
     } catch (err) {
       return res.status(401).json({
         success: false,
