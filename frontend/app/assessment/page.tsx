@@ -1,18 +1,18 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/lib/AuthContext'
 
 export default function AssessmentInfoPage() {
   const router = useRouter()
+  const { user } = useAuth()
   const [loading, setLoading] = useState(false)
 
   const handleStartAssessment = async () => {
     setLoading(true)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-
       if (!user) {
         router.push('/login')
         return

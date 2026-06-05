@@ -3,9 +3,11 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/lib/AuthContext'
 
 export default function AziendeCreatePage() {
   const router = useRouter()
+  const { user } = useAuth()
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   
@@ -23,9 +25,6 @@ export default function AziendeCreatePage() {
     setMessage(null)
 
     try {
-      // Verifica se l'utente è loggato
-      const { data: { user } } = await supabase.auth.getUser()
-
       if (!user) {
         setMessage({ type: 'error', text: 'Devi effettuare il login per creare un\'organizzazione' })
         setTimeout(() => router.push('/login'), 2000)

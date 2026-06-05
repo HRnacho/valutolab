@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/lib/AuthContext'
 import BadgeGenerator from '@/components/BadgeGenerator'
 import QRCodeGenerator from '@/components/QRCodeGenerator'
 import jsPDF from 'jspdf'
@@ -34,6 +35,7 @@ interface ShareData {
 
 export default function DashboardPage() {
   const router = useRouter()
+  const { user: authUser, logout } = useAuth()
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
   const [assessments, setAssessments] = useState<Assessment[]>([])
@@ -72,8 +74,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-
+      const user = authUser
       if (!user) {
         router.push('/login')
         return
@@ -822,7 +823,7 @@ export default function DashboardPage() {
   }
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut()
+    await logout()
     router.push('/login')
   }
 

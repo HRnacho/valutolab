@@ -24,7 +24,14 @@ function generateAccessToken(user) {
   const secret = getAccessSecret();
   if (!secret) throw new Error('JWT_SECRET non configurato nel file .env');
   return jwt.sign(
-    { sub: user.id, email: user.email, role: user.role },
+    {
+      sub:         user.id,
+      email:       user.email,
+      role:        user.role,
+      // supabase_id permette al frontend di continuare a usare lo stesso
+      // UUID per le query sui dati Supabase già esistenti
+      supabase_id: user.supabase_id ?? null
+    },
     secret,
     { expiresIn: ACCESS_EXPIRES() }
   );
@@ -102,7 +109,7 @@ router.post('/login', async (req, res, next) => {
     }
 
     const { rows } = await db.query(
-      `SELECT id, email, password_hash, full_name, role, is_active
+      `SELECT id, email, password_hash, full_name, role, is_active, supabase_id
        FROM users WHERE email = $1`,
       [email.toLowerCase().trim()]
     );
@@ -126,7 +133,7 @@ router.post('/login', async (req, res, next) => {
 
     return res.json({
       success: true,
-      user: { id: user.id, email: user.email, full_name: user.full_name, role: user.role },
+      user: { id: user.id, email: user.email, full_name: user.full_name, role: user.role, supabase_id: user.supabase_id ?? null },
       access_token:  accessToken,
       refresh_token: refreshToken,
       expires_in:    ACCESS_EXPIRES
@@ -218,7 +225,7 @@ router.get('/me', async (req, res, next) => {
     }
 
     const { rows } = await db.query(
-      `SELECT id, email, full_name, role, created_at, last_login
+      `SELECT id, email, full_name, role, created_at, last_login, supabase_id
        FROM users WHERE id = $1 AND is_active = true`,
       [decoded.sub]
     );

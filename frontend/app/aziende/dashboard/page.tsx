@@ -3,9 +3,13 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/lib/AuthContext'
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || ''
 
 export default function AziendeDashboardPage() {
   const router = useRouter()
+  const { user: authUser, loading: authLoading } = useAuth()
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
   const [organization, setOrganization] = useState<any>(null)
@@ -22,44 +26,21 @@ export default function AziendeDashboardPage() {
   })
 
   useEffect(() => {
-    let handled = false
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (handled) return
-
-      if (event === 'SIGNED_IN') {
-        handled = true
-        await checkUserAndLoadOrg()
-      } else if (event === 'INITIAL_SESSION' && session?.user) {
-        handled = true
-        await checkUserAndLoadOrg()
-      } else if (event === 'INITIAL_SESSION' && !session?.user) {
-        setTimeout(() => {
-          if (!handled) {
-            router.push('/login')
-          }
-        }, 1000)
-      }
-    })
-
-    return () => subscription.unsubscribe()
-  }, [])
+    if (authLoading) return
+    if (!authUser) { router.push('/login'); return }
+    checkUserAndLoadOrg()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authUser, authLoading])
 
   const checkUserAndLoadOrg = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-
-      if (!user) {
-        router.push('/login')
-        return
-      }
+      const user = authUser
+      if (!user) { router.push('/login'); return }
 
       setUser(user)
 
-      const lastSignIn = user.last_sign_in_at ?? user.created_at
-      const createdAt = user.created_at
-      const diff = new Date(lastSignIn).getTime() - new Date(createdAt).getTime()
-      if (diff < 60000) setIsFirstAccess(true)
+      // Per utenti JWT non esponiamo last_sign_in_at: isFirstAccess sempre false
+      setIsFirstAccess(false)
 
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'
       const response = await fetch(`${apiUrl}/api/organizations/user/${user.id}`)
@@ -101,14 +82,16 @@ export default function AziendeDashboardPage() {
   const handleSendPasswordSetup = async () => {
     setSendingPasswordEmail(true)
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-        redirectTo: 'https://valutolab.com/aziende/dashboard'
+      const res = await fetch(`${API_URL}/api/auth/forgot-password`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ email: user?.email })
       })
-      if (error) throw error
+      if (!res.ok) throw new Error()
       setMessage({ type: 'success', text: '📧 Email inviata! Controlla la casella per impostare la password.' })
       setIsFirstAccess(false)
-    } catch (error: any) {
-      setMessage({ type: 'error', text: 'Errore nell\'invio email' })
+    } catch {
+      setMessage({ type: 'error', text: "Errore nell'invio email" })
     } finally {
       setSendingPasswordEmail(false)
     }

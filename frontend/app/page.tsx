@@ -2,33 +2,21 @@
 
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/lib/AuthContext'
 
 export default function HomePage() {
   const router = useRouter()
-  const [user, setUser] = useState<any>(null)
+  const { user, loading } = useAuth()
   const [isAziendaReferente, setIsAziendaReferente] = useState(false)
 
   useEffect(() => {
-    const checkUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      setUser(user)
-
-      if (user) {
-        try {
-          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'
-          const response = await fetch(`${apiUrl}/api/v1/trial/check-referente/${user.id}`)
-          if (response.ok) {
-            const data = await response.json()
-            setIsAziendaReferente(data.isReferente === true)
-          }
-        } catch (e) {
-          // silenzioso: se fallisce non mostriamo il bottone
-        }
-      }
-    }
-    checkUser()
-  }, [])
+    if (loading || !user) return
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'
+    fetch(`${apiUrl}/api/v1/trial/check-referente/${user.id}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setIsAziendaReferente(data.isReferente === true) })
+      .catch(() => {})
+  }, [user, loading])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50">

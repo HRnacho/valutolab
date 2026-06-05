@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter, useParams } from 'next/navigation'
+import { useAuth } from '@/lib/AuthContext'
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Cell } from 'recharts'
 import ShareSection from '@/components/ShareSection'
 
@@ -40,6 +41,7 @@ export default function ResultsPage() {
   const router = useRouter()
   const params = useParams()
   const assessmentId = params.id as string
+  const { user: authUser } = useAuth()
 
   const [loading, setLoading] = useState(true)
   const [assessment, setAssessment] = useState<any>(null)
@@ -51,7 +53,7 @@ export default function ResultsPage() {
   useEffect(() => {
     const fetchResults = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser()
+        const user = authUser
         if (!user) {
           router.push('/login')
           return

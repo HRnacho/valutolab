@@ -30,14 +30,7 @@ export default function LoginPage() {
       router.push('/')
       router.refresh()
     } else {
-      if (result.error?.toLowerCase().includes('invalid login') ||
-          result.error?.toLowerCase().includes('credenziali')) {
-        setError('Email o password non corretti')
-      } else if (result.error?.toLowerCase().includes('email not confirmed')) {
-        setError('Devi confermare la tua email prima di accedere')
-      } else {
-        setError(result.error || 'Errore durante il login')
-      }
+      setError(result.error || 'Email o password non corretti')
     }
     setSubmitting(false)
   }

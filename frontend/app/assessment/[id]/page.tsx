@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter, useParams } from 'next/navigation'
+import { useAuth } from '@/lib/AuthContext'
 import { questions } from '@/data/questions'
 import SituationalQuestion from '@/components/SituationalQuestion'
 
@@ -28,6 +29,7 @@ export default function AssessmentPage() {
   const router = useRouter()
   const params = useParams()
   const assessmentId = params.id as string
+  const { user } = useAuth()
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -42,7 +44,6 @@ export default function AssessmentPage() {
 
   useEffect(() => {
     const checkAssessment = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         router.push('/login')
         return
@@ -114,7 +115,6 @@ export default function AssessmentPage() {
     const newAnswers = { ...answers, [question.id]: value }
     setAnswers(newAnswers)
 
-    const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
     await supabase
@@ -192,7 +192,6 @@ export default function AssessmentPage() {
     setSaving(true)
 
     try {
-      const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://valutolab-backend.onrender.com'

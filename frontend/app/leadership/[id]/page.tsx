@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter, useParams } from 'next/navigation'
+import { useAuth } from '@/lib/AuthContext'
 
 interface Question {
   id: string
@@ -26,6 +27,7 @@ export default function LeadershipAssessmentPage() {
   const router = useRouter()
   const params = useParams()
   const assessmentId = params.id as string
+  const { user: authUser } = useAuth()
 
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
@@ -36,14 +38,11 @@ export default function LeadershipAssessmentPage() {
 
   useEffect(() => {
     const init = async () => {
-      // Verifica utente
-      const { data: { user } } = await supabase.auth.getUser()
-      
+      const user = authUser
       if (!user) {
         router.push('/login')
         return
       }
-      
       setUser(user)
 
       // Carica domande

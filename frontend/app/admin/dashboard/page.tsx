@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/lib/AuthContext'
 
 // ==================== INTERFACES ====================
 interface Stats {
@@ -129,6 +130,7 @@ Il Team ValutoLab`
 // ==================== MAIN COMPONENT ====================
 export default function AdminDashboard() {
   const router = useRouter()
+  const { user: authUser, logout } = useAuth()
   const [loading, setLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
   const [currentAdminEmail, setCurrentAdminEmail] = useState('')
@@ -184,20 +186,14 @@ export default function AdminDashboard() {
   // ==================== EFFECTS ====================
   useEffect(() => {
     const checkAdmin = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-
+      const user = authUser
       if (!user) {
         router.push('/login')
         return
       }
 
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('is_admin, full_name')
-        .eq('id', user.id)
-        .single()
-
-      if (!profile?.is_admin) {
+      // Il role 'admin' è già nel JWT — nessuna query Supabase necessaria
+      if (user.role !== 'admin') {
         router.push('/dashboard')
         return
       }
@@ -591,7 +587,7 @@ export default function AdminDashboard() {
   })
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut()
+    await logout()
     router.push('/login')
   }
 

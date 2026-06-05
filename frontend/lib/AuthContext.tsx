@@ -1,25 +1,25 @@
 'use client'
 
 /**
- * AuthContext — Fase 3 migrazione JWT
+ * AuthContext — Fase 4: JWT puro, nessun fallback Supabase.
  *
- * Strategia "JWT first, Supabase fallback":
- * 1. Prova sempre il JWT custom (backend VPS)
- * 2. Se l'utente non è ancora migrato (JWT fallisce), usa Supabase Auth
- * 3. In Fase 4 si rimuove il fallback Supabase
+ * user.id  = supabase_id per gli utenti migrati (UUID già usato in tutti i
+ *            dati Supabase), oppure l'UUID locale per gli utenti nuovi.
+ * user.localId = UUID locale nel DB del VPS (sempre disponibile).
  */
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
-import { supabase } from './supabase'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface AuthUser {
+  /** UUID usato per le query Supabase (supabase_id per utenti migrati, id locale per nuovi) */
   id: string
+  /** UUID nel DB locale del VPS */
+  localId: string
   email: string
   full_name?: string | null
   role: string
-  authType: 'jwt' | 'supabase'
 }
 
 interface AuthContextValue {
@@ -27,17 +27,29 @@ interface AuthContextValue {
   loading: boolean
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
   logout: () => Promise<void>
-  /** Restituisce il Bearer token corrente (JWT o Supabase) per le chiamate API */
-  getAccessToken: () => Promise<string | null>
+  /** Restituisce il JWT access token corrente (sincrono, da localStorage) */
+  getAccessToken: () => string | null
 }
 
 // ── Context ───────────────────────────────────────────────────────────────────
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || ''
+const API_URL    = process.env.NEXT_PUBLIC_API_URL || ''
 const LS_ACCESS  = 'jwt_access_token'
 const LS_REFRESH = 'jwt_refresh_token'
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function mapUser(u: any): AuthUser {
+  return {
+    id:        u.supabase_id ?? u.id,   // backward compat con dati Supabase esistenti
+    localId:   u.id,
+    email:     u.email,
+    full_name: u.full_name ?? null,
+    role:      u.role
+  }
+}
 
 // ── Provider ──────────────────────────────────────────────────────────────────
 
@@ -45,14 +57,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser]       = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // ── JWT helpers ─────────────────────────────────────────────────────────────
+  // Chiama /api/auth/me con il token fornito
+  const fetchMe = useCallback(async (token: string): Promise<AuthUser | null> => {
+    try {
+      const res = await fetch(`${API_URL}/api/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (!res.ok) return null
+      const data = await res.json()
+      return mapUser(data.user)
+    } catch {
+      return null
+    }
+  }, [])
 
+  // Tenta il refresh del token
   const refreshJwt = useCallback(async (): Promise<AuthUser | null> => {
     const refreshToken = localStorage.getItem(LS_REFRESH)
     if (!refreshToken) return null
-
     try {
-      const res  = await fetch(`${API_URL}/api/auth/refresh`, {
+      const res = await fetch(`${API_URL}/api/auth/refresh`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ refresh_token: refreshToken })
@@ -65,72 +89,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const data = await res.json()
       localStorage.setItem(LS_ACCESS,  data.access_token)
       localStorage.setItem(LS_REFRESH, data.refresh_token)
-      return { ...data.user, authType: 'jwt' as const }
+      return await fetchMe(data.access_token)
     } catch {
       return null
     }
-  }, [])
+  }, [fetchMe])
 
-  const checkJwt = useCallback(async (): Promise<AuthUser | null> => {
-    const token = localStorage.getItem(LS_ACCESS)
-    if (!token) return null
-
-    try {
-      const res = await fetch(`${API_URL}/api/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      if (res.status === 401) return refreshJwt()
-      if (!res.ok) return null
-      const data = await res.json()
-      return { ...data.user, authType: 'jwt' as const }
-    } catch {
-      return null
-    }
-  }, [refreshJwt])
-
-  // ── checkAuth (mount + visibilitychange) ─────────────────────────────────────
-
+  // Controlla lo stato auth all'avvio e al ritorno in foreground
   const checkAuth = useCallback(async () => {
     setLoading(true)
     try {
-      // 1. JWT
-      const jwtUser = await checkJwt()
+      const token = localStorage.getItem(LS_ACCESS)
+      if (!token) { setUser(null); return }
+
+      const jwtUser = await fetchMe(token)
       if (jwtUser) { setUser(jwtUser); return }
 
-      // 2. Fallback Supabase (utenti non ancora migrati)
-      const { data: { user: supaUser } } = await supabase.auth.getUser()
-      if (supaUser) {
-        setUser({
-          id:        supaUser.id,
-          email:     supaUser.email!,
-          full_name: supaUser.user_metadata?.full_name ?? null,
-          role:      supaUser.user_metadata?.is_admin ? 'admin' : 'user',
-          authType:  'supabase'
-        })
-        return
-      }
-
-      setUser(null)
+      // Token scaduto → prova refresh
+      const refreshed = await refreshJwt()
+      setUser(refreshed)
     } finally {
       setLoading(false)
     }
-  }, [checkJwt])
+  }, [fetchMe, refreshJwt])
 
   useEffect(() => {
     checkAuth()
-    // Ricontrolla quando la tab torna in primo piano
     const onVisible = () => { if (document.visibilityState === 'visible') checkAuth() }
     document.addEventListener('visibilitychange', onVisible)
     return () => document.removeEventListener('visibilitychange', onVisible)
   }, [checkAuth])
 
-  // ── login ─────────────────────────────────────────────────────────────────
+  // ── login ──────────────────────────────────────────────────────────────────
 
   const login = useCallback(async (
     email: string,
     password: string
   ): Promise<{ success: boolean; error?: string }> => {
-    // 1. Prova JWT
     try {
       const res  = await fetch(`${API_URL}/api/auth/login`, {
         method:  'POST',
@@ -138,39 +133,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body:    JSON.stringify({ email, password })
       })
       const data = await res.json()
+      if (!res.ok) return { success: false, error: data.message || 'Credenziali non valide' }
 
-      if (res.ok && data.success) {
-        localStorage.setItem(LS_ACCESS,  data.access_token)
-        localStorage.setItem(LS_REFRESH, data.refresh_token)
-        setUser({ ...data.user, authType: 'jwt' })
-        return { success: true }
-      }
-
-      // 401 = credenziali sbagliate OPPURE utente non ancora su DB locale
-      // Prova Supabase solo se JWT risponde 401
-      if (res.status === 401) {
-        const { data: supaData, error: supaError } =
-          await supabase.auth.signInWithPassword({ email, password })
-
-        if (!supaError && supaData.user) {
-          setUser({
-            id:        supaData.user.id,
-            email:     supaData.user.email!,
-            full_name: supaData.user.user_metadata?.full_name ?? null,
-            role:      supaData.user.user_metadata?.is_admin ? 'admin' : 'user',
-            authType:  'supabase'
-          })
-          return { success: true }
-        }
-      }
-
-      return { success: false, error: data.message || 'Credenziali non valide' }
+      localStorage.setItem(LS_ACCESS,  data.access_token)
+      localStorage.setItem(LS_REFRESH, data.refresh_token)
+      setUser(mapUser(data.user))
+      return { success: true }
     } catch (err: any) {
       return { success: false, error: err.message || 'Errore di rete' }
     }
   }, [])
 
-  // ── logout ────────────────────────────────────────────────────────────────
+  // ── logout ─────────────────────────────────────────────────────────────────
 
   const logout = useCallback(async () => {
     const refreshToken = localStorage.getItem(LS_REFRESH)
@@ -183,24 +157,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     localStorage.removeItem(LS_ACCESS)
     localStorage.removeItem(LS_REFRESH)
-    await supabase.auth.signOut().catch(() => {})
     setUser(null)
   }, [])
 
-  // ── getAccessToken ────────────────────────────────────────────────────────
+  // ── getAccessToken (sincrono) ──────────────────────────────────────────────
 
-  const getAccessToken = useCallback(async (): Promise<string | null> => {
-    if (user?.authType === 'jwt') {
-      return localStorage.getItem(LS_ACCESS)
-    }
-    if (user?.authType === 'supabase') {
-      const { data } = await supabase.auth.getSession()
-      return data.session?.access_token ?? null
-    }
-    return null
-  }, [user])
-
-  // ── render ────────────────────────────────────────────────────────────────
+  const getAccessToken = useCallback((): string | null => {
+    return localStorage.getItem(LS_ACCESS)
+  }, [])
 
   return (
     <AuthContext.Provider value={{ user, loading, login, logout, getAccessToken }}>

@@ -1,29 +1,17 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/lib/AuthContext'
 
 export default function ServiziPage() {
   const router = useRouter()
-  const [loading, setLoading] = useState(true)
-  const [user, setUser] = useState<any>(null)
+  const { user, loading } = useAuth()
 
   useEffect(() => {
-    const checkUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      
-      if (!user) {
-        router.push('/login')
-        return
-      }
-      
-      setUser(user)
-      setLoading(false)
-    }
-
-    checkUser()
-  }, [router])
+    if (!loading && !user) router.push('/login')
+  }, [user, loading, router])
 
   const handleStartBaseAssessment = async () => {
     try {
