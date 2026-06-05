@@ -16,7 +16,8 @@ router.use(verifyToken);
 
 // ── Helper ───────────────────────────────────────────────────────────────────
 
-const userId = req => req.user.id;
+// Usa supabase_id se disponibile (utenti migrati), altrimenti id locale
+const userId = req => req.user.supabase_id ?? req.user.id;
 
 // ── USER PROFILE ─────────────────────────────────────────────────────────────
 

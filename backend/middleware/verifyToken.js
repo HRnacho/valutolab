@@ -14,7 +14,7 @@ export function verifyToken(req, res, next) {
   const token = authHeader.slice(7);
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = { id: decoded.sub, email: decoded.email, role: decoded.role };
+    req.user = { id: decoded.sub, email: decoded.email, role: decoded.role, supabase_id: decoded.supabase_id ?? null };
     next();
   } catch (err) {
     if (err.name === 'TokenExpiredError') {
