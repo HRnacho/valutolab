@@ -12,6 +12,7 @@ import trialRoutes from './routes/trial-pg.js';
 import trackingRouter from './routes/tracking.js';
 import { strictLimiter, generalLimiter } from './middleware/rateLimiter.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import authRouter from './routes/auth.js';
 
 dotenv.config();
 
@@ -34,10 +35,11 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Rate limiting: stretto su endpoint che inviano email/creano account,
-// generale su tutto il resto delle API pubbliche
-app.use('/api/v1/trial/create', strictLimiter);
+// Rate limiting
+app.use('/api/v1/trial/create',  strictLimiter);
 app.use('/api/v1/trial/activate', strictLimiter);
+app.use('/api/auth/login',        strictLimiter);   // brute-force protection
+app.use('/api/auth/register',     strictLimiter);
 app.use('/api', generalLimiter);
 
 app.get('/health', (req, res) => {
@@ -48,6 +50,10 @@ app.get('/health', (req, res) => {
   });
 });
 
+// ── Auth JWT custom (Fase 1 migrazione) ─────────────────────────────────────
+app.use('/api/auth', authRouter);
+
+// ── Route esistenti (Supabase Auth — invariate) ──────────────────────────────
 app.use('/api/assessments', assessmentsRouter);
 app.use('/api/ai-reports', aiReportsRouter);
 app.use('/api', situationalRouter);
