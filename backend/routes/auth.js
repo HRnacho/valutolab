@@ -3,7 +3,10 @@ import express from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import { Resend } from 'resend';
 import db from '../config/database.js';
+
+const getResend = () => new Resend(process.env.RESEND_API_KEY);
 
 const router = express.Router();
 
@@ -224,6 +227,128 @@ router.get('/me', async (req, res, next) => {
     }
 
     return res.json({ success: true, user: rows[0] });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── Helper reset password ───────────────────────────────────────────────────
+const RESET_TOKEN_EXPIRES_H = 24;
+
+async function createResetToken(userId) {
+  const token    = crypto.randomBytes(32).toString('hex');
+  const expiresAt = new Date(Date.now() + RESET_TOKEN_EXPIRES_H * 3_600_000);
+
+  // Revoca eventuali token precedenti non ancora usati
+  await db.query(
+    `UPDATE password_reset_tokens SET used_at = NOW()
+     WHERE user_id = $1 AND used_at IS NULL`,
+    [userId]
+  );
+  await db.query(
+    `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
+     VALUES ($1, $2, $3)`,
+    [userId, hashToken(token), expiresAt.toISOString()]
+  );
+  return token;
+}
+
+async function sendResetEmail({ to, fullName, resetToken, subject, intro }) {
+  const link = `${process.env.FRONTEND_URL || 'https://valutolab.com'}/reset-password?token=${resetToken}`;
+  await getResend().emails.send({
+    from: 'ValutoLab <noreply@valutolab.com>',
+    to,
+    subject,
+    html: `
+      <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;">
+        <h1 style="color:#4F46E5;margin:0 0 4px;">ValutoLab</h1>
+        <h2 style="margin:0 0 16px;">Ciao ${fullName || 'Utente'}!</h2>
+        <p>${intro}</p>
+        <p>Il link è valido per <strong>${RESET_TOKEN_EXPIRES_H} ore</strong>.</p>
+        <div style="text-align:center;margin:32px 0;">
+          <a href="${link}"
+             style="background:#4F46E5;color:white;padding:14px 32px;border-radius:8px;
+                    text-decoration:none;font-size:16px;font-weight:bold;">
+            Imposta nuova password
+          </a>
+        </div>
+        <p style="font-size:12px;color:#6B7280;">
+          Se il pulsante non funziona, copia questo link nel browser:<br>
+          <span style="word-break:break-all;">${link}</span>
+        </p>
+      </div>`
+  });
+}
+
+// ── POST /api/auth/forgot-password ──────────────────────────────────────────
+router.post('/forgot-password', async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email obbligatoria' });
+    }
+
+    const { rows } = await db.query(
+      'SELECT id, full_name FROM users WHERE email = $1 AND is_active = true',
+      [email.toLowerCase().trim()]
+    );
+
+    // Risposta sempre positiva: non rivela se l'email è registrata
+    if (rows[0]) {
+      const token = await createResetToken(rows[0].id);
+      await sendResetEmail({
+        to: email.toLowerCase().trim(),
+        fullName: rows[0].full_name,
+        resetToken: token,
+        subject: 'Reimposta la tua password — ValutoLab',
+        intro: 'Hai richiesto di reimpostare la password del tuo account ValutoLab.'
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: "Se l'email è registrata, riceverai le istruzioni entro pochi minuti."
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── POST /api/auth/reset-password ───────────────────────────────────────────
+router.post('/reset-password', async (req, res, next) => {
+  try {
+    const { token, password } = req.body;
+    if (!token || !password) {
+      return res.status(400).json({ success: false, message: 'Token e password sono obbligatori' });
+    }
+    if (password.length < 8) {
+      return res.status(400).json({ success: false, message: 'La password deve essere di almeno 8 caratteri' });
+    }
+
+    const { rows } = await db.query(
+      `SELECT prt.id, prt.user_id, prt.expires_at, prt.used_at,
+              u.is_active
+       FROM password_reset_tokens prt
+       JOIN users u ON u.id = prt.user_id
+       WHERE prt.token_hash = $1`,
+      [hashToken(token)]
+    );
+    const record = rows[0];
+
+    if (!record)         return res.status(400).json({ success: false, message: 'Token non valido' });
+    if (record.used_at)  return res.status(400).json({ success: false, message: 'Token già utilizzato' });
+    if (new Date(record.expires_at) < new Date()) {
+      return res.status(400).json({ success: false, message: 'Token scaduto. Richiedi un nuovo link.' });
+    }
+    if (!record.is_active) {
+      return res.status(403).json({ success: false, message: 'Account disabilitato' });
+    }
+
+    const password_hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+    await db.query('UPDATE users SET password_hash = $1 WHERE id = $2',     [password_hash, record.user_id]);
+    await db.query('UPDATE password_reset_tokens SET used_at = NOW() WHERE id = $1', [record.id]);
+
+    return res.json({ success: true, message: 'Password aggiornata. Puoi ora effettuare il login.' });
   } catch (err) {
     next(err);
   }
