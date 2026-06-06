@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 420" role="img" aria-label="Costellazione delle dodici competenze ESCO attorno al profilo">
+  
+  
+  <g stroke="#D9DEE7" stroke-width="1">
+    <line x1="210" y1="210" x2="360" y2="210"></line>
+    <line x1="210" y1="210" x2="331" y2="280"></line>
+    <line x1="210" y1="210" x2="288" y2="344"></line>
+    <line x1="210" y1="210" x2="210" y2="352"></line>
+    <line x1="210" y1="210" x2="135" y2="340"></line>
+    <line x1="210" y1="210" x2="90" y2="279"></line>
+    <line x1="210" y1="210" x2="58" y2="210"></line>
+    <line x1="210" y1="210" x2="84" y2="137"></line>
+    <line x1="210" y1="210" x2="135" y2="80"></line>
+    <line x1="210" y1="210" x2="210" y2="70"></line>
+    <line x1="210" y1="210" x2="285" y2="80"></line>
+    <line x1="210" y1="210" x2="335" y2="138"></line>
+  </g>
+  
+  <polygon points="360,210 331,280 288,344 210,352 135,340 90,279 58,210 84,137 135,80 210,70 285,80 335,138" fill="none" stroke="#ECE6D8" stroke-width="1.2"></polygon>
+  
+  <g fill="#FBF8F2" stroke="#1B2A40" stroke-width="1.6">
+    <circle cx="288" cy="344" r="5.5"></circle>
+    <circle cx="135" cy="340" r="5.5"></circle>
+    <circle cx="90" cy="279" r="5.5"></circle>
+    <circle cx="84" cy="137" r="5.5"></circle>
+    <circle cx="135" cy="80" r="5.5"></circle>
+    <circle cx="285" cy="80" r="5.5"></circle>
+    <circle cx="335" cy="138" r="5.5"></circle>
+    <circle cx="331" cy="280" r="5.5"></circle>
+  </g>
+  
+  <circle cx="360" cy="210" r="6" fill="#2D5F73"></circle>
+  <circle cx="210" cy="352" r="6" fill="#4F7A53"></circle>
+  <circle cx="58" cy="210" r="6" fill="#C68A2E"></circle>
+  <circle cx="210" cy="70" r="6" fill="#B0473A"></circle>
+  
+  <circle cx="210" cy="210" r="16" fill="#CF7556" opacity="0.12"></circle>
+  <circle cx="210" cy="210" r="8" fill="#CF7556" stroke="#8B3D1F" stroke-width="1.5"></circle>
+</svg>

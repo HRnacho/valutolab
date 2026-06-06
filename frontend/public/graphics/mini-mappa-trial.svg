@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 300" role="img" aria-label="Mini-mappa della versione trial: tre competenze su dodici">
+  
+  <line x1="40" y1="255" x2="400" y2="255" stroke="#D9D0BC" stroke-width="1"></line>
+  
+  <polyline points="50,230 140,188 230,150" fill="none" stroke="#1B2A40" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline>
+  
+  <polyline points="230,150 320,118 390,86" fill="none" stroke="#BCC4D2" stroke-width="2" stroke-dasharray="5 7" stroke-linecap="round" stroke-linejoin="round"></polyline>
+  
+  <circle cx="50" cy="230" r="5.5" fill="#FBF8F2" stroke="#1B2A40" stroke-width="1.8"></circle>
+  <circle cx="140" cy="188" r="5.5" fill="#FBF8F2" stroke="#1B2A40" stroke-width="1.8"></circle>
+  <circle cx="230" cy="150" r="13" fill="#CF7556" opacity="0.14"></circle>
+  <circle cx="230" cy="150" r="6" fill="#CF7556" stroke="#8B3D1F" stroke-width="1.5"></circle>
+  
+  <g fill="#FBF8F2" stroke="#BCC4D2" stroke-width="1.6">
+    <circle cx="320" cy="118" r="5"></circle>
+    <circle cx="390" cy="86" r="5"></circle>
+  </g>
+  
+  <text x="50" y="285" font-family="&#39;JetBrains Mono&#39;,ui-monospace,monospace" font-size="12" letter-spacing="1.5" fill="#6F7E96">03 / 12</text>
+</svg>

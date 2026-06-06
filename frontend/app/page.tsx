@@ -34,42 +34,27 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <Wordmark size={22} />
-
             <nav className="hidden md:flex items-center gap-8">
               {['Servizi', 'Metodologia', 'Aziende'].map(label => (
-                <a
-                  key={label}
-                  href={`#${label.toLowerCase()}`}
-                  className="font-body text-[14px] text-ink-600 hover:text-sienna-600 transition-colors"
-                >
+                <a key={label} href={`#${label.toLowerCase()}`}
+                  className="font-body text-[14px] text-ink-600 hover:text-sienna-600 transition-colors">
                   {label}
                 </a>
               ))}
             </nav>
-
             <div className="flex items-center gap-3">
               {user ? (
                 <>
-                  <Button variant="primary" onClick={() => router.push('/dashboard')}>
-                    Dashboard
-                  </Button>
+                  <Button variant="primary" onClick={() => router.push('/dashboard')}>Dashboard</Button>
                   {isAziendaReferente && (
-                    <Button variant="secondary" onClick={() => router.push('/aziende/dashboard')}>
-                      Dashboard Azienda
-                    </Button>
+                    <Button variant="secondary" onClick={() => router.push('/aziende/dashboard')}>Dashboard Azienda</Button>
                   )}
                 </>
               ) : (
                 <>
-                  <Button variant="ghost" onClick={() => router.push('/login')}>
-                    Accedi
-                  </Button>
-                  <Button variant="secondary" onClick={() => router.push('/register')}>
-                    Registrati
-                  </Button>
-                  <Button variant="accent" onClick={() => router.push('/servizi')}>
-                    Inizia l'assessment
-                  </Button>
+                  <Button variant="ghost" onClick={() => router.push('/login')}>Accedi</Button>
+                  <Button variant="secondary" onClick={() => router.push('/register')}>Registrati</Button>
+                  <Button variant="accent" onClick={() => router.push('/servizi')}>Inizia l&apos;assessment</Button>
                 </>
               )}
             </div>
@@ -78,30 +63,113 @@ export default function HomePage() {
       </header>
 
       {/* ── HERO ─────────────────────────────────────────────────── */}
-      <section className="py-24 lg:py-36 border-b border-paper-200">
-        <div className="max-w-5xl mx-auto px-6 lg:px-8">
-          <p className="font-mono text-eyebrow text-ink-500 uppercase tracking-eyebrow mb-8">
-            § 01 — Assessment professionale
-          </p>
-          <h1 className="font-display text-display-1 text-ink-900 mb-8 max-w-3xl">
-            Dodici competenze.<br />
-            Uno standard <em>europeo</em>.
-          </h1>
-          <p className="font-body text-lede text-ink-600 max-w-2xl mb-10">
-            Un assessment delle tue competenze trasversali mappato sullo standard ESCO v1.2
-            della Commissione Europea. Quaranta minuti, una lettura che resta.
-          </p>
-          <div className="flex flex-wrap items-center gap-4">
-            <Button variant="accent" className="text-[16px] px-8 py-4" onClick={() => router.push('/servizi')}>
-              Inizia l'assessment
-              <ArrowRight className="inline ml-2 w-4 h-4" strokeWidth={1.5} />
-            </Button>
-            <Button variant="secondary" onClick={() => router.push('/aziende/create')}>
-              Soluzioni per aziende
-            </Button>
-          </div>
-          <div className="mt-10">
-            <EscoChip label="Competenze trasversali · 12 skill" />
+      <section className="border-b border-paper-200 overflow-hidden">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-0 items-center min-h-[620px]">
+
+            {/* Left column — copy */}
+            <div className="py-24 lg:py-36 lg:pr-16 relative z-10">
+              {/* traiettoria-crescita: decorazione dietro il testo, posizionata in basso */}
+              <div aria-hidden="true"
+                className="absolute bottom-0 left-0 w-80 opacity-[0.07] pointer-events-none select-none">
+                <img src="/graphics/traiettoria-crescita.svg" alt="" />
+              </div>
+
+              <p className="font-mono text-eyebrow text-ink-500 uppercase tracking-eyebrow mb-8">
+                § 01 — Assessment professionale
+              </p>
+              <h1 className="font-display text-display-1 text-ink-900 mb-8 max-w-xl">
+                Dodici competenze.<br />
+                Uno standard <em>europeo</em>.
+              </h1>
+              <p className="font-body text-lede text-ink-600 max-w-lg mb-10">
+                Un assessment delle tue competenze trasversali mappato sullo standard ESCO v1.2
+                della Commissione Europea. Quaranta minuti, una lettura che resta.
+              </p>
+              <div className="flex flex-wrap items-center gap-4">
+                <Button variant="accent" className="text-[16px] px-8 py-4" onClick={() => router.push('/servizi')}>
+                  Inizia l&apos;assessment
+                  <ArrowRight className="inline ml-2 w-4 h-4" strokeWidth={1.5} />
+                </Button>
+                <Button variant="secondary" onClick={() => router.push('/aziende/create')}>
+                  Soluzioni per aziende
+                </Button>
+              </div>
+              <div className="mt-10">
+                <EscoChip label="Competenze trasversali · 12 skill" />
+              </div>
+            </div>
+
+            {/* Right column — report-preview inlinato */}
+            <div className="hidden lg:flex items-center justify-center py-12 pl-8">
+              <div className="w-full max-w-[480px]">
+                {/* SVG inlinato → eredita Space Grotesk / JetBrains Mono */}
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 500"
+                  role="img" aria-label="Anteprima del report ValutoLab"
+                  className="w-full h-auto drop-shadow-2xl">
+                  <defs>
+                    <filter id="cardShadow" x="-20%" y="-20%" width="140%" height="140%">
+                      <feDropShadow dx="0" dy="16" stdDeviation="20" floodColor="#0E1A2B" floodOpacity="0.10" />
+                    </filter>
+                  </defs>
+                  <rect x="20" y="14" width="520" height="466" fill="#FBF8F2" stroke="#D9D0BC" strokeWidth="1" filter="url(#cardShadow)" />
+                  {/* Header */}
+                  <text x="56" y="62" fontFamily="'Space Grotesk',sans-serif" fontWeight="600" fontSize="19" letterSpacing="-0.2" fill="#0E1A2B">Marco Bianchi</text>
+                  <text x="56" y="82" fontFamily="'JetBrains Mono',monospace" fontSize="10.5" letterSpacing="1.4" fill="#6F7E96">REPORT · 04 GIUGNO 2026</text>
+                  {/* ESCO badge */}
+                  <rect x="396" y="46" width="108" height="30" fill="#F6F2EA" stroke="#D9D0BC" strokeWidth="1" />
+                  <circle cx="414" cy="61" r="7" fill="#0E1A2B" />
+                  <text x="414" y="64.5" textAnchor="middle" fontFamily="sans-serif" fontSize="8" fill="#CF7556">★</text>
+                  <text x="428" y="65" fontFamily="'JetBrains Mono',monospace" fontSize="11" fontWeight="600" letterSpacing="0.5" fill="#0E1A2B">ESCO v1.2</text>
+                  {/* Separator */}
+                  <line x1="56" y1="98" x2="504" y2="98" stroke="#ECE6D8" strokeWidth="1" />
+                  {/* Score ring */}
+                  <circle cx="100" cy="166" r="40" fill="none" stroke="#ECE6D8" strokeWidth="8" />
+                  <circle cx="100" cy="166" r="40" fill="none" stroke="#2D5F73" strokeWidth="8"
+                    strokeDasharray="251.3" strokeDashoffset="50.3" strokeLinecap="butt"
+                    transform="rotate(-90 100 166)" />
+                  <text x="100" y="172" textAnchor="middle" fontFamily="'Space Grotesk',sans-serif" fontWeight="300" fontSize="30" fill="#0E1A2B">4,0</text>
+                  <text x="100" y="189" textAnchor="middle" fontFamily="'JetBrains Mono',monospace" fontSize="10" letterSpacing="0.8" fill="#6F7E96">/ 5,0</text>
+                  <text x="166" y="159" fontFamily="'Space Grotesk',sans-serif" fontWeight="600" fontSize="17" letterSpacing="-0.2" fill="#0E1A2B">Profilo complessivo</text>
+                  <text x="166" y="179" fontFamily="'JetBrains Mono',monospace" fontSize="10" letterSpacing="1.2" fill="#6F7E96">LIVELLO AVANZATO · EQF 5–7</text>
+                  {/* Separator */}
+                  <line x1="56" y1="228" x2="504" y2="228" stroke="#ECE6D8" strokeWidth="1" />
+                  {/* Skill bars */}
+                  <g fontFamily="'Space Grotesk',sans-serif">
+                    <text x="56" y="262" fontWeight="500" fontSize="13" fill="#0E1A2B">Comunicazione</text>
+                    <rect x="206" y="254" width="264" height="8" fill="#ECE6D8" />
+                    <rect x="206" y="254" width="227" height="8" fill="#2D5F73" />
+                    <text x="504" y="262" textAnchor="end" fontWeight="500" fontSize="14" fill="#2E3F58">4,3</text>
+                    <text x="56" y="292" fontWeight="500" fontSize="13" fill="#0E1A2B">Empatia</text>
+                    <rect x="206" y="284" width="264" height="8" fill="#ECE6D8" />
+                    <rect x="206" y="284" width="216" height="8" fill="#2D5F73" />
+                    <text x="504" y="292" textAnchor="end" fontWeight="500" fontSize="14" fill="#2E3F58">4,1</text>
+                    <text x="56" y="322" fontWeight="500" fontSize="13" fill="#0E1A2B">Pensiero critico</text>
+                    <rect x="206" y="314" width="264" height="8" fill="#ECE6D8" />
+                    <rect x="206" y="314" width="206" height="8" fill="#4F7A53" />
+                    <text x="504" y="322" textAnchor="end" fontWeight="500" fontSize="14" fill="#2E3F58">3,9</text>
+                    <text x="56" y="352" fontWeight="500" fontSize="13" fill="#0E1A2B">Teamwork</text>
+                    <rect x="206" y="344" width="264" height="8" fill="#ECE6D8" />
+                    <rect x="206" y="344" width="190" height="8" fill="#4F7A53" />
+                    <text x="504" y="352" textAnchor="end" fontWeight="500" fontSize="14" fill="#2E3F58">3,6</text>
+                    <text x="56" y="382" fontWeight="500" fontSize="13" fill="#0E1A2B">Decisione</text>
+                    <rect x="206" y="374" width="264" height="8" fill="#ECE6D8" />
+                    <rect x="206" y="374" width="148" height="8" fill="#C68A2E" />
+                    <text x="504" y="382" textAnchor="end" fontWeight="500" fontSize="14" fill="#2E3F58">2,8</text>
+                  </g>
+                  {/* Level pills */}
+                  <g fontFamily="'JetBrains Mono',monospace" fontSize="10" fontWeight="600" letterSpacing="1">
+                    <rect x="56" y="412" width="74" height="22" fill="#2D5F73" />
+                    <text x="93" y="427" textAnchor="middle" fill="#FFFFFF">ESPERTO</text>
+                    <rect x="138" y="412" width="86" height="22" fill="#4F7A53" />
+                    <text x="181" y="427" textAnchor="middle" fill="#FFFFFF">AVANZATO</text>
+                    <rect x="232" y="412" width="98" height="22" fill="#C68A2E" />
+                    <text x="281" y="427" textAnchor="middle" fill="#FFFFFF">INTERMEDIO</text>
+                  </g>
+                </svg>
+              </div>
+            </div>
+
           </div>
         </div>
       </section>
@@ -121,19 +189,27 @@ export default function HomePage() {
               },
               {
                 icon: <FileText className="w-5 h-5" strokeWidth={1.5} />,
-                body: 'Il report non è un template. L\'analisi qualitativa è generata da Claude su misura per il tuo profilo specifico di risposte.',
                 title: 'Lettura personalizzata',
+                body: "Il report non è un template. L'analisi qualitativa è generata da Claude su misura per il tuo profilo specifico di risposte.",
+                art: '/graphics/doppia-evidenza.svg',
               },
               {
                 icon: <Award className="w-5 h-5" strokeWidth={1.5} />,
                 title: 'Evidenza portabile',
                 body: 'Badge LinkedIn, QR code verificabile, PDF vettoriale — strumenti che il professionista porta nel CV, nel colloquio, nel profilo online.',
               },
-            ].map(({ icon, title, body }) => (
-              <div key={title} className="bg-paper-50 p-10">
-                <div className="text-sienna-600 mb-5">{icon}</div>
-                <h3 className="font-display text-display-3 text-ink-900 mb-4">{title}</h3>
-                <p className="font-body text-body text-ink-600 leading-relaxed">{body}</p>
+            ].map(({ icon, title, body, art }) => (
+              <div key={title} className="bg-paper-50 p-10 flex flex-col gap-5">
+                <div className="text-sienna-600">{icon}</div>
+                <div>
+                  <h3 className="font-display text-display-3 text-ink-900 mb-4">{title}</h3>
+                  <p className="font-body text-body text-ink-600 leading-relaxed">{body}</p>
+                </div>
+                {art && (
+                  <div aria-hidden="true" className="mt-auto pt-4 opacity-80">
+                    <img src={art} alt="" className="w-full" />
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -143,35 +219,29 @@ export default function HomePage() {
       {/* ── SERVIZI ──────────────────────────────────────────────── */}
       <section id="servizi" className="py-24 border-b border-paper-200">
         <div className="max-w-5xl mx-auto px-6 lg:px-8">
-          <p className="font-mono text-eyebrow text-ink-500 uppercase tracking-eyebrow mb-4">
-            § 03 — Servizi
-          </p>
-          <h2 className="font-display text-display-2 text-ink-900 mb-16">
-            Scegli l'assessment
-          </h2>
-          <div className="grid md:grid-cols-2 gap-px bg-paper-200">
+          <div className="grid lg:grid-cols-[1fr_auto] gap-12 items-start mb-16">
+            <div>
+              <p className="font-mono text-eyebrow text-ink-500 uppercase tracking-eyebrow mb-4">§ 03 — Servizi</p>
+              <h2 className="font-display text-display-2 text-ink-900">Scegli l&apos;assessment</h2>
+            </div>
+            {/* costellazione-12: a lato del titolo servizi */}
+            <div aria-hidden="true" className="hidden lg:block w-40 opacity-70 flex-shrink-0">
+              <img src="/graphics/costellazione-12.svg" alt="" />
+            </div>
+          </div>
 
+          <div className="grid md:grid-cols-2 gap-px bg-paper-200">
             {/* Assessment Base */}
             <div className="bg-paper-50 p-10 flex flex-col">
               <div className="mb-2">
-                <span className="font-mono text-[11px] tracking-wider text-ink-500 uppercase">
-                  Assessment Base
-                </span>
+                <span className="font-mono text-[11px] tracking-wider text-ink-500 uppercase">Assessment Base</span>
               </div>
-              <h3 className="font-display text-display-3 text-ink-900 mb-2">
-                Competenze Trasversali
-              </h3>
+              <h3 className="font-display text-display-3 text-ink-900 mb-2">Competenze Trasversali</h3>
               <p className="font-body text-body text-ink-600 mb-8">
                 48 item Likert + 12 situational judgement. 12 competenze misurate, mappate ESCO.
               </p>
               <ul className="space-y-3 mb-10 flex-1">
-                {[
-                  'Valutazione 12 soft skills',
-                  'Report qualitativo AI',
-                  'Profilo ESCO con URI verificabili',
-                  'Badge LinkedIn + QR code',
-                  'Certificato PDF',
-                ].map(item => (
+                {['Valutazione 12 soft skills', 'Report qualitativo AI', 'Profilo ESCO con URI verificabili', 'Badge LinkedIn + QR code', 'Certificato PDF'].map(item => (
                   <li key={item} className="flex items-start gap-3">
                     <Check className="w-4 h-4 text-sienna-600 mt-1 flex-shrink-0" strokeWidth={1.5} />
                     <span className="font-body text-body text-ink-700">{item}</span>
@@ -181,8 +251,7 @@ export default function HomePage() {
               <div className="mt-auto">
                 <LevelTrack score={3.2} className="mb-6 opacity-40" />
                 <Button variant="primary" className="w-full justify-center" onClick={() => router.push('/servizi')}>
-                  Scopri di più
-                  <ChevronRight className="inline ml-1 w-4 h-4" strokeWidth={1.5} />
+                  Scopri di più <ChevronRight className="inline ml-1 w-4 h-4" strokeWidth={1.5} />
                 </Button>
               </div>
             </div>
@@ -190,24 +259,14 @@ export default function HomePage() {
             {/* Leadership */}
             <div className="bg-ink-900 p-10 flex flex-col">
               <div className="mb-2">
-                <span className="font-mono text-[11px] tracking-wider text-ink-400 uppercase">
-                  Assessment Premium
-                </span>
+                <span className="font-mono text-[11px] tracking-wider text-ink-400 uppercase">Assessment Premium</span>
               </div>
-              <h3 className="font-display text-display-3 text-paper-50 mb-2">
-                Leadership Deep Dive
-              </h3>
+              <h3 className="font-display text-display-3 text-paper-50 mb-2">Leadership Deep Dive</h3>
               <p className="font-body text-body text-ink-300 mb-8">
-                30 scenari situazionali avanzati. 6 dimensioni di leadership. Piano d'azione 3–6 mesi.
+                30 scenari situazionali avanzati. 6 dimensioni di leadership. Piano d&apos;azione 3–6 mesi.
               </p>
               <ul className="space-y-3 mb-10 flex-1">
-                {[
-                  'Stile di leadership personalizzato',
-                  'Analisi 6 dimensioni manageriali',
-                  'Piano d\'azione con timeline',
-                  'Risorse consigliate',
-                  'Report premium scaricabile',
-                ].map(item => (
+                {["Stile di leadership personalizzato", "Analisi 6 dimensioni manageriali", "Piano d'azione con timeline", "Risorse consigliate", "Report premium scaricabile"].map(item => (
                   <li key={item} className="flex items-start gap-3">
                     <Check className="w-4 h-4 text-sienna-500 mt-1 flex-shrink-0" strokeWidth={1.5} />
                     <span className="font-body text-body text-ink-200">{item}</span>
@@ -216,12 +275,10 @@ export default function HomePage() {
               </ul>
               <div className="mt-auto">
                 <Button variant="accent" className="w-full justify-center" onClick={() => router.push('/servizi')}>
-                  Scopri di più
-                  <ChevronRight className="inline ml-1 w-4 h-4" strokeWidth={1.5} />
+                  Scopri di più <ChevronRight className="inline ml-1 w-4 h-4" strokeWidth={1.5} />
                 </Button>
               </div>
             </div>
-
           </div>
 
           {/* Coming soon */}
@@ -233,9 +290,7 @@ export default function HomePage() {
                 <p className="font-body text-caption text-ink-500">Team assessment — valutazione relazioni interpersonali e ruoli</p>
               </div>
             </div>
-            <span className="font-mono text-[11px] tracking-wider text-ink-400 uppercase border border-paper-300 px-3 py-1.5">
-              In sviluppo
-            </span>
+            <span className="font-mono text-[11px] tracking-wider text-ink-400 uppercase border border-paper-300 px-3 py-1.5">In sviluppo</span>
           </div>
         </div>
       </section>
@@ -243,9 +298,7 @@ export default function HomePage() {
       {/* ── AZIENDE ──────────────────────────────────────────────── */}
       <section id="aziende" className="py-24 border-b border-paper-200 bg-paper-50">
         <div className="max-w-5xl mx-auto px-6 lg:px-8">
-          <p className="font-mono text-eyebrow text-ink-500 uppercase tracking-eyebrow mb-4">
-            § 04 — Soluzioni per aziende
-          </p>
+          <p className="font-mono text-eyebrow text-ink-500 uppercase tracking-eyebrow mb-4">§ 04 — Soluzioni per aziende</p>
           <div className="grid md:grid-cols-2 gap-16 items-start">
             <div>
               <h2 className="font-display text-display-2 text-ink-900 mb-6">
@@ -256,9 +309,12 @@ export default function HomePage() {
                 esporta report. Nessuna licenza per candidato — una tariffa flat per organizzazione.
               </p>
               <Button variant="accent" onClick={() => router.push('/aziende/create')}>
-                Richiedi accesso
-                <ArrowRight className="inline ml-2 w-4 h-4" strokeWidth={1.5} />
+                Richiedi accesso <ArrowRight className="inline ml-2 w-4 h-4" strokeWidth={1.5} />
               </Button>
+              {/* rete-team: sotto la CTA su desktop */}
+              <div aria-hidden="true" className="hidden md:block mt-10 w-64 opacity-75">
+                <img src="/graphics/rete-team.svg" alt="" />
+              </div>
             </div>
             <ul className="space-y-5">
               {[
@@ -283,12 +339,8 @@ export default function HomePage() {
       {/* ── CTA ──────────────────────────────────────────────────── */}
       <section className="py-24 bg-ink-900">
         <div className="max-w-3xl mx-auto px-6 lg:px-8 text-center">
-          <p className="font-mono text-eyebrow text-ink-500 uppercase tracking-eyebrow mb-6">
-            § 05 — Inizia
-          </p>
-          <h2 className="font-display text-display-2 text-paper-50 mb-6">
-            Un assessment che vale la lettura.
-          </h2>
+          <p className="font-mono text-eyebrow text-ink-500 uppercase tracking-eyebrow mb-6">§ 05 — Inizia</p>
+          <h2 className="font-display text-display-2 text-paper-50 mb-6">Un assessment che vale la lettura.</h2>
           <p className="font-body text-lede text-ink-400 mb-10">
             Quaranta minuti. Dodici competenze. Un report che parla di te, non di un template.
           </p>
@@ -296,11 +348,9 @@ export default function HomePage() {
             <Button variant="accent" className="text-[16px] px-8 py-4" onClick={() => router.push('/servizi')}>
               Inizia come privato
             </Button>
-            <Button
-              variant="secondary"
+            <Button variant="secondary"
               className="text-[16px] px-8 py-4 border-ink-600 text-ink-300 hover:border-paper-50 hover:text-paper-50"
-              onClick={() => router.push('/aziende/create')}
-            >
+              onClick={() => router.push('/aziende/create')}>
               Parla con noi — Aziende
             </Button>
           </div>
@@ -314,54 +364,30 @@ export default function HomePage() {
             <div>
               <Wordmark size={20} variant="light" className="mb-4" />
               <p className="font-body text-caption text-ink-500 leading-relaxed">
-                Piattaforma professionale per l'assessment delle competenze trasversali
+                Piattaforma professionale per l&apos;assessment delle competenze trasversali
                 mappate sullo standard europeo ESCO v1.2.
               </p>
             </div>
             <div>
-              <p className="font-mono text-[11px] uppercase tracking-wider text-ink-600 mb-4">
-                Servizi
-              </p>
+              <p className="font-mono text-[11px] uppercase tracking-wider text-ink-600 mb-4">Servizi</p>
               <ul className="space-y-2">
-                {[
-                  ['Assessment Base', '/servizi'],
-                  ['Leadership Deep Dive', '/servizi'],
-                  ['Soluzioni Aziende', '/aziende/create'],
-                ].map(([label, href]) => (
-                  <li key={label}>
-                    <a href={href} className="font-body text-caption text-ink-500 hover:text-paper-50 transition-colors">
-                      {label}
-                    </a>
-                  </li>
+                {[['Assessment Base', '/servizi'], ['Leadership Deep Dive', '/servizi'], ['Soluzioni Aziende', '/aziende/create']].map(([label, href]) => (
+                  <li key={label}><a href={href} className="font-body text-caption text-ink-500 hover:text-paper-50 transition-colors">{label}</a></li>
                 ))}
               </ul>
             </div>
             <div>
-              <p className="font-mono text-[11px] uppercase tracking-wider text-ink-600 mb-4">
-                Accesso
-              </p>
+              <p className="font-mono text-[11px] uppercase tracking-wider text-ink-600 mb-4">Accesso</p>
               <ul className="space-y-2">
-                {[
-                  ['Accedi', '/login'],
-                  ['Registrati', '/register'],
-                  ['info@valutolab.com', 'mailto:info@valutolab.com'],
-                ].map(([label, href]) => (
-                  <li key={label}>
-                    <a href={href} className="font-body text-caption text-ink-500 hover:text-paper-50 transition-colors">
-                      {label}
-                    </a>
-                  </li>
+                {[['Accedi', '/login'], ['Registrati', '/register'], ['info@valutolab.com', 'mailto:info@valutolab.com']].map(([label, href]) => (
+                  <li key={label}><a href={href} className="font-body text-caption text-ink-500 hover:text-paper-50 transition-colors">{label}</a></li>
                 ))}
               </ul>
             </div>
           </div>
           <div className="border-t border-ink-800 pt-8 flex flex-wrap justify-between items-center gap-4">
-            <p className="font-mono text-[11px] text-ink-600">
-              © 2026 ValutoLab · ESCO v1.2 · Commissione Europea
-            </p>
-            <p className="font-mono text-[11px] text-ink-700">
-              Assessment · Reporting · Certificazione
-            </p>
+            <p className="font-mono text-[11px] text-ink-600">© 2026 ValutoLab · ESCO v1.2 · Commissione Europea</p>
+            <p className="font-mono text-[11px] text-ink-700">Assessment · Reporting · Certificazione</p>
           </div>
         </div>
       </footer>

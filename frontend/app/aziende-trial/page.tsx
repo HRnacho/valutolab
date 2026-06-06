@@ -132,6 +132,11 @@ export default function AgenziaTrialLanding() {
                 <div key={label} className="flex items-center gap-1.5"><Icon className="w-4 h-4" />{label}</div>
               ))}
             </div>
+
+            {/* rete-team: profili connessi su base confrontabile */}
+            <div aria-hidden="true" className="hidden lg:block mt-10 w-full max-w-sm opacity-80">
+              <img src="/graphics/rete-team.svg" alt="" className="w-full" />
+            </div>
           </div>
 
           {/* RIGHT — FORM */}

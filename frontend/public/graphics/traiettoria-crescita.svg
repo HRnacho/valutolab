@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 360" role="img" aria-label="Traiettoria di crescita attraverso i quattro livelli ESCO">
+  
+  
+  <g>
+    <rect x="40" y="250" width="440" height="70" fill="#B0473A" opacity="0.06"></rect>
+    <rect x="40" y="180" width="440" height="70" fill="#C68A2E" opacity="0.06"></rect>
+    <rect x="40" y="110" width="440" height="70" fill="#4F7A53" opacity="0.06"></rect>
+    <rect x="40" y="40" width="440" height="70" fill="#2D5F73" opacity="0.07"></rect>
+  </g>
+  
+  <g stroke="#D9D0BC" stroke-width="1">
+    <line x1="40" y1="320" x2="480" y2="320"></line>
+    <line x1="40" y1="250" x2="480" y2="250"></line>
+    <line x1="40" y1="180" x2="480" y2="180"></line>
+    <line x1="40" y1="110" x2="480" y2="110"></line>
+    <line x1="40" y1="40" x2="480" y2="40"></line>
+  </g>
+  
+  <g stroke="#ECE6D8" stroke-width="1">
+    <line x1="50" y1="40" x2="50" y2="320"></line>
+    <line x1="136" y1="40" x2="136" y2="320"></line>
+    <line x1="222" y1="40" x2="222" y2="320"></line>
+    <line x1="308" y1="40" x2="308" y2="320"></line>
+    <line x1="394" y1="40" x2="394" y2="320"></line>
+    <line x1="480" y1="40" x2="480" y2="320"></line>
+  </g>
+  
+  <polyline points="50,300 136,272 222,214 308,166 394,118 480,70" fill="none" stroke="#1B2A40" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline>
+  
+  <g>
+    <circle cx="50" cy="300" r="5" fill="#FBF8F2" stroke="#1B2A40" stroke-width="1.8"></circle>
+    <circle cx="136" cy="272" r="5" fill="#FBF8F2" stroke="#1B2A40" stroke-width="1.8"></circle>
+    <circle cx="222" cy="214" r="5" fill="#FBF8F2" stroke="#1B2A40" stroke-width="1.8"></circle>
+    <circle cx="308" cy="166" r="5" fill="#FBF8F2" stroke="#1B2A40" stroke-width="1.8"></circle>
+    <circle cx="394" cy="118" r="5" fill="#FBF8F2" stroke="#1B2A40" stroke-width="1.8"></circle>
+    
+    <circle cx="480" cy="70" r="13" fill="#CF7556" opacity="0.14"></circle>
+    <circle cx="480" cy="70" r="6" fill="#CF7556" stroke="#8B3D1F" stroke-width="1.5"></circle>
+  </g>
+</svg>

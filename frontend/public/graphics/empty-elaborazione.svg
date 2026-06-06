@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 280" role="img" aria-label="Stato di elaborazione: calcolo dei punteggi in corso">
+  
+  <line x1="40" y1="220" x2="380" y2="220" stroke="#D9D0BC" stroke-width="1"></line>
+  
+  <polyline points="55,195 130,170 205,140" fill="none" stroke="#1B2A40" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline>
+  
+  <polyline points="205,140 280,150 350,95" fill="none" stroke="#BCC4D2" stroke-width="2" stroke-dasharray="3 6" stroke-linecap="round" stroke-linejoin="round"></polyline>
+  
+  <circle cx="55" cy="195" r="5" fill="#FBF8F2" stroke="#1B2A40" stroke-width="1.8"></circle>
+  <circle cx="130" cy="170" r="5" fill="#FBF8F2" stroke="#1B2A40" stroke-width="1.8"></circle>
+  
+  <circle cx="205" cy="140" r="11" fill="#CF7556" opacity="0.16">
+    
+    
+  </circle>
+  <circle cx="205" cy="140" r="6" fill="#CF7556" stroke="#8B3D1F" stroke-width="1.5"></circle>
+  
+  <g fill="#FBF8F2" stroke="#BCC4D2" stroke-width="1.6">
+    <circle cx="280" cy="150" r="4.5"></circle>
+    <circle cx="350" cy="95" r="4.5"></circle>
+  </g>
+  
+  <text x="40" y="258" font-family="&#39;JetBrains Mono&#39;,ui-monospace,monospace" font-size="12" letter-spacing="1.5" fill="#6F7E96">CALCOLO IN CORSO…</text>
+</svg>

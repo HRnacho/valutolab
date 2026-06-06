@@ -68,6 +68,11 @@ export default function TrialPage() {
 
         {/* Card */}
         <div className="bg-paper-50 border border-paper-200 rounded-md shadow-md-ink p-8 space-y-5">
+          {/* mini-mappa: 3 di 12 — comunica subito che il trial è un sottoinsieme */}
+          <div aria-hidden="true" className="w-full">
+            <img src="/graphics/mini-mappa-trial.svg" alt="" className="w-full" />
+          </div>
+
           {/* Trial badge */}
           <div className="bg-ink-900 rounded-md p-4 text-center">
             <p className="text-[11px] font-bold uppercase tracking-eyebrow text-paper-300 mb-1">Trial Gratuito</p>
