@@ -1,12 +1,15 @@
-﻿'use client'
+'use client'
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/AuthContext'
 import { api } from '@/lib/api'
+import { Wordmark } from '@/components/ui/Wordmark'
+import { Button } from '@/components/ui/Button'
+import { ScoreRing } from '@/components/ui/ScoreRing'
 import BadgeGenerator from '@/components/BadgeGenerator'
 import QRCodeGenerator from '@/components/QRCodeGenerator'
-import QRCode from 'qrcode'
+import { FileText, Share2, Mail, Trash2, Play, ChevronRight, BarChart3 } from 'lucide-react'
 
 interface Assessment {
   id: string
@@ -42,44 +45,29 @@ export default function DashboardPage() {
   const [leadershipResponsesCount, setLeadershipResponsesCount] = useState<Record<string, number>>({})
   const [deleting, setDeleting] = useState<string | null>(null)
   const [shareData, setShareData] = useState<Record<string, ShareData>>({})
-  const [creatingShare, setCreatingShare] = useState<string | null>(null)
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [generatingPDF, setGeneratingPDF] = useState<string | null>(null)
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [badgeModal, setBadgeModal] = useState<{
-    open: boolean;
-    assessmentId: string | null;
-    userName: string;
-    score: number;
-    topSkills: Array<{ name: string; score: number }>;
-    shareToken: string;
+    open: boolean; assessmentId: string | null; userName: string
+    score: number; topSkills: Array<{ name: string; score: number }>; shareToken: string
   } | null>(null)
-  const [qrModal, setQrModal] = useState<{
-    open: boolean;
-    profileUrl: string;
-    userName: string;
-  } | null>(null)
+  const [qrModal, setQrModal] = useState<{ open: boolean; profileUrl: string; userName: string } | null>(null)
 
   useEffect(() => {
     if (message) {
-      const timer = setTimeout(() => setMessage(null), 3000)
-      return () => clearTimeout(timer)
+      const t = setTimeout(() => setMessage(null), 3000)
+      return () => clearTimeout(t)
     }
   }, [message])
 
-  const showMessage = (type: 'success' | 'error', text: string) => {
-    setMessage({ type, text })
-  }
+  const showMessage = (type: 'success' | 'error', text: string) => setMessage({ type, text })
 
   useEffect(() => {
     const fetchData = async () => {
-      if (authLoading) return        // AuthContext ancora in caricamento
-      const user = authUser
-      if (!user) {
-        router.push('/login')
-        return
-      }
+      if (authLoading) return
+      if (!authUser) { router.push('/login'); return }
 
-      setUser(user)
+      setUser(authUser)
 
       const [assessmentsRes, leadershipRes] = await Promise.all([
         api.assessments.list(),
@@ -87,76 +75,55 @@ export default function DashboardPage() {
       ])
       const assessmentsData = assessmentsRes.assessments || []
       const leadershipData  = leadershipRes.assessments  || []
-
       setAssessments(assessmentsData)
       setLeadershipAssessments(leadershipData)
 
       const counts: Record<string, number> = {}
-      for (const assessment of assessmentsData) {
-        if (assessment.status === 'in_progress') {
-          const r = await api.assessments.responses.count(assessment.id)
-          counts[assessment.id] = r.count || 0
+      for (const a of assessmentsData) {
+        if (a.status === 'in_progress') {
+          const r = await api.assessments.responses.count(a.id)
+          counts[a.id] = r.count || 0
         }
       }
       setResponsesCount(counts)
 
-      const leadershipCounts: Record<string, number> = {}
-      for (const assessment of leadershipData) {
-        if (assessment.status === 'in_progress') {
-          const r = await api.leadership.responses.count(assessment.id)
-          leadershipCounts[assessment.id] = r.count || 0
+      const lCounts: Record<string, number> = {}
+      for (const a of leadershipData) {
+        if (a.status === 'in_progress') {
+          const r = await api.leadership.responses.count(a.id)
+          lCounts[a.id] = r.count || 0
         }
       }
-      setLeadershipResponsesCount(leadershipCounts)
+      setLeadershipResponsesCount(lCounts)
 
       const completedIds = (assessmentsData as Assessment[])
-        .filter((a: Assessment) => a.status === 'completed')
-        .map((a: Assessment) => a.id)
+        .filter(a => a.status === 'completed').map(a => a.id)
 
       if (completedIds.length > 0) {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://valutolab-backend.onrender.com'
-        
-        const sharePromises = completedIds.map(async (id) => {
-          try {
-            const response = await fetch(`${apiUrl}/api/share/create`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ userId: user.id, assessmentId: id })
-            })
-            const data = await response.json()
-            if (data.success) {
-              return { [id]: data.share }
-            }
-          } catch (error) {
-            console.error('Error checking share:', error)
-          }
-          return null
-        })
-
-        const shareResults = await Promise.all(sharePromises)
-        const shares: Record<string, ShareData> = shareResults
-          .filter((result): result is Record<string, ShareData> => result !== null)
-          .reduce((acc, result) => ({ ...acc, ...result }), {} as Record<string, ShareData>)
-        
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'
+        const shareResults = await Promise.all(
+          completedIds.map(async (id) => {
+            try {
+              const res = await fetch(`${apiUrl}/api/share/create`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: authUser.id, assessmentId: id })
+              })
+              const data = await res.json()
+              return data.success ? { [id]: data.share } : null
+            } catch { return null }
+          })
+        )
+        const shares = shareResults
+          .filter((r): r is Record<string, ShareData> => r !== null)
+          .reduce((acc, r) => ({ ...acc, ...r }), {} as Record<string, ShareData>)
         setShareData(shares)
       }
 
       setLoading(false)
     }
-
     fetchData()
   }, [router, authUser, authLoading])
-
-  // Escapa caratteri HTML per prevenire XSS nei template innerHTML del PDF
-  const sanitizeText = (value: unknown): string => {
-    const str = value == null ? '' : String(value)
-    return str
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#x27;')
-  }
 
   const handleGeneratePDF = async (assessmentId: string) => {
     setGeneratingPDF(assessmentId)
@@ -166,47 +133,36 @@ export default function DashboardPage() {
       const response = await fetch(`${apiBase}/api/reports/${assessmentId}/pdf`, {
         headers: { Authorization: `Bearer ${token}` },
       })
-
       if (!response.ok) {
         const err = await response.json().catch(() => ({}))
         throw new Error((err as any).message || `Errore ${response.status}`)
       }
-
       const blob = await response.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
       a.download = `valutolab-report-${assessmentId.substring(0, 8)}.pdf`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
+      document.body.appendChild(a); a.click()
+      document.body.removeChild(a); URL.revokeObjectURL(url)
       showMessage('success', 'PDF scaricato con successo!')
     } catch (error: any) {
-      console.error('Error generating PDF:', error)
       showMessage('error', error.message || 'Errore nella generazione del PDF')
     } finally {
       setGeneratingPDF(null)
     }
   }
 
-
   const handleToggleShare = async (assessmentId: string) => {
     if (!user || !shareData[assessmentId]) return
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://valutolab-backend.onrender.com'
-      const response = await fetch(
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'
+      const res = await fetch(
         `${apiUrl}/api/share/${shareData[assessmentId].share_token}/toggle`,
         { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: user.id }) }
       )
-      const data = await response.json()
-      if (data.success) {
-        setShareData({ ...shareData, [assessmentId]: data.share })
-        showMessage('success', data.message)
-      }
-    } catch (error) {
-      showMessage('error', "Errore durante l'aggiornamento")
-    }
+      const data = await res.json()
+      if (data.success) { setShareData({ ...shareData, [assessmentId]: data.share }); showMessage('success', data.message) }
+    } catch { showMessage('error', "Errore durante l'aggiornamento") }
   }
 
   const handleCopyLink = (assessmentId: string) => {
@@ -217,37 +173,30 @@ export default function DashboardPage() {
 
   const handleOpenBadge = async (assessmentId: string) => {
     try {
-      const [assessmentRes, profileRes, resultsRes] = await Promise.all([
-        api.assessments.get(assessmentId),
-        api.profile.get(),
-        api.assessments.results.get(assessmentId)
+      const [aRes, pRes, rRes] = await Promise.all([
+        api.assessments.get(assessmentId), api.profile.get(), api.assessments.results.get(assessmentId)
       ])
-      const assessment = assessmentRes.assessment
-      const profile    = profileRes.profile
-      const results    = resultsRes.results?.slice(0, 3)
       const categoryLabels: Record<string, string> = {
         communication: 'Comunicazione', leadership: 'Leadership', problem_solving: 'Problem Solving',
-        teamwork: 'Lavoro di Squadra', time_management: 'Gestione del Tempo', adaptability: 'AdattabilitÃ ',
-        creativity: 'CreativitÃ ', critical_thinking: 'Pensiero Critico', empathy: 'Empatia',
+        teamwork: 'Lavoro di Squadra', time_management: 'Gestione del Tempo', adaptability: 'Adattabilità',
+        creativity: 'Creatività', critical_thinking: 'Pensiero Critico', empathy: 'Empatia',
         resilience: 'Resilienza', negotiation: 'Negoziazione', decision_making: 'Decision Making'
       }
-      const topSkills = (results as any[] || []).map((r: any) => ({ name: categoryLabels[r.skill_category] || r.skill_category, score: Math.round(parseFloat(r.final_score) * 20) }))
-      setBadgeModal({ open: true, assessmentId, userName: profile?.full_name || 'Utente ValutoLab', score: assessment?.total_score || 0, topSkills, shareToken: shareData[assessmentId]?.share_token || '' })
-    } catch (error) {
-      showMessage('error', 'Errore nel caricamento dei dati')
-    }
+      const topSkills = (rRes.results?.slice(0, 3) || []).map((r: any) => ({
+        name: categoryLabels[r.skill_category] || r.skill_category,
+        score: Math.round(parseFloat(r.final_score) * 20)
+      }))
+      setBadgeModal({ open: true, assessmentId, userName: pRes.profile?.full_name || 'Utente ValutoLab', score: aRes.assessment?.total_score || 0, topSkills, shareToken: shareData[assessmentId]?.share_token || '' })
+    } catch { showMessage('error', 'Errore nel caricamento dei dati') }
   }
 
   const handleOpenQR = async (assessmentId: string) => {
     try {
-      const profileRes = await api.profile.get()
-      const profile = profileRes.profile
+      const pRes = await api.profile.get()
       const shareToken = shareData[assessmentId]?.share_token
-      if (!shareToken) { showMessage('error', 'Errore: token di condivisione non trovato'); return }
-      setQrModal({ open: true, profileUrl: `https://valutolab.com/profile/${shareToken}`, userName: profile?.full_name || 'Utente ValutoLab' })
-    } catch (error) {
-      showMessage('error', 'Errore nel caricamento del QR code')
-    }
+      if (!shareToken) { showMessage('error', 'Token di condivisione non trovato'); return }
+      setQrModal({ open: true, profileUrl: `https://valutolab.com/profile/${shareToken}`, userName: pRes.profile?.full_name || 'Utente ValutoLab' })
+    } catch { showMessage('error', 'Errore nel caricamento del QR code') }
   }
 
   const handleStartNewAssessment = async () => {
@@ -256,43 +205,30 @@ export default function DashboardPage() {
       try {
         const res = await api.assessments.create()
         router.push(`/assessment/${res.assessment.id}`)
-      } catch (error) {
-        console.error('Error starting assessment:', error)
-        alert("Errore nell'avvio dell'assessment. Riprova.")
-      }
+      } catch { alert("Errore nell'avvio dell'assessment. Riprova.") }
     } else {
       router.push('/servizi')
     }
   }
 
-  const handleDeleteLeadership = async (assessmentId: string) => {
-    setDeleting(assessmentId)
+  const handleDeleteAssessment = async (id: string) => {
+    setDeleting(id)
     try {
-      await api.leadership.delete(assessmentId)
-      setLeadershipAssessments(leadershipAssessments.filter(a => a.id !== assessmentId))
-      showMessage('success', 'Leadership assessment eliminato')
-    } catch (error) {
-      showMessage('error', "Errore nell'eliminazione")
-    } finally {
-      setDeleting(null)
-    }
-  }
-
-  const handleDeleteAssessment = async (assessmentId: string) => {
-    setDeleting(assessmentId)
-    try {
-      await api.assessments.delete(assessmentId)
-      setAssessments(assessments.filter(a => a.id !== assessmentId))
+      await api.assessments.delete(id)
+      setAssessments(assessments.filter(a => a.id !== id))
       showMessage('success', 'Assessment eliminato')
-    } catch (error) {
-      showMessage('error', "Errore nell'eliminazione")
-    } finally {
-      setDeleting(null)
-    }
+    } catch { showMessage('error', "Errore nell'eliminazione") }
+    finally { setDeleting(null) }
   }
 
-  const handlePrintPDF = (assessmentId: string) => {
-    router.push(`/dashboard/results/${assessmentId}`)
+  const handleDeleteLeadership = async (id: string) => {
+    setDeleting(id)
+    try {
+      await api.leadership.delete(id)
+      setLeadershipAssessments(leadershipAssessments.filter(a => a.id !== id))
+      showMessage('success', 'Leadership assessment eliminato')
+    } catch { showMessage('error', "Errore nell'eliminazione") }
+    finally { setDeleting(null) }
   }
 
   const handleShareEmail = (assessmentId: string) => {
@@ -301,275 +237,343 @@ export default function DashboardPage() {
     window.location.href = `mailto:?subject=${subject}&body=${body}`
   }
 
-  const handleSignOut = async () => {
-    await logout()
-    router.push('/login')
-  }
-
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-paper-100">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Caricamento...</p>
+          <div className="w-8 h-8 border-2 border-ink-900 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="mt-4 font-body text-ink-500 text-[14px]">Caricamento...</p>
         </div>
       </div>
     )
   }
 
-  const inProgressAssessments = assessments.filter(a => a.status === 'in_progress')
-  const completedAssessments = assessments.filter(a => a.status === 'completed')
-  const inProgressLeadership = leadershipAssessments.filter(a => a.status === 'in_progress')
-  const completedLeadership = leadershipAssessments.filter(a => a.status === 'completed')
-
+  const inProgressAssessments  = assessments.filter(a => a.status === 'in_progress')
+  const completedAssessments   = assessments.filter(a => a.status === 'completed')
+  const inProgressLeadership   = leadershipAssessments.filter(a => a.status === 'in_progress')
+  const completedLeadership    = leadershipAssessments.filter(a => a.status === 'completed')
   const isTrial = user?.user_metadata?.role === 'trial_user'
+  const isEmpty = assessments.length === 0 && leadershipAssessments.length === 0
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
+    <div className="min-h-screen bg-paper-100 font-body text-ink-900">
+
+      {/* Toast */}
       {message && (
-        <div className={`fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg ${message.type === 'success' ? 'bg-green-500' : 'bg-red-500'} text-white font-semibold`}>
+        <div className={`fixed top-4 right-4 z-50 px-5 py-3 rounded-sm shadow-lg-ink text-[14px] font-medium text-paper-50 transition-all ${message.type === 'success' ? 'bg-ink-900' : 'bg-sienna-600'}`}>
           {message.text}
         </div>
       )}
 
-      <nav className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* ── HEADER ─────────────────────────────────────────────────── */}
+      <header className="bg-paper-50 border-b border-paper-200 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <h1 className="text-2xl font-bold text-gray-900">ValutoLab</h1>
-            <div className="flex items-center gap-4">
-              <span className="text-gray-600">{user?.email}</span>
-              <button onClick={handleSignOut} className="text-gray-600 hover:text-gray-900">Esci</button>
+            <Wordmark size={20} />
+            <div className="flex items-center gap-6">
+              <span className="text-[13px] text-ink-500">{user?.email}</span>
+              <button
+                onClick={async () => { await logout(); router.push('/login') }}
+                className="text-[13px] text-ink-600 hover:text-sienna-600 transition-colors"
+              >
+                Esci
+              </button>
             </div>
           </div>
         </div>
-      </nav>
+      </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h2>
-          <p className="text-gray-600">Gestisci i tuoi assessment delle soft skills</p>
-        </div>
+      <main className="max-w-7xl mx-auto px-6 lg:px-8 py-10 space-y-10">
 
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Nuovo Assessment</h3>
-              <p className="text-gray-600">
-                {isTrial ? 'Inizia il tuo assessment gratuito delle soft skills' : 'Scegli tra Assessment Base o Leadership Deep Dive'}
-              </p>
-            </div>
-            <button onClick={handleStartNewAssessment} className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-blue-700 transition shadow-lg">
-              {isTrial ? 'Inizia Assessment' : '+ Vai ai Servizi'}
-            </button>
-          </div>
-        </div>
-
-        {inProgressAssessments.length > 0 && (
-          <div className="mb-8">
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">Assessment Base in Corso</h3>
-            <div className="space-y-4">
-              {inProgressAssessments.map((assessment) => {
-                const answeredCount = responsesCount[assessment.id] || 0
-                const progress = Math.round((answeredCount / 48) * 100)
-                return (
-                  <div key={assessment.id} className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-purple-500">
-                    <div className="flex items-center justify-between mb-4">
-                      <div>
-                        <h4 className="text-lg font-semibold text-gray-900">Assessment Soft Skills</h4>
-                        <p className="text-sm text-gray-600">Iniziato il {new Date(assessment.created_at).toLocaleDateString('it-IT')}</p>
-                      </div>
-                      <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-semibold">In corso</span>
-                    </div>
-                    <div className="mb-4">
-                      <div className="flex justify-between text-sm text-gray-600 mb-2">
-                        <span>Progresso: {answeredCount}/48 domande</span>
-                        <span>{progress}%</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-3">
-                        <div className="bg-gradient-to-r from-purple-600 to-blue-600 h-3 rounded-full transition-all duration-300" style={{ width: `${progress}%` }}></div>
-                      </div>
-                    </div>
-                    <div className="flex gap-3">
-                      <button onClick={() => router.push(`/assessment/${assessment.id}`)} className="flex-1 bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-purple-700 transition">Riprendi Assessment</button>
-                      <button onClick={() => { if (window.confirm('Eliminare questo assessment?')) handleDeleteAssessment(assessment.id) }} disabled={deleting === assessment.id} className="px-4 py-2 border-2 border-red-300 text-red-600 rounded-lg font-semibold hover:bg-red-50 transition disabled:opacity-50">
-                        {deleting === assessment.id ? 'Eliminazione...' : 'Elimina'}
-                      </button>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
-        {inProgressLeadership.length > 0 && (
-          <div className="mb-8">
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">Leadership Deep Dive in Corso</h3>
-            <div className="space-y-4">
-              {inProgressLeadership.map((assessment) => {
-                const answeredCount = leadershipResponsesCount[assessment.id] || 0
-                const progress = Math.round((answeredCount / 30) * 100)
-                return (
-                  <div key={assessment.id} className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-yellow-500">
-                    <div className="flex items-center justify-between mb-4">
-                      <div>
-                        <h4 className="text-lg font-semibold text-gray-900">Leadership Deep Dive</h4>
-                        <p className="text-sm text-gray-600">Iniziato il {new Date(assessment.created_at).toLocaleDateString('it-IT')}</p>
-                      </div>
-                      <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-semibold">In corso</span>
-                    </div>
-                    <div className="mb-4">
-                      <div className="flex justify-between text-sm text-gray-600 mb-2">
-                        <span>Progresso: {answeredCount}/30 domande</span>
-                        <span>{progress}%</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-3">
-                        <div className="bg-gradient-to-r from-yellow-500 to-orange-600 h-3 rounded-full transition-all duration-300" style={{ width: `${progress}%` }}></div>
-                      </div>
-                    </div>
-                    <div className="flex gap-3">
-                      <button onClick={() => router.push(`/leadership/${assessment.id}`)} className="flex-1 bg-gradient-to-r from-yellow-500 to-orange-600 text-white px-4 py-2 rounded-lg font-semibold hover:from-yellow-600 hover:to-orange-700 transition">Riprendi Leadership Assessment</button>
-                      <button onClick={() => { if (window.confirm('Eliminare questo assessment?')) handleDeleteLeadership(assessment.id) }} disabled={deleting === assessment.id} className="px-4 py-2 border-2 border-red-300 text-red-600 rounded-lg font-semibold hover:bg-red-50 transition disabled:opacity-50">
-                        {deleting === assessment.id ? 'Eliminazione...' : 'Elimina'}
-                      </button>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
-        {(completedAssessments.length > 0 || completedLeadership.length > 0) && (
+        {/* ── PAGE TITLE ─────────────────────────────────────────────── */}
+        <div className="flex items-end justify-between">
           <div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">Assessment Completati</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {completedAssessments.map((assessment) => {
-                const share = shareData[assessment.id]
+            <p className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400 mb-1">Area personale</p>
+            <h1 className="font-display text-display-3 text-ink-900">Dashboard</h1>
+          </div>
+          <Button variant="primary" onClick={handleStartNewAssessment}>
+            {isTrial ? 'Inizia assessment' : '+ Vai ai servizi'}
+          </Button>
+        </div>
+
+        {/* ── EMPTY STATE ────────────────────────────────────────────── */}
+        {isEmpty && (
+          <div className="bg-paper-50 border border-paper-200 rounded-md shadow-sm-ink p-16 text-center">
+            <BarChart3 className="w-10 h-10 text-ink-300 mx-auto mb-4" />
+            <h2 className="font-display text-display-3 text-ink-800 mb-2">Nessun assessment ancora</h2>
+            <p className="text-ink-500 text-[15px] mb-6">Inizia il tuo primo assessment per scoprire le tue competenze</p>
+            <Button variant="primary" onClick={handleStartNewAssessment}>
+              {isTrial ? 'Inizia assessment gratuito' : 'Vai ai servizi'}
+            </Button>
+          </div>
+        )}
+
+        {/* ── IN PROGRESS — SOFT SKILLS ──────────────────────────────── */}
+        {inProgressAssessments.length > 0 && (
+          <section>
+            <h2 className="font-display text-[18px] font-medium text-ink-700 mb-4">In corso — Soft Skills</h2>
+            <div className="space-y-3">
+              {inProgressAssessments.map((a) => {
+                const answered = responsesCount[a.id] || 0
+                const pct = Math.round((answered / 48) * 100)
                 return (
-                  <div key={assessment.id} className="bg-white rounded-xl shadow-lg p-6">
-                    <div className="flex items-center justify-between mb-4">
+                  <div key={a.id} className="bg-paper-50 border border-paper-200 rounded-md shadow-sm-ink p-6 flex flex-col gap-4">
+                    <div className="flex items-start justify-between">
                       <div>
-                        <h4 className="text-lg font-semibold text-gray-900">Assessment Soft Skills</h4>
-                        <p className="text-sm text-gray-600">Completato il {new Date(assessment.completed_at || '').toLocaleDateString('it-IT')}</p>
+                        <span className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400">Assessment Soft Skills</span>
+                        <p className="text-[13px] text-ink-500 mt-0.5">Iniziato il {new Date(a.created_at).toLocaleDateString('it-IT')}</p>
                       </div>
-                      <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-semibold">Completato</span>
+                      <span className="text-[11px] font-medium uppercase tracking-eyebrow text-sienna-600 bg-sienna-50 border border-sienna-300 px-3 py-1 rounded-sm">
+                        In corso
+                      </span>
                     </div>
-                    <div className="bg-gradient-to-r from-purple-100 to-blue-100 rounded-lg p-4 mb-4">
-                      <p className="text-sm text-gray-600 mb-1">Punteggio Generale</p>
-                      <p className="text-3xl font-bold text-gray-900">{Number(assessment.total_score).toFixed(1)}<span className="text-lg text-gray-600">/5.0</span></p>
+                    <div>
+                      <div className="flex justify-between text-[12px] text-ink-500 mb-1.5">
+                        <span>{answered}/48 domande</span><span>{pct}%</span>
+                      </div>
+                      <div className="w-full bg-paper-200 rounded-sm h-1.5">
+                        <div className="bg-ink-900 h-1.5 rounded-sm transition-all" style={{ width: `${pct}%` }} />
+                      </div>
                     </div>
-                    <div className="space-y-3">
-                      <button onClick={() => router.push(`/dashboard/results/${assessment.id}`)} className="w-full bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-purple-700 transition">
-                        Visualizza Risultati
+                    <div className="flex gap-2">
+                      <Button variant="primary" className="flex-1 flex items-center justify-center gap-2" onClick={() => router.push(`/assessment/${a.id}`)}>
+                        <Play className="w-4 h-4" /> Riprendi
+                      </Button>
+                      <Button variant="ghost" className="text-sienna-600 hover:text-sienna-700 text-[13px]"
+                        onClick={() => { if (window.confirm('Eliminare questo assessment?')) handleDeleteAssessment(a.id) }}
+                        disabled={deleting === a.id}>
+                        {deleting === a.id ? '...' : 'Elimina'}
+                      </Button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* ── IN PROGRESS — LEADERSHIP ───────────────────────────────── */}
+        {inProgressLeadership.length > 0 && (
+          <section>
+            <h2 className="font-display text-[18px] font-medium text-ink-700 mb-4">In corso — Leadership Deep Dive</h2>
+            <div className="space-y-3">
+              {inProgressLeadership.map((a) => {
+                const answered = leadershipResponsesCount[a.id] || 0
+                const pct = Math.round((answered / 30) * 100)
+                return (
+                  <div key={a.id} className="bg-paper-50 border border-paper-200 rounded-md shadow-sm-ink p-6 flex flex-col gap-4">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <span className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400">Leadership Deep Dive</span>
+                        <p className="text-[13px] text-ink-500 mt-0.5">Iniziato il {new Date(a.created_at).toLocaleDateString('it-IT')}</p>
+                      </div>
+                      <span className="text-[11px] font-medium uppercase tracking-eyebrow text-sienna-600 bg-sienna-50 border border-sienna-300 px-3 py-1 rounded-sm">
+                        In corso
+                      </span>
+                    </div>
+                    <div>
+                      <div className="flex justify-between text-[12px] text-ink-500 mb-1.5">
+                        <span>{answered}/30 domande</span><span>{pct}%</span>
+                      </div>
+                      <div className="w-full bg-paper-200 rounded-sm h-1.5">
+                        <div className="bg-ink-900 h-1.5 rounded-sm transition-all" style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="primary" className="flex-1 flex items-center justify-center gap-2" onClick={() => router.push(`/leadership/${a.id}`)}>
+                        <Play className="w-4 h-4" /> Riprendi
+                      </Button>
+                      <Button variant="ghost" className="text-sienna-600 hover:text-sienna-700 text-[13px]"
+                        onClick={() => { if (window.confirm('Eliminare questo assessment?')) handleDeleteLeadership(a.id) }}
+                        disabled={deleting === a.id}>
+                        {deleting === a.id ? '...' : 'Elimina'}
+                      </Button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* ── COMPLETED ──────────────────────────────────────────────── */}
+        {(completedAssessments.length > 0 || completedLeadership.length > 0) && (
+          <section>
+            <h2 className="font-display text-[18px] font-medium text-ink-700 mb-4">Completati</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+              {/* Soft Skills completati */}
+              {completedAssessments.map((a) => {
+                const share = shareData[a.id]
+                return (
+                  <div key={a.id} className="bg-paper-50 border border-paper-200 rounded-md shadow-sm-ink p-6 flex flex-col gap-5">
+
+                    {/* Header card */}
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <span className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400">Assessment Soft Skills</span>
+                        <p className="text-[13px] text-ink-500 mt-0.5">
+                          Completato il {new Date(a.completed_at || '').toLocaleDateString('it-IT')}
+                        </p>
+                      </div>
+                      <span className="text-[11px] font-medium uppercase tracking-eyebrow text-level-avanzato bg-green-50 border border-green-200 px-3 py-1 rounded-sm">
+                        Completato
+                      </span>
+                    </div>
+
+                    {/* Score */}
+                    <div className="flex items-center gap-5 bg-paper-100 rounded-md p-4 border border-paper-200">
+                      <ScoreRing value={a.total_score ?? 0} size={72} />
+                      <div>
+                        <p className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400 mb-0.5">Punteggio generale</p>
+                        <p className="font-display text-display-3 text-ink-900">{Number(a.total_score).toFixed(1)}<span className="text-[16px] text-ink-400 font-normal">/5,0</span></p>
+                      </div>
+                    </div>
+
+                    {/* CTA principale */}
+                    <Button variant="primary" className="w-full flex items-center justify-center gap-2"
+                      onClick={() => router.push(`/dashboard/results/${a.id}`)}>
+                      Visualizza risultati <ChevronRight className="w-4 h-4" />
+                    </Button>
+
+                    {/* Share / azioni */}
+                    {share && (
+                      <div className="border border-paper-200 rounded-md p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Share2 className="w-4 h-4 text-ink-500" />
+                            <span className="text-[13px] font-medium text-ink-700">Condivisione</span>
+                            {share.is_active && <span className="text-[11px] text-ink-400">{share.view_count} views</span>}
+                          </div>
+                          {/* Toggle */}
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" checked={share.is_active} onChange={() => handleToggleShare(a.id)} className="sr-only peer" />
+                            <div className="w-9 h-5 bg-paper-300 rounded-full peer peer-checked:bg-ink-900 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full" />
+                          </label>
+                        </div>
+
+                        {share.is_active && (
+                          <div className="space-y-2">
+                            <div className="flex gap-2">
+                              <input
+                                readOnly value={`valutolab.com/profile/${share.share_token}`}
+                                className="flex-1 px-3 py-1.5 text-[11px] font-mono border border-paper-200 rounded-sm bg-paper-100 text-ink-600"
+                              />
+                              <button onClick={() => handleCopyLink(a.id)} className="px-3 py-1.5 bg-ink-900 text-paper-50 text-[11px] font-medium rounded-sm hover:bg-ink-800 transition-colors">
+                                Copia
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Azioni secondarie */}
+                    <div className="grid grid-cols-4 gap-2">
+                      <button onClick={() => handleGeneratePDF(a.id)} disabled={generatingPDF === a.id}
+                        className="flex flex-col items-center gap-1 p-2 border border-paper-200 rounded-md hover:bg-paper-100 transition-colors disabled:opacity-40 text-ink-600">
+                        <FileText className="w-4 h-4" />
+                        <span className="text-[10px] font-medium">{generatingPDF === a.id ? '...' : 'PDF'}</span>
                       </button>
                       {share && (
-                        <div className="border-2 border-purple-200 rounded-lg p-4 bg-purple-50">
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-semibold text-gray-700">Condivisione</span>
-                              {share.is_active && <span className="text-xs text-gray-600">{share.view_count} views</span>}
-                            </div>
-                            <label className="relative inline-flex items-center cursor-pointer">
-                              <input type="checkbox" checked={share.is_active} onChange={() => handleToggleShare(assessment.id)} className="sr-only peer" />
-                              <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
-                            </label>
-                          </div>
-                          {share.is_active && (
-                            <div className="space-y-2">
-                              <div className="flex gap-2">
-                                <input type="text" value={`valutolab.com/profile/${share.share_token}`} readOnly className="flex-1 px-3 py-1 text-xs border border-gray-300 rounded bg-white text-gray-600 font-mono" />
-                                <button onClick={() => handleCopyLink(assessment.id)} className="px-3 py-1 bg-purple-600 text-white rounded text-xs font-semibold hover:bg-purple-700">Copia</button>
-                              </div>
-                              <div className="grid grid-cols-3 gap-2">
-                                <button onClick={() => handleOpenBadge(assessment.id)} className="px-2 py-1 border border-purple-300 text-purple-700 rounded text-xs font-semibold hover:bg-purple-50">Badge</button>
-                                <button onClick={() => handleOpenQR(assessment.id)} className="px-2 py-1 border border-purple-300 text-purple-700 rounded text-xs font-semibold hover:bg-purple-50">QR</button>
-                                <button onClick={() => handleGeneratePDF(assessment.id)} disabled={generatingPDF === assessment.id} className="px-2 py-1 border border-purple-300 text-purple-700 rounded text-xs font-semibold hover:bg-purple-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                                  {generatingPDF === assessment.id ? '...' : 'PDF'}
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
+                        <>
+                          <button onClick={() => handleOpenBadge(a.id)}
+                            className="flex flex-col items-center gap-1 p-2 border border-paper-200 rounded-md hover:bg-paper-100 transition-colors text-ink-600">
+                            <span className="text-[16px]">🏅</span>
+                            <span className="text-[10px] font-medium">Badge</span>
+                          </button>
+                          <button onClick={() => handleOpenQR(a.id)}
+                            className="flex flex-col items-center gap-1 p-2 border border-paper-200 rounded-md hover:bg-paper-100 transition-colors text-ink-600">
+                            <span className="text-[16px]">⬛</span>
+                            <span className="text-[10px] font-medium">QR</span>
+                          </button>
+                        </>
                       )}
-                      <div className="grid grid-cols-3 gap-2">
-                        <button onClick={() => handlePrintPDF(assessment.id)} className="px-3 py-2 border-2 border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition flex items-center justify-center gap-1">
-                          PDF
-                        </button>
-                        <button onClick={() => handleShareEmail(assessment.id)} className="px-3 py-2 border-2 border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition flex items-center justify-center gap-1">
-                          Email
-                        </button>
-                        <button onClick={() => { if (window.confirm('Eliminare questo assessment? Azione irreversibile.')) handleDeleteAssessment(assessment.id) }} disabled={deleting === assessment.id} className="px-3 py-2 border-2 border-red-300 text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 transition disabled:opacity-50 flex items-center justify-center gap-1">
-                          {deleting === assessment.id ? '...' : 'Elimina'}
-                        </button>
-                      </div>
+                      <button onClick={() => handleShareEmail(a.id)}
+                        className="flex flex-col items-center gap-1 p-2 border border-paper-200 rounded-md hover:bg-paper-100 transition-colors text-ink-600">
+                        <Mail className="w-4 h-4" />
+                        <span className="text-[10px] font-medium">Email</span>
+                      </button>
                     </div>
+
+                    {/* Elimina */}
+                    <button
+                      onClick={() => { if (window.confirm('Eliminare questo assessment? Azione irreversibile.')) handleDeleteAssessment(a.id) }}
+                      disabled={deleting === a.id}
+                      className="flex items-center justify-center gap-1.5 text-[12px] text-ink-400 hover:text-sienna-600 transition-colors disabled:opacity-40 py-1"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      {deleting === a.id ? 'Eliminazione...' : 'Elimina assessment'}
+                    </button>
                   </div>
                 )
               })}
 
-              {completedLeadership.map((assessment) => (
-                <div key={assessment.id} className="bg-white rounded-xl shadow-lg p-6 border-t-4 border-yellow-500">
-                  <div className="flex items-center justify-between mb-4">
+              {/* Leadership completati */}
+              {completedLeadership.map((a) => (
+                <div key={a.id} className="bg-paper-50 border border-paper-200 rounded-md shadow-sm-ink p-6 flex flex-col gap-5">
+                  <div className="flex items-start justify-between">
                     <div>
-                      <h4 className="text-lg font-semibold text-gray-900">Leadership Deep Dive</h4>
-                      <p className="text-sm text-gray-600">Completato il {new Date(assessment.completed_at || '').toLocaleDateString('it-IT')}</p>
+                      <span className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400">Leadership Deep Dive</span>
+                      <p className="text-[13px] text-ink-500 mt-0.5">
+                        Completato il {new Date(a.completed_at || '').toLocaleDateString('it-IT')}
+                      </p>
                     </div>
-                    <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-semibold">Completato</span>
+                    <span className="text-[11px] font-medium uppercase tracking-eyebrow text-level-avanzato bg-green-50 border border-green-200 px-3 py-1 rounded-sm">
+                      Completato
+                    </span>
                   </div>
-                  <div className="bg-gradient-to-r from-yellow-100 to-orange-100 rounded-lg p-4 mb-4">
-                    <p className="text-sm text-gray-600 mb-1">Punteggio Leadership</p>
-                    <p className="text-3xl font-bold text-gray-900">{Number(assessment.total_score).toFixed(1)}<span className="text-lg text-gray-600">/5.0</span></p>
+
+                  <div className="flex items-center gap-5 bg-paper-100 rounded-md p-4 border border-paper-200">
+                    <ScoreRing value={a.total_score ?? 0} size={72} />
+                    <div>
+                      <p className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400 mb-0.5">Punteggio leadership</p>
+                      <p className="font-display text-display-3 text-ink-900">{Number(a.total_score).toFixed(1)}<span className="text-[16px] text-ink-400 font-normal">/5,0</span></p>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <button onClick={() => router.push(`/leadership/${assessment.id}/results`)} className="w-full bg-gradient-to-r from-yellow-500 to-orange-600 text-white px-4 py-2 rounded-lg font-semibold hover:from-yellow-600 hover:to-orange-700 transition">
-                      Visualizza Risultati Leadership
-                    </button>
-                    <button onClick={() => { if (window.confirm('Eliminare questo assessment?')) handleDeleteLeadership(assessment.id) }} disabled={deleting === assessment.id} className="w-full px-4 py-2 border-2 border-red-300 text-red-600 rounded-lg font-semibold hover:bg-red-50 transition disabled:opacity-50">
-                      {deleting === assessment.id ? 'Eliminazione...' : 'Elimina'}
-                    </button>
-                  </div>
+
+                  <Button variant="primary" className="w-full flex items-center justify-center gap-2"
+                    onClick={() => router.push(`/leadership/${a.id}/results`)}>
+                    Visualizza risultati <ChevronRight className="w-4 h-4" />
+                  </Button>
+
+                  <button
+                    onClick={() => { if (window.confirm('Eliminare questo assessment?')) handleDeleteLeadership(a.id) }}
+                    disabled={deleting === a.id}
+                    className="flex items-center justify-center gap-1.5 text-[12px] text-ink-400 hover:text-sienna-600 transition-colors disabled:opacity-40 py-1"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    {deleting === a.id ? 'Eliminazione...' : 'Elimina assessment'}
+                  </button>
                 </div>
               ))}
-            </div>
-          </div>
-        )}
 
-        {assessments.length === 0 && leadershipAssessments.length === 0 && (
-          <div className="text-center py-12">
-            <div className="text-gray-400 mb-4">
-              <svg className="w-24 h-24 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Nessun assessment ancora</h3>
-            <p className="text-gray-600 mb-4">Inizia il tuo primo assessment per scoprire le tue competenze</p>
-            <button onClick={handleStartNewAssessment} className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-blue-700 transition shadow-lg">
-              {isTrial ? 'Inizia Assessment Gratuito' : 'Vai ai Servizi'}
-            </button>
-          </div>
-        )}
-
-        {badgeModal?.open && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-2xl font-bold text-gray-900">Badge LinkedIn</h3>
-                <button onClick={() => setBadgeModal(null)} className="text-gray-400 hover:text-gray-600">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                </button>
-              </div>
-              <BadgeGenerator userName={badgeModal.userName} score={badgeModal.score} topSkills={badgeModal.topSkills} shareToken={badgeModal.shareToken} />
-            </div>
-          </div>
-        )}
-
-        {qrModal?.open && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full">
-              <QRCodeGenerator profileUrl={qrModal.profileUrl} userName={qrModal.userName} onClose={() => setQrModal(null)} />
-            </div>
-          </div>
+          </section>
         )}
       </main>
+
+      {/* ── MODAL BADGE ─────────────────────────────────────────────── */}
+      {badgeModal?.open && (
+        <div className="fixed inset-0 bg-ink-950/60 flex items-center justify-center p-4 z-50">
+          <div className="bg-paper-50 rounded-md shadow-lg-ink p-8 max-w-md w-full">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="font-display text-[20px] font-medium text-ink-900">Badge LinkedIn</h3>
+              <button onClick={() => setBadgeModal(null)} className="text-ink-400 hover:text-ink-700">✕</button>
+            </div>
+            <BadgeGenerator userName={badgeModal.userName} score={badgeModal.score} topSkills={badgeModal.topSkills} shareToken={badgeModal.shareToken} />
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL QR ────────────────────────────────────────────────── */}
+      {qrModal?.open && (
+        <div className="fixed inset-0 bg-ink-950/60 flex items-center justify-center p-4 z-50">
+          <div className="bg-paper-50 rounded-md shadow-lg-ink p-8 max-w-md w-full">
+            <QRCodeGenerator profileUrl={qrModal.profileUrl} userName={qrModal.userName} onClose={() => setQrModal(null)} />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

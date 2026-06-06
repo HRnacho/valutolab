@@ -1,0 +1,81 @@
+/* ============================================================
+   ValutoLab Design System v2 — globals.css snippet
+   Append to (or merge into) frontend/app/globals.css
+   ============================================================ */
+
+/* --- 1. Google Fonts via @import (or use next/font/google in layout.tsx — preferred) --- */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+/* --- 2. CSS custom properties (mirrored from tailwind.config but available outside Tailwind context) --- */
+:root {
+  /* Type */
+  --vl-font-display: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+  --vl-font-body: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+  --vl-font-mono: 'JetBrains Mono', 'IBM Plex Mono', monospace;
+
+  /* Ink */
+  --vl-ink-950: #07111E;
+  --vl-ink-900: #0E1A2B;
+  --vl-ink-800: #1B2A40;
+  --vl-ink-700: #2E3F58;
+  --vl-ink-600: #4E5E78;
+  --vl-ink-500: #6F7E96;
+  --vl-ink-400: #94A0B5;
+  --vl-ink-300: #BCC4D2;
+  --vl-ink-200: #D9DEE7;
+  --vl-ink-100: #EAEDF2;
+  --vl-ink-50:  #F2F4F7;
+
+  /* Paper */
+  --vl-paper-50:  #FBF8F2;
+  --vl-paper-100: #F6F2EA;
+  --vl-paper-200: #ECE6D8;
+  --vl-paper-300: #D9D0BC;
+
+  /* Sienna (accent) */
+  --vl-sienna-700: #8B3D1F;
+  --vl-sienna-600: #B85C3A;
+  --vl-sienna-500: #CF7556;
+  --vl-sienna-300: #E9B89E;
+  --vl-sienna-100: #F7E6D9;
+  --vl-sienna-50:  #FCF3EA;
+
+  /* Functional levels */
+  --vl-level-base:       #B0473A;
+  --vl-level-intermedio: #C68A2E;
+  --vl-level-avanzato:   #4F7A53;
+  --vl-level-esperto:    #2D5F73;
+}
+
+/* --- 3. Base styles --- */
+html, body {
+  background: var(--vl-paper-100);
+  color: var(--vl-ink-900);
+  font-family: var(--vl-font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'tnum'; /* tabular figures for numeric data */
+}
+
+/* Headings default to display font */
+h1, h2, h3, h4, h5, h6,
+.font-display {
+  font-family: var(--vl-font-display);
+  letter-spacing: -0.02em;
+}
+
+/* Italic emphasis in display headings uses sienna by default */
+h1 em, h2 em, h3 em {
+  font-style: italic;
+  color: var(--vl-sienna-700);
+}
+
+/* --- 4. Print rules (optional starting point — see PDF_PIPELINE.md for full setup) --- */
+@media print {
+  html, body { background: #fff; }
+  .no-print { display: none !important; }
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

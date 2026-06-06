@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ValutoLab — Design System v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* =========================================================
+   VALUTOLAB · Design System v2
+   Direction: Premium Consulting × Tech
+   Type: Space Grotesk (display) + IBM Plex Sans (body) + JetBrains Mono
+   ========================================================= */
+
+:root {
+  /* --- TOKENS · type --- */
+  --vl-font-display: 'Space Grotesk', 'Inter Tight', system-ui, -apple-system, sans-serif;
+  --vl-font-body: 'IBM Plex Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --vl-font-mono: 'JetBrains Mono', 'IBM Plex Mono', 'SF Mono', Menlo, monospace;
+
+  /* --- TOKENS · color --- */
+  /* Ink — primary dark, used for text and serious surfaces */
+  --vl-ink-950: #07111E;
+  --vl-ink-900: #0E1A2B;
+  --vl-ink-800: #1B2A40;
+  --vl-ink-700: #2E3F58;
+  --vl-ink-600: #4E5E78;
+  --vl-ink-500: #6F7E96;
+  --vl-ink-400: #94A0B5;
+  --vl-ink-300: #BCC4D2;
+  --vl-ink-200: #D9DEE7;
+  --vl-ink-100: #EAEDF2;
+  --vl-ink-50:  #F2F4F7;
+
+  /* Paper — warm off-white, the canvas. Premium consulting uses warm paper, not cold gray. */
+  --vl-paper-50:  #FBF8F2;
+  --vl-paper-100: #F6F2EA;
+  --vl-paper-200: #ECE6D8;
+  --vl-paper-300: #D9D0BC;
+
+  /* Sienna — single warm accent. Used sparingly: brand mark, key data, CTA. */
+  --vl-sienna-700: #8B3D1F;
+  --vl-sienna-600: #B85C3A;   /* primary accent */
+  --vl-sienna-500: #CF7556;
+  --vl-sienna-300: #E9B89E;
+  --vl-sienna-100: #F7E6D9;
+  --vl-sienna-50:  #FCF3EA;
+
+  /* Functional — used only for system states (scoring levels) */
+  --vl-level-base:        #B0473A;  /* 1.0–2.0 — terra darker red */
+  --vl-level-intermedio:  #C68A2E;  /* 2.1–3.0 — ochre */
+  --vl-level-avanzato:    #4F7A53;  /* 3.1–4.0 — sage green */
+  --vl-level-esperto:     #2D5F73;  /* 4.1–5.0 — deep teal */
+
+  /* --- TOKENS · spacing & elevation --- */
+  --vl-radius-sm: 2px;
+  --vl-radius-md: 4px;
+  --vl-radius-lg: 6px;
+  --vl-shadow-sm: 0 1px 2px rgba(14,26,43,0.06);
+  --vl-shadow-md: 0 4px 14px rgba(14,26,43,0.08);
+  --vl-shadow-lg: 0 22px 60px rgba(14,26,43,0.14);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--vl-paper-100); }
+body {
+  font-family: var(--vl-font-body);
+  color: var(--vl-ink-900);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "ss01", "cv01", "cv11";
+}
+
+/* ============================================================
+   LAYOUT — design system spec doc
+   ============================================================ */
+.ds {
+  max-width: 1280px;
+  margin: 0 auto;
+  background: var(--vl-paper-50);
+  box-shadow: var(--vl-shadow-lg);
+}
+.section {
+  padding: 88px 100px;
+  border-bottom: 1px solid var(--vl-paper-300);
+  position: relative;
+}
+.section--ink { background: var(--vl-ink-900); color: var(--vl-paper-50); border-bottom-color: transparent; }
+.section--paper-100 { background: var(--vl-paper-100); }
+.section--paper-200 { background: var(--vl-paper-200); }
+.section--white { background: #fff; }
+
+.sec-head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 32px;
+  border-top: 4px solid var(--vl-ink-900);
+  padding-top: 18px;
+  margin-bottom: 56px;
+}
+.section--ink .sec-head { border-top-color: var(--vl-sienna-600); }
+.sec-head__num {
+  font-family: var(--vl-font-mono);
+  font-size: 13px; font-weight: 500; letter-spacing: 0.16em;
+  color: var(--vl-ink-500); text-transform: uppercase;
+}
+.section--ink .sec-head__num { color: var(--vl-sienna-300); }
+.sec-head__title {
+  font-family: var(--vl-font-display);
+  font-weight: 500; font-size: 44px; line-height: 1.05;
+  letter-spacing: -0.022em; margin: 6px 0 0; color: var(--vl-ink-900);
+}
+.section--ink .sec-head__title { color: var(--vl-paper-50); }
+.sec-head__title em { font-style: italic; color: var(--vl-sienna-600); }
+.section--ink .sec-head__title em { color: var(--vl-sienna-500); }
+.sec-head__kicker {
+  font-family: var(--vl-font-mono);
+  font-size: 12px; font-weight: 500; letter-spacing: 0.18em;
+  color: var(--vl-ink-500); text-transform: uppercase;
+  text-align: right; flex-shrink: 0; padding-top: 6px;
+}
+.section--ink .sec-head__kicker { color: var(--vl-paper-200); }
+
+.lede {
+  font-family: var(--vl-font-display);
+  font-weight: 300; font-style: italic;
+  font-size: 24px; line-height: 1.45; color: var(--vl-ink-700);
+  max-width: 820px; margin: 0 0 56px;
+  letter-spacing: -0.005em;
+}
+.section--ink .lede { color: var(--vl-paper-200); }
+.body-text {
+  font-size: 16px; line-height: 1.62; color: var(--vl-ink-700); max-width: 720px; margin: 0;
+}
+.body-text + .body-text { margin-top: 16px; }
+
+.label {
+  font-family: var(--vl-font-mono);
+  font-size: 11px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--vl-ink-500); display: block; margin: 0 0 12px;
+}
+.section--ink .label { color: var(--vl-paper-300); }
+
+/* ============================================================
+   1 — MASTHEAD
+   ============================================================ */
+.mast {
+  background:
+    radial-gradient(circle at 86% 14%, rgba(184,92,58,0.12) 0%, transparent 46%),
+    var(--vl-paper-50);
+  padding: 80px 100px 60px;
+  border-bottom: 1px solid var(--vl-paper-300);
+}
+.mast__top {
+  display: flex; align-items: center; justify-content: space-between;
+  font-family: var(--vl-font-mono); font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--vl-ink-500);
+}
+.mast__top .left { display: flex; gap: 22px; align-items: center; }
+.mast__top .right { color: var(--vl-ink-700); }
+.mast__divider { height: 1px; background: var(--vl-ink-900); margin: 24px 0 60px; }
+/* ============================================================
+   WORDMARK — two-block construction
+   "Valuto" su Ink + "Lab" su Sienna. Geometrico, leggibile a
+   qualsiasi scala. Ottimo per favicon, badge, certificato.
+   ============================================================ */
+.wordmark {
+  font-family: var(--vl-font-display);
+  font-weight: 700;
+  font-size: 92px;
+  line-height: 1;
+  letter-spacing: -0.045em;
+  display: inline-flex;
+  gap: 0;
+}
+.wordmark .blk {
+  padding: 18px 22px 14px;
+  display: inline-block;
+}
+.wordmark .blk--ink    { background: var(--vl-ink-900);    color: var(--vl-paper-50); }
+.wordmark .blk--sienna { background: var(--vl-sienna-600); color: var(--vl-paper-50); }
+.wordmark .blk--paper  { background: var(--vl-paper-50);   color: var(--vl-ink-900); }
+.wordmark .blk--outline { background: transparent; color: var(--vl-ink-900); box-shadow: inset 0 0 0 2px var(--vl-ink-900); }
+.mast__sub {
+  display: flex; align-items: flex-end; justify-content: space-between; margin-top: 28px; gap: 40px;
+}
+.mast__sub h2 {
+  font-family: var(--vl-font-display); font-weight: 500; font-size: 38px;
+  line-height: 1.12; letter-spacing: -0.025em; max-width: 720px; margin: 0; color: var(--vl-ink-900);
+}
+.mast__sub h2 em { font-style: italic; color: var(--vl-sienna-700); }
+.mast__meta {
+  font-family: var(--vl-font-mono); font-size: 12px; letter-spacing: 0.12em;
+  color: var(--vl-ink-500); text-transform: uppercase;
+  text-align: right; line-height: 1.7; flex-shrink: 0;
+}
+.mast__meta b { color: var(--vl-ink-900); font-weight: 600; }
+
+/* ============================================================
+   2 — MANIFESTO
+   ============================================================ */
+.manifesto {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 80px; margin-top: 8px;
+}
+.manifesto__col h3 {
+  font-family: var(--vl-font-display); font-weight: 400; font-size: 32px; line-height: 1.18;
+  letter-spacing: -0.015em; margin: 0 0 18px; color: var(--vl-ink-900);
+}
+.manifesto__col h3 em { font-style: italic; color: var(--vl-sienna-700); }
+.principles { list-style: none; padding: 0; margin: 40px 0 0; border-top: 1px solid var(--vl-ink-200); }
+.principles li {
+  display: grid; grid-template-columns: 56px 1fr; gap: 12px; align-items: baseline;
+  padding: 22px 0; border-bottom: 1px solid var(--vl-ink-200);
+}
+.principles .pn { font-family: var(--vl-font-mono); font-size: 13px; color: var(--vl-sienna-700); font-weight: 600; letter-spacing: 0.06em; }
+.principles .pt {
+  font-family: var(--vl-font-display); font-size: 22px; line-height: 1.32; color: var(--vl-ink-900);
+  font-weight: 400; letter-spacing: -0.01em;
+}
+.principles .pt b { font-weight: 600; }
+
+/* ============================================================
+   3 — WORDMARK exploration
+   ============================================================ */
+.wm-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+.wm-card {
+  background: #fff; border: 1px solid var(--vl-paper-300);
+  padding: 56px 36px 32px; min-height: 240px;
+  display: flex; flex-direction: column; justify-content: space-between;
+}
+.wm-card.dark { background: var(--vl-ink-900); border-color: var(--vl-ink-900); }
+.wm-card.dark .wm-spec { color: var(--vl-paper-300); }
+.wm-card.dark .wordmark-mini { color: var(--vl-paper-50); }
+.wm-card.dark .wordmark-mini em { color: var(--vl-sienna-500); }
+.wm-card.sienna { background: var(--vl-sienna-600); border-color: var(--vl-sienna-600); }
+.wm-card.sienna .wm-spec { color: var(--vl-sienna-100); }
+.wm-card.sienna .wordmark-mini { color: var(--vl-paper-50); }
+.wm-card.sienna .wordmark-mini em { color: var(--vl-sienna-100); font-style: italic; font-weight: 300; }
+.wm-card.sienna .wordmark-mini .dot { background: var(--vl-paper-50); }
+.wordmark-mini {
+  font-family: var(--vl-font-display);
+  font-weight: 700;
+  font-size: 38px;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  display: inline-flex;
+  gap: 0;
+}
+.wordmark-mini .blk { padding: 10px 12px 8px; display: inline-block; }
+.wordmark-mini .blk--ink    { background: var(--vl-ink-900);    color: var(--vl-paper-50); }
+.wordmark-mini .blk--sienna { background: var(--vl-sienna-600); color: var(--vl-paper-50); }
+.wordmark-mini .blk--paper  { background: var(--vl-paper-50);   color: var(--vl-ink-900); }
+.wordmark-mini .blk--outline { background: transparent; color: var(--vl-ink-900); box-shadow: inset 0 0 0 2px currentColor; }
+.wordmark-mini .blk--ink-on-sienna  { background: var(--vl-ink-900);    color: var(--vl-paper-50); }
+.wordmark-mini .blk--paper-on-sienna { background: transparent; color: var(--vl-paper-50); box-shadow: inset 0 0 0 2px currentColor; }
+.wm-spec {
+  font-family: var(--vl-font-mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--vl-ink-500);
+  margin-top: 8px;
+}
+
+/* ============================================================
+   4 — COLOR
+   ============================================================ */
+.swatch-row { display: grid; grid-template-columns: 220px 1fr; gap: 40px; margin-bottom: 56px; align-items: start; }
+.swatch-row h4 { font-family: var(--vl-font-display); font-weight: 400; font-size: 22px; letter-spacing: -0.01em; margin: 0 0 8px; }
+.swatch-row p { font-size: 14px; line-height: 1.55; color: var(--vl-ink-600); margin: 0; }
+.swatch-grid { display: grid; gap: 0; }
+.swatch-grid.ink { grid-template-columns: repeat(11, 1fr); }
+.swatch-grid.paper { grid-template-columns: repeat(4, 1fr); }
+.swatch-grid.sienna { grid-template-columns: repeat(6, 1fr); }
+.swatch-grid.level { grid-template-columns: repeat(4, 1fr); }
+.swatch {
+  aspect-ratio: 1 / 1.15; padding: 14px;
+  display: flex; flex-direction: column; justify-content: space-between;
+  font-family: var(--vl-font-mono); font-size: 10px; letter-spacing: 0.06em;
+}
+.swatch .w { font-weight: 600; font-size: 11px; }
+.swatch .v { font-size: 9.5px; opacity: 0.9; }
+.swatch.is-dark { color: var(--vl-paper-50); }
+.swatch.is-light { color: var(--vl-ink-900); }
+.swatch.level { aspect-ratio: 1 / 1.4; padding: 18px; }
+.swatch.level .l-name { font-family: var(--vl-font-display); font-size: 19px; line-height: 1; letter-spacing: -0.01em; font-weight: 500; }
+.swatch.level .l-range { font-size: 11px; opacity: 0.85; letter-spacing: 0.06em; }
+
+/* ============================================================
+   5 — TYPOGRAPHY
+   ============================================================ */
+.type-stack { display: grid; gap: 0; }
+.type-row {
+  display: grid; grid-template-columns: 200px 1fr; gap: 40px; align-items: baseline;
+  padding: 28px 0; border-bottom: 1px solid var(--vl-paper-300);
+}
+.type-row .meta {
+  font-family: var(--vl-font-mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--vl-ink-500); line-height: 1.7;
+}
+.type-row .meta b { display: block; color: var(--vl-ink-900); font-size: 13px; font-weight: 600; }
+.type-row .sample.disp-1 { font-family: var(--vl-font-display); font-size: 64px; font-weight: 700; line-height: 1.03; letter-spacing: -0.03em; color: var(--vl-ink-900); }
+.type-row .sample.disp-1 em { font-style: italic; font-weight: 500; color: var(--vl-sienna-700); }
+.type-row .sample.disp-2 { font-family: var(--vl-font-display); font-size: 42px; font-weight: 500; line-height: 1.08; letter-spacing: -0.025em; }
+.type-row .sample.disp-3 { font-family: var(--vl-font-display); font-size: 28px; font-weight: 500; line-height: 1.15; letter-spacing: -0.015em; }
+.type-row .sample.lede-s  { font-family: var(--vl-font-display); font-size: 22px; font-style: italic; font-weight: 300; line-height: 1.4; color: var(--vl-ink-700); }
+.type-row .sample.body-s  { font-family: var(--vl-font-body); font-size: 16px; line-height: 1.62; color: var(--vl-ink-700); max-width: 580px; }
+.type-row .sample.cap-s   { font-family: var(--vl-font-body); font-size: 13px; line-height: 1.5; color: var(--vl-ink-500); }
+.type-row .sample.eyebrow-s { font-family: var(--vl-font-mono); font-size: 12px; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: var(--vl-sienna-700); }
+.type-row .sample.mono-s  { font-family: var(--vl-font-mono); font-size: 14px; color: var(--vl-ink-700); letter-spacing: -0.005em; }
+.type-row .sample.num-s   { font-family: var(--vl-font-display); font-size: 90px; font-weight: 300; line-height: 0.9; letter-spacing: -0.04em; color: var(--vl-ink-900); }
+.type-row .sample.num-s sup { font-size: 36px; vertical-align: top; line-height: 1; color: var(--vl-ink-400); font-weight: 300; margin-left: 4px; }
+
+/* ============================================================
+   6 — COMPONENTS
+   ============================================================ */
+.cmp-grid { display: grid; gap: 28px; }
+.cmp-card {
+  background: #fff; border: 1px solid var(--vl-paper-300); padding: 32px;
+  display: flex; flex-direction: column; gap: 24px;
+}
+.cmp-card .cap { font-family: var(--vl-font-mono); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--vl-ink-500); }
+.cmp-card .name { font-family: var(--vl-font-display); font-size: 22px; font-weight: 500; letter-spacing: -0.012em; margin: -16px 0 0; color: var(--vl-ink-900); }
+.cmp-card .desc { font-size: 13px; color: var(--vl-ink-600); line-height: 1.55; margin: -10px 0 0; max-width: 460px; }
+.cmp-card .demo { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; min-height: 60px; }
+.cmp-card.row-1 { grid-column: span 2; }
+
+/* Buttons */
+.btn {
+  font-family: var(--vl-font-body); font-weight: 500; font-size: 15px;
+  letter-spacing: 0.005em; padding: 13px 22px; border-radius: var(--vl-radius-sm);
+  border: 1px solid transparent; cursor: pointer; display: inline-flex; align-items: center; gap: 10px;
+  text-decoration: none; transition: all 0.15s ease;
+}
+.btn--primary { background: var(--vl-ink-900); color: var(--vl-paper-50); }
+.btn--primary:hover { background: var(--vl-ink-800); }
+.btn--accent  { background: var(--vl-sienna-600); color: var(--vl-paper-50); }
+.btn--accent:hover { background: var(--vl-sienna-700); }
+.btn--secondary { background: transparent; color: var(--vl-ink-900); border-color: var(--vl-ink-900); }
+.btn--secondary:hover { background: var(--vl-ink-900); color: var(--vl-paper-50); }
+.btn--ghost { background: transparent; color: var(--vl-ink-700); padding-left: 0; padding-right: 0; }
+.btn--ghost:hover { color: var(--vl-sienna-700); }
+
+/* ESCO chip */
+.esco-chip {
+  display: inline-flex; align-items: center; gap: 9px;
+  background: var(--vl-paper-100); border: 1px solid var(--vl-paper-300); padding: 7px 12px 7px 9px;
+  font-family: var(--vl-font-mono); font-size: 11px; letter-spacing: 0.06em; color: var(--vl-ink-700);
+}
+.esco-chip__star {
+  width: 14px; height: 14px; border-radius: 50%; background: var(--vl-ink-900);
+  display: inline-grid; place-items: center; flex-shrink: 0;
+}
+.esco-chip__star::after { content: '★'; color: var(--vl-sienna-500); font-size: 9px; line-height: 1; }
+.esco-chip b { font-weight: 600; color: var(--vl-ink-900); }
+
+/* Level pill */
+.level-pill {
+  font-family: var(--vl-font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.12em;
+  text-transform: uppercase; padding: 5px 10px; border-radius: 2px; color: #fff;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.level-pill.base       { background: var(--vl-level-base); }
+.level-pill.intermedio { background: var(--vl-level-intermedio); }
+.level-pill.avanzato   { background: var(--vl-level-avanzato); }
+.level-pill.esperto    { background: var(--vl-level-esperto); }
+.level-pill .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: 0.7; }
+
+/* 4-step level track */
+.lvl-track {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px;
+  width: 320px;
+}
+.lvl-track .seg {
+  height: 12px; background: var(--vl-paper-200);
+  position: relative;
+}
+.lvl-track .seg.active { background: var(--vl-ink-900); }
+.lvl-track .seg.current { background: var(--vl-sienna-600); }
+.lvl-track-row { display: flex; align-items: center; gap: 28px; }
+.lvl-track-meta {
+  font-family: var(--vl-font-display); font-size: 26px; font-weight: 400; letter-spacing: -0.015em; color: var(--vl-ink-900);
+}
+.lvl-track-meta small { font-family: var(--vl-font-mono); font-size: 11px; letter-spacing: 0.1em; color: var(--vl-ink-500); display: block; text-transform: uppercase; margin-top: 4px; }
+
+/* Score ring */
+.score-ring { display: flex; align-items: center; gap: 24px; }
+.score-ring__svg { width: 120px; height: 120px; flex-shrink: 0; }
+.score-ring__track { fill: none; stroke: var(--vl-paper-200); stroke-width: 8; }
+.score-ring__value { fill: none; stroke: var(--vl-ink-900); stroke-width: 8; stroke-linecap: butt; transform: rotate(-90deg); transform-origin: center; }
+.score-ring__num {
+  font-family: var(--vl-font-display); font-weight: 300; font-size: 38px;
+  letter-spacing: -0.03em; fill: var(--vl-ink-900);
+}
+.score-ring__num-suffix { font-family: var(--vl-font-mono); font-size: 11px; letter-spacing: 0.1em; fill: var(--vl-ink-500); }
+.score-ring__lbl b { display: block; font-family: var(--vl-font-display); font-size: 22px; font-weight: 500; letter-spacing: -0.012em; color: var(--vl-ink-900); }
+.score-ring__lbl span { font-family: var(--vl-font-mono); font-size: 11px; letter-spacing: 0.12em; color: var(--vl-ink-500); text-transform: uppercase; }
+
+/* Data bar (competence bar) */
+.dbar { display: grid; gap: 16px; }
+.dbar-row { display: grid; grid-template-columns: 230px 1fr 92px; gap: 24px; align-items: center; }
+.dbar-row .skill { font-family: var(--vl-font-display); font-size: 18px; font-weight: 500; letter-spacing: -0.01em; color: var(--vl-ink-900); }
+.dbar-row .skill small { display: block; font-family: var(--vl-font-mono); font-size: 10px; letter-spacing: 0.1em; color: var(--vl-ink-500); text-transform: uppercase; margin-top: 3px; font-weight: 500; }
+.dbar-row .track { height: 14px; background: var(--vl-paper-200); position: relative; }
+.dbar-row .fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--vl-ink-900); }
+.dbar-row .fill.lvl-esperto    { background: var(--vl-level-esperto); }
+.dbar-row .fill.lvl-avanzato   { background: var(--vl-level-avanzato); }
+.dbar-row .fill.lvl-intermedio { background: var(--vl-level-intermedio); }
+.dbar-row .fill.lvl-base       { background: var(--vl-level-base); }
+.dbar-row .score { font-family: var(--vl-font-display); font-size: 26px; font-weight: 400; letter-spacing: -0.02em; color: var(--vl-ink-900); text-align: right; }
+.dbar-row .score span { font-family: var(--vl-font-mono); font-size: 11px; color: var(--vl-ink-400); letter-spacing: 0.05em; }
+
+/* Pull quote */
+.pq {
+  font-family: var(--vl-font-display); font-weight: 300; font-style: italic;
+  font-size: 28px; line-height: 1.32; letter-spacing: -0.012em;
+  color: var(--vl-ink-900); padding: 30px 0 30px 32px;
+  border-left: 3px solid var(--vl-sienna-600);
+  max-width: 720px;
+}
+.pq cite { display: block; margin-top: 18px; font-family: var(--vl-font-mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; font-style: normal; color: var(--vl-ink-500); }
+
+/* Iconography */
+.icon-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0; border: 1px solid var(--vl-paper-300); }
+.icon-cell {
+  padding: 28px 18px; border-right: 1px solid var(--vl-paper-300); border-bottom: 1px solid var(--vl-paper-300);
+  display: flex; flex-direction: column; align-items: center; gap: 12px; background: #fff;
+}
+.icon-cell:nth-child(6n) { border-right: 0; }
+.icon-cell svg { width: 28px; height: 28px; stroke: var(--vl-ink-800); stroke-width: 1.5; }
+.icon-cell .label-i { font-family: var(--vl-font-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--vl-ink-500); text-align: center; }
+
+/* Voice — before/after */
+.va-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid var(--vl-paper-300); }
+.va-grid > div { padding: 32px; }
+.va-grid .before { background: var(--vl-paper-100); border-right: 1px solid var(--vl-paper-300); }
+.va-grid .after { background: #fff; }
+.va-tag { font-family: var(--vl-font-mono); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 600; }
+.va-tag.bad { color: var(--vl-level-base); }
+.va-tag.good { color: var(--vl-level-avanzato); }
+.va-body { font-family: var(--vl-font-display); font-size: 19px; line-height: 1.42; color: var(--vl-ink-900); margin: 14px 0 0; letter-spacing: -0.008em; font-weight: 400; }
+.va-body em { font-style: italic; color: var(--vl-sienna-700); }
+
+/* Applied — teaser report card */
+.applied {
+  background: #fff; border: 1px solid var(--vl-paper-300);
+  padding: 56px; display: grid; grid-template-columns: 1.1fr 1fr; gap: 56px; align-items: center;
+  box-shadow: var(--vl-shadow-md);
+}
+.applied .left h3 {
+  font-family: var(--vl-font-display); font-size: 42px; font-weight: 400; line-height: 1.08;
+  letter-spacing: -0.022em; margin: 16px 0 0; color: var(--vl-ink-900);
+}
+.applied .left h3 em { font-style: italic; color: var(--vl-sienna-700); }
+.applied .left .who { display: flex; align-items: baseline; justify-content: space-between; margin-top: 36px; padding-top: 24px; border-top: 1px solid var(--vl-paper-300); }
+.applied .left .who .name { font-family: var(--vl-font-display); font-size: 22px; font-weight: 500; letter-spacing: -0.01em; color: var(--vl-ink-900); }
+.applied .left .who .name small { display: block; font-family: var(--vl-font-mono); font-size: 11px; letter-spacing: 0.14em; color: var(--vl-ink-500); text-transform: uppercase; margin-top: 4px; font-weight: 500; }
+.applied .left .who .date { font-family: var(--vl-font-mono); font-size: 11px; letter-spacing: 0.14em; color: var(--vl-ink-500); text-transform: uppercase; }
+.applied .right { padding-left: 0; }
+
+/* ============================================================
+   ENGINEERING NOTE
+   ============================================================ */
+.eng-note {
+  background: var(--vl-ink-900); color: var(--vl-paper-100);
+  padding: 56px; display: grid; grid-template-columns: 220px 1fr; gap: 56px;
+}
+.eng-note .tag { font-family: var(--vl-font-mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--vl-sienna-500); }
+.eng-note h4 { font-family: var(--vl-font-display); font-size: 28px; font-weight: 400; letter-spacing: -0.015em; line-height: 1.18; margin: 8px 0 18px; color: var(--vl-paper-50); }
+.eng-note p { font-size: 15px; line-height: 1.66; color: var(--vl-paper-200); margin: 0 0 14px; max-width: 660px; }
+.eng-note p b { color: var(--vl-paper-50); font-weight: 600; }
+.eng-note .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 28px; }
+.eng-note .compare > div { padding: 22px; border: 1px solid var(--vl-ink-700); }
+.eng-note .compare h5 { font-family: var(--vl-font-display); font-size: 18px; font-weight: 500; letter-spacing: -0.01em; margin: 0 0 8px; color: var(--vl-paper-50); }
+.eng-note .compare h5 .bad { color: var(--vl-sienna-500); }
+.eng-note .compare h5 .good { color: #88B884; }
+.eng-note .compare ul { padding: 0; margin: 0; list-style: none; font-family: var(--vl-font-mono); font-size: 12px; line-height: 1.9; color: var(--vl-paper-200); letter-spacing: 0.01em; }
+.eng-note .compare ul li::before { content: '—  '; color: var(--vl-paper-300); }
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+.foot { padding: 40px 100px; background: var(--vl-ink-950); color: var(--vl-paper-300); display: flex; align-items: center; justify-content: space-between; font-family: var(--vl-font-mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; }
+.foot b { color: var(--vl-paper-50); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="ds" data-screen-label="ValutoLab DS">
+
+  <!-- ============================================================
+       MASTHEAD
+       ============================================================ -->
+  <div class="mast">
+    <div class="mast__top">
+      <div class="left">
+        <span>ValutoLab</span>
+        <span style="opacity:0.5;">·</span>
+        <span>Design System v1.0</span>
+      </div>
+      <div class="right">04 Giugno 2026 · Proposta interna</div>
+    </div>
+    <div class="mast__divider"></div>
+    <div class="wordmark"><span class="blk blk--ink">Valuto</span><span class="blk blk--sienna">Lab</span></div>
+    <div class="mast__sub">
+      <h2>Sistema visivo per un assessment <em>professionale</em>,<br>fondato sul framework europeo ESCO v1.2.</h2>
+      <div class="mast__meta">
+        Direzione · <b>Premium Consulting</b><br>
+        Per · Report · App · Sito<br>
+        Tipografia · Space Grotesk + IBM&nbsp;Plex + JetBrains&nbsp;Mono
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       § 01 — MANIFESTO
+       ============================================================ -->
+  <section class="section section--paper-100">
+    <div class="sec-head">
+      <div>
+        <div class="sec-head__num">§ 01 — Manifesto</div>
+        <h2 class="sec-head__title">Da landing template a <em>strumento di valutazione</em>.</h2>
+      </div>
+      <div class="sec-head__kicker">Posizionamento</div>
+    </div>
+
+    <p class="lede">ValutoLab non è un quiz. È uno strumento di assessment basato sul framework europeo delle competenze, capace di mappare 12 soft skill su scala EQF, di leggere comportamento reale tramite scenari, e di restituire un piano di sviluppo personalizzato. Il design deve dirlo a chi guarda.</p>
+
+    <div class="manifesto">
+      <div class="manifesto__col">
+        <h3>Tre cose <em>vere</em> sul prodotto.</h3>
+        <p class="body-text">Sono già nel codice. Non vanno inventate, vanno mostrate.</p>
+        <ul class="principles">
+          <li><span class="pn">01</span><span class="pt"><b>Mappatura ESCO v1.2.</b> Ogni competenza è agganciata al framework europeo della Commissione, con livello EQF e riferimento O*NET.</span></li>
+          <li><span class="pn">02</span><span class="pt"><b>Doppia evidenza.</b> 70% autovalutazione (Likert) + 30% comportamento reale (scenari situazionali). Misura quello che dici di fare e quello che fai.</span></li>
+          <li><span class="pn">03</span><span class="pt"><b>Lettura personalizzata.</b> Report generato da Claude su dati strutturati: piano in 90 giorni, quick wins, ruoli ideali.</span></li>
+        </ul>
+      </div>
+      <div class="manifesto__col">
+        <h3>Tre cose che il <em>design</em> deve fare.</h3>
+        <p class="body-text">Allineate alla direzione Premium Consulting.</p>
+        <ul class="principles">
+          <li><span class="pn">04</span><span class="pt"><b>Autorevolezza prima di tutto.</b> Serif editoriale, palette ridotta, tantissimo bianco caldo. Niente stock photo, niente emoji.</span></li>
+          <li><span class="pn">05</span><span class="pt"><b>Dati come protagonisti.</b> Numeri grandi, scale ESCO leggibili, comparazioni chiare. Il valore è nei dati, non nei decori.</span></li>
+          <li><span class="pn">06</span><span class="pt"><b>Calore senza ammorbidire.</b> Carta avorio e un accento terracotta. Un assessment serio non deve essere freddo.</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       § 02 — LOGOTYPE
+       ============================================================ -->
+  <section class="section section--paper-50">
+    <div class="sec-head">
+      <div>
+        <div class="sec-head__num">§ 02 — Logotype</div>
+        <h2 class="sec-head__title">Un wordmark <em>silenzioso</em>.</h2>
+      </div>
+      <div class="sec-head__kicker">Marca</div>
+    </div>
+
+    <p class="lede">Wordmark a due blocchi: "Valuto" su inchiostro, "Lab" su terracotta. Geometria stretta, Space Grotesk Bold, niente serif. Leggibile a 16px come a 200px, ottimo per favicon, badge, certificato.</p>
+
+    <div class="wm-grid">
+      <div class="wm-card">
+        <div class="wordmark-mini"><span class="blk blk--ink">Valuto</span><span class="blk blk--sienna">Lab</span></div>
+        <div class="wm-spec">Primary · Ink + Sienna</div>
+      </div>
+      <div class="wm-card dark">
+        <div class="wordmark-mini"><span class="blk blk--paper">Valuto</span><span class="blk blk--sienna">Lab</span></div>
+        <div class="wm-spec">Editorial · Paper + Sienna su Ink</div>
+      </div>
+      <div class="wm-card sienna">
+        <div class="wordmark-mini"><span class="blk blk--ink-on-sienna">Valuto</span><span class="blk blk--paper-on-sienna">Lab</span></div>
+        <div class="wm-spec">Accent · reversed</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       § 03 — COLOR
+       ============================================================ -->
+  <section class="section section--paper-100">
+    <div class="sec-head">
+      <div>
+        <div class="sec-head__num">§ 03 — Colore</div>
+        <h2 class="sec-head__title">Inchiostro, carta, <em>terracotta</em>.</h2>
+      </div>
+      <div class="sec-head__kicker">Palette · 4 famiglie</div>
+    </div>
+
+    <p class="lede">Palette costruita per durare. Ink come voce principale, Paper caldo come tela, una sola famiglia di accento — terracotta sienna — usata con disciplina. I colori dei livelli sono funzionali, riservati al risultato di scoring.</p>
+
+    <div class="swatch-row">
+      <div>
+        <span class="label">Famiglia 01</span>
+        <h4>Ink</h4>
+        <p>Voce principale del sistema. Testo, dati, superfici scure. La "voce" della consulenza.</p>
+      </div>
+      <div class="swatch-grid ink">
+        <div class="swatch is-dark" style="background:#07111E"><span class="w">950</span><span class="v">#07111E</span></div>
+        <div class="swatch is-dark" style="background:#0E1A2B"><span class="w">900</span><span class="v">#0E1A2B</span></div>
+        <div class="swatch is-dark" style="background:#1B2A40"><span class="w">800</span><span class="v">#1B2A40</span></div>
+        <div class="swatch is-dark" style="background:#2E3F58"><span class="w">700</span><span class="v">#2E3F58</span></div>
+        <div class="swatch is-dark" style="background:#4E5E78"><span class="w">600</span><span class="v">#4E5E78</span></div>
+        <div class="swatch is-dark" style="background:#6F7E96"><span class="w">500</span><span class="v">#6F7E96</span></div>
+        <div class="swatch is-light" style="background:#94A0B5"><span class="w">400</span><span class="v">#94A0B5</span></div>
+        <div class="swatch is-light" style="background:#BCC4D2"><span class="w">300</span><span class="v">#BCC4D2</span></div>
+        <div class="swatch is-light" style="background:#D9DEE7"><span class="w">200</span><span class="v">#D9DEE7</span></div>
+        <div class="swatch is-light" style="background:#EAEDF2"><span class="w">100</span><span class="v">#EAEDF2</span></div>
+        <div class="swatch is-light" style="background:#F2F4F7"><span class="w">50</span><span class="v">#F2F4F7</span></div>
+      </div>
+    </div>
+
+    <div class="swatch-row">
+      <div>
+        <span class="label">Famiglia 02</span>
+        <h4>Paper</h4>
+        <p>Carta avorio: l'antidoto al bianco freddo. Sfondi principali di report e dashboard.</p>
+      </div>
+      <div class="swatch-grid paper">
+        <div class="swatch is-light" style="background:#FBF8F2"><span class="w">50</span><span class="v">#FBF8F2</span></div>
+        <div class="swatch is-light" style="background:#F6F2EA"><span class="w">100</span><span class="v">#F6F2EA</span></div>
+        <div class="swatch is-light" style="background:#ECE6D8"><span class="w">200</span><span class="v">#ECE6D8</span></div>
+        <div class="swatch is-light" style="background:#D9D0BC"><span class="w">300</span><span class="v">#D9D0BC</span></div>
+      </div>
+    </div>
+
+    <div class="swatch-row">
+      <div>
+        <span class="label">Famiglia 03 · Accento</span>
+        <h4>Sienna</h4>
+        <p>Unica famiglia di accento. Brand mark, dati chiave, link, CTA. Usare con parsimonia.</p>
+      </div>
+      <div class="swatch-grid sienna">
+        <div class="swatch is-dark" style="background:#8B3D1F"><span class="w">700</span><span class="v">#8B3D1F</span></div>
+        <div class="swatch is-dark" style="background:#B85C3A"><span class="w">600</span><span class="v">#B85C3A</span></div>
+        <div class="swatch is-dark" style="background:#CF7556"><span class="w">500</span><span class="v">#CF7556</span></div>
+        <div class="swatch is-light" style="background:#E9B89E"><span class="w">300</span><span class="v">#E9B89E</span></div>
+        <div class="swatch is-light" style="background:#F7E6D9"><span class="w">100</span><span class="v">#F7E6D9</span></div>
+        <div class="swatch is-light" style="background:#FCF3EA"><span class="w">50</span><span class="v">#FCF3EA</span></div>
+      </div>
+    </div>
+
+    <div class="swatch-row">
+      <div>
+        <span class="label">Famiglia 04 · Funzionale</span>
+        <h4>Levels</h4>
+        <p>Esclusivamente per il risultato di scoring sui 4 livelli ESCO. Mai usata altrove.</p>
+      </div>
+      <div class="swatch-grid level">
+        <div class="swatch level is-dark" style="background:#B0473A"><div><span class="l-name">Base</span><br><span class="l-range">1.0 – 2.0</span></div><span class="v">#B0473A</span></div>
+        <div class="swatch level is-dark" style="background:#C68A2E"><div><span class="l-name">Intermedio</span><br><span class="l-range">2.1 – 3.0</span></div><span class="v">#C68A2E</span></div>
+        <div class="swatch level is-dark" style="background:#4F7A53"><div><span class="l-name">Avanzato</span><br><span class="l-range">3.1 – 4.0</span></div><span class="v">#4F7A53</span></div>
+        <div class="swatch level is-dark" style="background:#2D5F73"><div><span class="l-name">Esperto</span><br><span class="l-range">4.1 – 5.0</span></div><span class="v">#2D5F73</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       § 04 — TYPOGRAPHY
+       ============================================================ -->
+  <section class="section section--white">
+    <div class="sec-head">
+      <div>
+        <div class="sec-head__num">§ 04 — Tipografia</div>
+        <h2 class="sec-head__title">Space Grotesk + IBM Plex + JetBrains Mono.</h2>
+      </div>
+      <div class="sec-head__kicker">3 famiglie · 9 stili</div>
+    </div>
+
+    <p class="lede">Display geometrico ultra-current per la marca e i titoli. Sans neutra industriale per il testo lungo. Mono "developer" per i dati — sceglie un registro tech, non solo editoriale. Tutte open-source, Google Fonts: zero licenze.</p>
+
+    <div class="type-stack">
+      <div class="type-row">
+        <div class="meta"><b>Display 1 · D1</b>Space Grotesk · Bold · 64 / 66<br>letter-spacing −0.03em</div>
+        <div class="sample disp-1">Conosci come pensi.<br>Misura come <em>agisci</em>.</div>
+      </div>
+      <div class="type-row">
+        <div class="meta"><b>Display 2 · D2</b>Space Grotesk · Medium · 42 / 46<br>letter-spacing −0.025em</div>
+        <div class="sample disp-2">Una mappa europea della tua professionalità.</div>
+      </div>
+      <div class="type-row">
+        <div class="meta"><b>Display 3 · D3</b>Space Grotesk · Medium · 28 / 32</div>
+        <div class="sample disp-3">Profilo strategico: Technical Leader.</div>
+      </div>
+      <div class="type-row">
+        <div class="meta"><b>Lede · light italic</b>Space Grotesk · Light Italic · 22 / 31</div>
+        <div class="sample lede-s">"Il suo approccio decisionale rivela una preferenza marcata per il consenso, anche quando il tempo stringe."</div>
+      </div>
+      <div class="type-row">
+        <div class="meta"><b>Body · B</b>IBM Plex Sans · Regular · 16 / 26</div>
+        <div class="sample body-s">L'assessment combina autovalutazione e analisi comportamentale. Il punteggio finale pesa 70% le risposte Likert e 30% le scelte effettuate nei dodici scenari situazionali. Dove c'è disallineamento tra percezione e comportamento, lo segnaliamo.</div>
+      </div>
+      <div class="type-row">
+        <div class="meta"><b>Caption · C</b>IBM Plex Sans · Regular · 13 / 20</div>
+        <div class="sample cap-s">Fonte: European Commission — ESCO Framework v1.2, aggiornato 15 maggio 2024.</div>
+      </div>
+      <div class="type-row">
+        <div class="meta"><b>Eyebrow · E</b>IBM Plex Mono · Medium · 12<br>letter-spacing 0.18em uppercase</div>
+        <div class="sample eyebrow-s">§ Mappatura ESCO · Competenze trasversali</div>
+      </div>
+      <div class="type-row">
+        <div class="meta"><b>Mono · M</b>IBM Plex Mono · Regular · 14</div>
+        <div class="sample mono-s">esco_uri = "http://data.europa.eu/esco/skill/b7f2d1d7"</div>
+      </div>
+      <div class="type-row">
+        <div class="meta"><b>Numeric · N</b>Space Grotesk · Light · 90<br>tabular figures</div>
+        <div class="sample num-s">4,3<sup>/5</sup></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       § 05 — COMPONENTS
+       ============================================================ -->
+  <section class="section section--paper-100">
+    <div class="sec-head">
+      <div>
+        <div class="sec-head__num">§ 05 — Componenti</div>
+        <h2 class="sec-head__title">Mattoni del sistema.</h2>
+      </div>
+      <div class="sec-head__kicker">Per report, app, sito</div>
+    </div>
+
+    <p class="lede">Componenti minimi necessari a costruire dashboard, report e landing senza reinventare nulla. Tutti rigorosamente nei token sopra.</p>
+
+    <div class="cmp-grid" style="grid-template-columns: 1fr 1fr;">
+
+      <!-- Buttons -->
+      <div class="cmp-card">
+        <div class="cap">Component · Button</div>
+        <div class="name">Pulsanti</div>
+        <div class="desc">Quattro stili. Primary su superfici chiare, accent solo per la CTA principale di pagina, secondary per azioni di pari livello, ghost per link.</div>
+        <div class="demo">
+          <a class="btn btn--primary">Genera report</a>
+          <a class="btn btn--accent">Inizia l'assessment</a>
+          <a class="btn btn--secondary">Esporta PDF</a>
+          <a class="btn btn--ghost">Vai al certificato →</a>
+        </div>
+      </div>
+
+      <!-- ESCO chip -->
+      <div class="cmp-card">
+        <div class="cap">Component · ESCO chip</div>
+        <div class="name">Chip ESCO</div>
+        <div class="desc">Mostra l'attribuzione al framework europeo. Sempre presente accanto a una competenza o al risultato. Garantisce credibilità senza occupare spazio.</div>
+        <div class="demo">
+          <span class="esco-chip"><span class="esco-chip__star"></span><b>ESCO v1.2</b> · Comunicare con gli altri</span>
+          <span class="esco-chip"><span class="esco-chip__star"></span><b>EQF 5–7</b></span>
+        </div>
+      </div>
+
+      <!-- Level pill -->
+      <div class="cmp-card">
+        <div class="cap">Component · Level pill</div>
+        <div class="name">Pillola livello</div>
+        <div class="desc">I quattro livelli ESCO sintetizzati. Usata dove serve dichiarare il livello in modo compatto: tabelle, comparazioni, header competenza.</div>
+        <div class="demo">
+          <span class="level-pill base"><span class="dot"></span>Base</span>
+          <span class="level-pill intermedio"><span class="dot"></span>Intermedio</span>
+          <span class="level-pill avanzato"><span class="dot"></span>Avanzato</span>
+          <span class="level-pill esperto"><span class="dot"></span>Esperto</span>
+        </div>
+      </div>
+
+      <!-- Level track -->
+      <div class="cmp-card">
+        <div class="cap">Component · Level track</div>
+        <div class="name">Scala a 4 segmenti</div>
+        <div class="desc">Mostra il progresso lungo la scala ESCO. Segmenti riempiti = livelli raggiunti, segmento terracotta = livello corrente. Più leggibile di una percentuale.</div>
+        <div class="demo">
+          <div class="lvl-track-row">
+            <div class="lvl-track">
+              <div class="seg active"></div>
+              <div class="seg active"></div>
+              <div class="seg current"></div>
+              <div class="seg"></div>
+            </div>
+            <div class="lvl-track-meta">Avanzato<small>3,7 / 5,0</small></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Score ring -->
+      <div class="cmp-card">
+        <div class="cap">Component · Score ring</div>
+        <div class="name">Score complessivo</div>
+        <div class="desc">Visualizza il punteggio aggregato di una competenza o dell'intero assessment. Arco scuro, tipografia serif al centro, etichetta a destra.</div>
+        <div class="demo">
+          <div class="score-ring">
+            <svg class="score-ring__svg" viewBox="0 0 120 120">
+              <circle class="score-ring__track" cx="60" cy="60" r="50"/>
+              <circle class="score-ring__value" cx="60" cy="60" r="50" stroke-dasharray="314.16" stroke-dashoffset="69.1"/>
+              <text class="score-ring__num" x="60" y="64" text-anchor="middle">4,3</text>
+              <text class="score-ring__num-suffix" x="60" y="82" text-anchor="middle">/ 5,0</text>
+            </svg>
+            <div class="score-ring__lbl">
+              <b>Comunicazione</b>
+              <span>Livello Avanzato · EQF 5–7</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quote -->
+      <div class="cmp-card">
+        <div class="cap">Component · Pull quote</div>
+        <div class="name">Lettura personalizzata</div>
+        <div class="desc">Come presentiamo il testo AI generato. Italic serif, regola terracotta a sinistra. È il "perché" del numero, non un decoro.</div>
+        <div class="demo">
+          <div class="pq">
+            Il suo profilo mostra un'autoconsapevolezza alta nelle dinamiche relazionali, ma una tendenza a delegare le decisioni difficili.
+            <cite>— Lettura AI · Communication × Decision Making</cite>
+          </div>
+        </div>
+      </div>
+
+      <!-- Data bar -->
+      <div class="cmp-card row-1">
+        <div class="cap">Component · Competence chart</div>
+        <div class="name">Le 12 competenze ESCO</div>
+        <div class="desc">La visualizzazione principale del report: tutte le 12 soft skill su un'unica scala da 1 a 5, colorate per livello, ordinate da più alta a più bassa.</div>
+        <div class="demo" style="display:block; width: 100%;">
+          <div class="dbar">
+            <div class="dbar-row">
+              <div class="skill">Comunicazione <small>ESCO 01</small></div>
+              <div class="track"><div class="fill lvl-esperto" style="width: 86%;"></div></div>
+              <div class="score">4,3<span>/5</span></div>
+            </div>
+            <div class="dbar-row">
+              <div class="skill">Empatia <small>ESCO 09</small></div>
+              <div class="track"><div class="fill lvl-esperto" style="width: 82%;"></div></div>
+              <div class="score">4,1<span>/5</span></div>
+            </div>
+            <div class="dbar-row">
+              <div class="skill">Pensiero critico <small>ESCO 08</small></div>
+              <div class="track"><div class="fill lvl-avanzato" style="width: 78%;"></div></div>
+              <div class="score">3,9<span>/5</span></div>
+            </div>
+            <div class="dbar-row">
+              <div class="skill">Teamwork <small>ESCO 04</small></div>
+              <div class="track"><div class="fill lvl-avanzato" style="width: 72%;"></div></div>
+              <div class="score">3,6<span>/5</span></div>
+            </div>
+            <div class="dbar-row">
+              <div class="skill">Leadership <small>ESCO 02</small></div>
+              <div class="track"><div class="fill lvl-avanzato" style="width: 68%;"></div></div>
+              <div class="score">3,4<span>/5</span></div>
+            </div>
+            <div class="dbar-row">
+              <div class="skill">Decisione <small>ESCO 12</small></div>
+              <div class="track"><div class="fill lvl-intermedio" style="width: 56%;"></div></div>
+              <div class="score">2,8<span>/5</span></div>
+            </div>
+            <div class="dbar-row">
+              <div class="skill">Negoziazione <small>ESCO 11</small></div>
+              <div class="track"><div class="fill lvl-intermedio" style="width: 50%;"></div></div>
+              <div class="score">2,5<span>/5</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Iconography -->
+      <div class="cmp-card row-1">
+        <div class="cap">System · Iconography</div>
+        <div class="name">Icone — Lucide, stroke 1.5</div>
+        <div class="desc">Le emoji vanno via, sostituite da Lucide (già nel codice come <code style="font-family:var(--vl-font-mono); background:var(--vl-paper-100); padding:1px 5px; font-size:12px;">lucide-react</code>). Tratto fine 1.5, monocromatiche, mai colorate dentro. Selezione applicata ai contesti ricorrenti.</div>
+        <div class="demo" style="display:block; width:100%;">
+          <div class="icon-grid">
+            <!-- assessment -->
+            <div class="icon-cell"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span class="label-i">Assessment</span></div>
+            <div class="icon-cell"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg><span class="label-i">Score</span></div>
+            <div class="icon-cell"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span class="label-i">Report</span></div>
+            <div class="icon-cell"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg><span class="label-i">Certificato</span></div>
+            <div class="icon-cell"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg><span class="label-i">Timeline</span></div>
+            <div class="icon-cell"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="label-i">Team</span></div>
+            <div class="icon-cell"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 12h8"/><path d="M12 8v8"/></svg><span class="label-i">Aggiungi</span></div>
+            <div class="icon-cell"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg><span class="label-i">Avanti</span></div>
+            <div class="icon-cell"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span class="label-i">Completato</span></div>
+            <div class="icon-cell"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="label-i">Feedback</span></div>
+            <div class="icon-cell"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg><span class="label-i">Framework</span></div>
+            <div class="icon-cell"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><span class="label-i">Esplora</span></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============================================================
+       § 06 — VOICE
+       ============================================================ -->
+  <section class="section section--white">
+    <div class="sec-head">
+      <div>
+        <div class="sec-head__num">§ 06 — Voce</div>
+        <h2 class="sec-head__title">Tecnica nei dati,<br><em>umana</em> nella lettura.</h2>
+      </div>
+      <div class="sec-head__kicker">Tono · Copy</div>
+    </div>
+
+    <p class="lede">Due registri convivono. Quando misuriamo, parliamo da consulenti: ESCO, EQF, Likert, situazionale. Quando interpretiamo, parliamo da pari: "sei", "tu", senza paternalismo. Nessuna emoji nei titoli. Nessun esclamativo.</p>
+
+    <div class="va-grid">
+      <div class="before">
+        <div class="va-tag bad">Prima</div>
+        <p class="va-body">"🎯 Scopri le tue Soft Skills! Compila il nostro test e ricevi subito un report personalizzato ✨"</p>
+      </div>
+      <div class="after">
+        <div class="va-tag good">Dopo</div>
+        <p class="va-body">"Un assessment delle tue dodici competenze trasversali, mappato sullo standard europeo ESCO. <em>Quaranta minuti, una lettura che resta.</em>"</p>
+      </div>
+    </div>
+
+    <div style="height: 24px;"></div>
+
+    <div class="va-grid">
+      <div class="before">
+        <div class="va-tag bad">Prima</div>
+        <p class="va-body">"Wow, sei un grande comunicatore! 👏 Continua così!"</p>
+      </div>
+      <div class="after">
+        <div class="va-tag good">Dopo</div>
+        <p class="va-body">"Le tue scelte nei dodici scenari confermano la tua autovalutazione: <em>ascolti prima di rispondere e adatti il registro all'interlocutore.</em> È una qualità rara nei profili senior."</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       § 07 — APPLIED
+       ============================================================ -->
+  <section class="section section--paper-200">
+    <div class="sec-head">
+      <div>
+        <div class="sec-head__num">§ 07 — Applicazione</div>
+        <h2 class="sec-head__title">Il sistema, in opera.</h2>
+      </div>
+      <div class="sec-head__kicker">Anteprima · 1 frammento</div>
+    </div>
+
+    <p class="lede">Un frammento di pagina di report applicando tutto sopra: tipografia, palette, componenti, voce. Serve a confermare che il sistema regge. Nelle prossime tappe declineremo report completo, sito, app.</p>
+
+    <div class="applied">
+      <div class="left">
+        <span class="esco-chip" style="margin-bottom: 0;"><span class="esco-chip__star"></span><b>ESCO v1.2</b> · Comunicare con gli altri</span>
+        <h3>Le tue scelte raccontano <em>più</em> della tua autovalutazione.</h3>
+        <p class="body-text" style="margin-top: 22px;">Il modo in cui hai risolto i tre scenari di comunicazione conferma la tua percezione: chiedi chiarimenti prima di reagire, riformuli quando capisci di non essere stato capito, scegli la chiarezza sulla diplomazia quando il tempo stringe.</p>
+        <div class="who">
+          <div class="name">Marco Bianchi<small>Profilo · Technical Leader</small></div>
+          <div class="date">04 Giugno 2026</div>
+        </div>
+      </div>
+      <div class="right">
+        <div class="score-ring" style="margin-bottom: 28px;">
+          <svg class="score-ring__svg" viewBox="0 0 120 120">
+            <circle class="score-ring__track" cx="60" cy="60" r="50"/>
+            <circle class="score-ring__value" cx="60" cy="60" r="50" stroke-dasharray="314.16" stroke-dashoffset="69.1" style="stroke: var(--vl-level-esperto);"/>
+            <text class="score-ring__num" x="60" y="64" text-anchor="middle">4,3</text>
+            <text class="score-ring__num-suffix" x="60" y="82" text-anchor="middle">/ 5,0</text>
+          </svg>
+          <div class="score-ring__lbl">
+            <b>Comunicazione</b>
+            <span>Esperto · EQF 5–7</span>
+          </div>
+        </div>
+        <div class="lvl-track-row">
+          <div class="lvl-track">
+            <div class="seg active"></div>
+            <div class="seg active"></div>
+            <div class="seg active"></div>
+            <div class="seg current"></div>
+          </div>
+          <div class="lvl-track-meta" style="font-size: 18px;">Esperto<small>Top livello ESCO</small></div>
+        </div>
+        <div style="margin-top: 28px; padding-top: 22px; border-top: 1px solid var(--vl-paper-300); display: grid; grid-template-columns: 1fr 1fr; gap: 18px;">
+          <div>
+            <span class="label">Autovalutazione</span>
+            <div class="lvl-track-meta">4,4<small>Likert 70%</small></div>
+          </div>
+          <div>
+            <span class="label">Comportamento</span>
+            <div class="lvl-track-meta">4,1<small>SJT 30%</small></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       § 08 — ENGINEERING NOTE
+       ============================================================ -->
+  <section class="section section--ink" style="padding-bottom: 60px;">
+    <div class="sec-head">
+      <div>
+        <div class="sec-head__num">§ 08 — Nota tecnica</div>
+        <h2 class="sec-head__title">Risolvere il <em>disallineamento</em> dei report.</h2>
+      </div>
+      <div class="sec-head__kicker">Causa · Soluzione</div>
+    </div>
+
+    <div class="eng-note">
+      <div>
+        <div class="tag">Engineering</div>
+      </div>
+      <div>
+        <h4>Il problema dei PDF non è grafico. È nel pipeline.</h4>
+        <p>Oggi il PDF è generato lato client con <b>jspdf + html2canvas</b>: il sistema fotografa il DOM come immagine raster e la incolla nel PDF. Da qui i tre sintomi che hai visto: <b>paginazione che salta a metà sezione, righe disallineate, testo non selezionabile</b>. Inoltre rende diversamente su ogni browser e risoluzione.</p>
+        <p>La fix è strutturale: spostare la generazione PDF lato server con <b>Puppeteer</b> (Chromium headless) che renderizza la stessa pagina Next.js del report e la esporta come PDF vettoriale. Risultato: testo selezionabile, paginazione controllata via CSS <code style="font-family:var(--vl-font-mono);">@page</code>, identico ovunque.</p>
+
+        <div class="compare">
+          <div>
+            <h5><span class="bad">Oggi</span> · jspdf + html2canvas</h5>
+            <ul>
+              <li>raster — non vettoriale</li>
+              <li>testo non selezionabile</li>
+              <li>paginazione fragile</li>
+              <li>render diverso per browser</li>
+              <li>peso file alto</li>
+              <li>no header/footer ripetuti</li>
+            </ul>
+          </div>
+          <div>
+            <h5><span class="good">Dopo</span> · Puppeteer server-side</h5>
+            <ul>
+              <li>vettoriale + testo nativo</li>
+              <li>selezionabile e ricercabile</li>
+              <li>@page CSS = controllo totale</li>
+              <li>identico ovunque</li>
+              <li>peso file ridotto</li>
+              <li>header/footer per pagina</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       FOOTER
+       ============================================================ -->
+  <div class="foot">
+    <div>ValutoLab · Design System v1.0 · <b>Premium Consulting</b></div>
+    <div>Source Serif 4 · IBM Plex Sans · IBM Plex Mono</div>
+  </div>
+
+</div>
+
+</body>
+</html>

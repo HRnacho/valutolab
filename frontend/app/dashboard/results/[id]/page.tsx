@@ -4,37 +4,81 @@ import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { useAuth } from '@/lib/AuthContext'
 import { api } from '@/lib/api'
-import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Cell } from 'recharts'
+import { ScoreRing } from '@/components/ui/ScoreRing'
+import { Button } from '@/components/ui/Button'
+import { Wordmark } from '@/components/ui/Wordmark'
 import ShareSection from '@/components/ShareSection'
+import {
+  RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell
+} from 'recharts'
+import { ArrowLeft, TrendingUp, TrendingDown, Calendar } from 'lucide-react'
 
-const skillColors = {
-  adaptability: '#06B6D4',
-  leadership: '#8B5CF6',
-  problem_solving: '#EC4899',
-  time_management: '#F59E0B',
-  communication: '#3B82F6',
-  empathy: '#14B8A6',
-  negotiation: '#A855F7',
-  decision_making: '#84CC16',
-  critical_thinking: '#6366F1',
-  teamwork: '#10B981',
-  creativity: '#F43F5E',
-  resilience: '#EF4444'
+// ── Palette DS v2 per le 12 skill ────────────────────────────────────────────
+const skillColors: Record<string, string> = {
+  adaptability:     '#2D5F73',
+  leadership:       '#4F7A53',
+  problem_solving:  '#B0473A',
+  time_management:  '#C68A2E',
+  communication:    '#0E1A2B',
+  empathy:          '#4F7A53',
+  negotiation:      '#2D5F73',
+  decision_making:  '#C68A2E',
+  critical_thinking:'#B0473A',
+  teamwork:         '#4F7A53',
+  creativity:       '#2D5F73',
+  resilience:       '#C68A2E',
 }
 
 const categoryLabels: Record<string, string> = {
-  communication: 'Comunicazione',
-  leadership: 'Leadership',
-  problem_solving: 'Problem Solving',
-  teamwork: 'Lavoro di Squadra',
-  time_management: 'Gestione del Tempo',
-  adaptability: 'Adattabilità',
-  creativity: 'Creatività',
-  critical_thinking: 'Pensiero Critico',
-  empathy: 'Empatia',
-  resilience: 'Resilienza',
-  negotiation: 'Negoziazione',
-  decision_making: 'Decision Making'
+  communication:    'Comunicazione',
+  leadership:       'Leadership',
+  problem_solving:  'Problem Solving',
+  teamwork:         'Lavoro di Squadra',
+  time_management:  'Gestione del Tempo',
+  adaptability:     'Adattabilità',
+  creativity:       'Creatività',
+  critical_thinking:'Pensiero Critico',
+  empathy:          'Empatia',
+  resilience:       'Resilienza',
+  negotiation:      'Negoziazione',
+  decision_making:  'Decision Making',
+}
+
+// Mapping livello → token DS colore
+const levelStyle: Record<string, { label: string; className: string }> = {
+  base:       { label: 'Base',       className: 'text-ink-500 bg-paper-200 border-paper-300' },
+  intermedio: { label: 'Intermedio', className: 'text-level-intermedio bg-amber-50 border-amber-200' },
+  avanzato:   { label: 'Avanzato',   className: 'text-level-avanzato bg-green-50 border-green-200' },
+  esperto:    { label: 'Esperto',    className: 'text-level-esperto bg-teal-50 border-teal-200' },
+}
+
+const getLevelKey = (score: number) => {
+  if (score >= 4.5) return 'esperto'
+  if (score >= 3.5) return 'avanzato'
+  if (score >= 2.5) return 'intermedio'
+  return 'base'
+}
+
+const LevelBadge = ({ score }: { score: number }) => {
+  const key = getLevelKey(score)
+  const { label, className } = levelStyle[key]
+  return (
+    <span className={`text-[10px] font-semibold uppercase tracking-eyebrow px-2 py-0.5 border rounded-sm ${className}`}>
+      {label}
+    </span>
+  )
+}
+
+// Tooltip custom per i chart
+const CustomTooltip = ({ active, payload }: any) => {
+  if (!active || !payload?.length) return null
+  return (
+    <div className="bg-paper-50 border border-paper-200 rounded-sm shadow-md-ink px-3 py-2">
+      <p className="font-body text-[12px] font-semibold text-ink-900">{payload[0]?.payload?.name || payload[0]?.payload?.skill}</p>
+      <p className="font-body text-[12px] text-ink-600">{Number(payload[0]?.value).toFixed(2)} / 5,0</p>
+    </div>
+  )
 }
 
 export default function ResultsPage() {
@@ -54,23 +98,16 @@ export default function ResultsPage() {
     const fetchResults = async () => {
       try {
         const user = authUser
-        if (!user) {
-          router.push('/login')
-          return
-        }
-
+        if (!user) { router.push('/login'); return }
         setUserId(user.id)
 
         const [assessmentRes, resultsRes, reportRes] = await Promise.all([
           api.assessments.get(assessmentId),
           api.assessments.results.get(assessmentId),
-          api.assessments.report.get(assessmentId)
+          api.assessments.report.get(assessmentId),
         ])
 
-        if (!assessmentRes.assessment) {
-          router.push('/dashboard')
-          return
-        }
+        if (!assessmentRes.assessment) { router.push('/dashboard'); return }
 
         setAssessment(assessmentRes.assessment)
         setResults(resultsRes.results || [])
@@ -80,30 +117,22 @@ export default function ResultsPage() {
         } else {
           generateReport()
         }
-
         setLoading(false)
       } catch (error) {
         console.error('Error fetching results:', error)
         setLoading(false)
       }
     }
-
     fetchResults()
   }, [assessmentId, router])
 
   const generateReport = async () => {
     setGeneratingReport(true)
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://valutolab-backend.onrender.com'
-      const response = await fetch(`${apiUrl}/api/ai-reports/generate/${assessmentId}`, {
-        method: 'POST'
-      })
-
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'
+      const response = await fetch(`${apiUrl}/api/ai-reports/generate/${assessmentId}`, { method: 'POST' })
       const data = await response.json()
-
-      if (data.success) {
-        setQualitativeReport(data.report)
-      }
+      if (data.success) setQualitativeReport(data.report)
     } catch (error) {
       console.error('Error generating report:', error)
     } finally {
@@ -113,277 +142,235 @@ export default function ResultsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-paper-100">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Caricamento risultati...</p>
+          <div className="w-8 h-8 border-2 border-ink-900 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="mt-4 font-body text-ink-500 text-[14px]">Caricamento risultati...</p>
         </div>
       </div>
     )
   }
 
-  const topSkills = [...results]
-    .sort((a, b) => b.final_score - a.final_score)
-    .slice(0, 3)
-
-  const bottomSkills = [...results]
-    .sort((a, b) => a.final_score - b.final_score)
-    .slice(0, 3)
+  const topSkills    = [...results].sort((a, b) => b.final_score - a.final_score).slice(0, 3)
+  const bottomSkills = [...results].sort((a, b) => a.final_score - b.final_score).slice(0, 3)
 
   const radarData = results.map(r => ({
-    skill: categoryLabels[r.skill_category],
+    skill: categoryLabels[r.skill_category] ?? r.skill_category,
     score: parseFloat(r.final_score),
-    fullMark: 5
+    fullMark: 5,
   }))
 
   const barData = results.map(r => ({
-    name: categoryLabels[r.skill_category],
+    name: categoryLabels[r.skill_category] ?? r.skill_category,
     score: parseFloat(r.final_score),
-    category: r.skill_category
+    category: r.skill_category,
   }))
 
-  const percentile = Math.round((assessment?.total_score / 5) * 100)
-
-  const getLevelBadge = (score: number) => {
-    if (score >= 4.5) return { text: 'Esperto', color: 'bg-green-100 text-green-800' }
-    if (score >= 3.5) return { text: 'Avanzato', color: 'bg-blue-100 text-blue-800' }
-    if (score >= 2.5) return { text: 'Intermedio', color: 'bg-yellow-100 text-yellow-800' }
-    return { text: 'Base', color: 'bg-gray-100 text-gray-800' }
-  }
-
-  // Conta quante competenze hanno livello Avanzato o Esperto (per il badge ESCO)
   const escoAdvancedCount = qualitativeReport
     ? Object.values(qualitativeReport.category_interpretations || {}).filter(
-        (interp: any) => interp.esco_mapping?.esco_level === 'Avanzato' || interp.esco_mapping?.esco_level === 'Esperto'
+        (i: any) => i.esco_mapping?.esco_level === 'Avanzato' || i.esco_mapping?.esco_level === 'Esperto'
       ).length
     : 0
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
-        
-        {/* HEADER */}
-        <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl shadow-2xl p-8 text-white">
-          <div className="flex justify-between items-start mb-6">
-            <h1 className="text-4xl font-bold">Risultati Assessment</h1>
+    <div className="min-h-screen bg-paper-100 font-body text-ink-900">
+
+      {/* ── HEADER ───────────────────────────────────────────────────── */}
+      <header className="bg-paper-50 border-b border-paper-200 sticky top-0 z-40">
+        <div className="max-w-6xl mx-auto px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <Wordmark size={20} />
             <button
               onClick={() => router.push('/dashboard')}
-              className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition"
+              className="flex items-center gap-1.5 text-[13px] text-ink-600 hover:text-ink-900 transition-colors"
             >
-              ← Dashboard
+              <ArrowLeft className="w-4 h-4" />
+              Dashboard
             </button>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
-              <p className="text-white/80 text-sm mb-2">Punteggio Generale</p>
-              <p className="text-6xl font-bold mb-2">{Number(assessment?.total_score).toFixed(1)}</p>
-              <p className="text-white/80 text-lg">su 5.0</p>
-            </div>
-            
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
-              <p className="text-white/80 text-sm mb-2">Percentuale</p>
-              <p className="text-6xl font-bold mb-2">{percentile}%</p>
-              <p className="text-white/80 text-lg">delle competenze</p>
+        </div>
+      </header>
+
+      <main className="max-w-6xl mx-auto px-6 lg:px-8 py-10 space-y-8">
+
+        {/* ── HERO SCORES ──────────────────────────────────────────────── */}
+        <div className="bg-ink-900 rounded-md p-8 text-paper-50">
+          <p className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400 mb-1">Assessment Soft Skills</p>
+          <h1 className="font-display text-display-2 mb-8">Risultati</h1>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Punteggio generale */}
+            <div className="bg-ink-800 rounded-md p-6 flex items-center gap-5">
+              <ScoreRing value={assessment?.total_score ?? 0} size={80} />
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400 mb-1">Punteggio</p>
+                <p className="font-display text-[36px] leading-none text-paper-50">
+                  {Number(assessment?.total_score).toFixed(1)}<span className="text-[18px] text-ink-400">/5,0</span>
+                </p>
+              </div>
             </div>
 
-            {/* BADGE ESCO nell'header */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 flex flex-col justify-between">
+            {/* Percentuale */}
+            <div className="bg-ink-800 rounded-md p-6">
+              <p className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400 mb-2">Percentuale competenze</p>
+              <p className="font-display text-[48px] leading-none text-paper-50">
+                {Math.round((assessment?.total_score / 5) * 100)}<span className="text-[24px] text-ink-400">%</span>
+              </p>
+            </div>
+
+            {/* ESCO */}
+            <div className="bg-ink-800 rounded-md p-6">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-xl">🇪🇺</span>
-                <p className="text-white/80 text-sm font-semibold">Standard Europeo ESCO v1.2</p>
+                <span className="text-[16px]">🇪🇺</span>
+                <p className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400">Standard ESCO v1.2</p>
               </div>
               {qualitativeReport ? (
                 <>
-                  <p className="text-4xl font-bold mb-1">{escoAdvancedCount}<span className="text-2xl">/12</span></p>
-                  <p className="text-white/80 text-sm">competenze Avanzato/Esperto</p>
+                  <p className="font-display text-[48px] leading-none text-paper-50">
+                    {escoAdvancedCount}<span className="text-[24px] text-ink-400">/12</span>
+                  </p>
+                  <p className="text-[12px] text-ink-400 mt-1">competenze Avanzato/Esperto</p>
                 </>
               ) : (
-                <p className="text-white/70 text-sm">Generazione report in corso...</p>
+                <p className="text-[13px] text-ink-500 mt-2">Report in generazione…</p>
               )}
             </div>
           </div>
         </div>
 
-        {/* PUNTI DI FORZA & MIGLIORAMENTO */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                <span className="text-2xl">⭐</span>
-              </div>
-              <h2 className="text-2xl font-bold text-gray-900">Punti di Forza</h2>
+        {/* ── PUNTI DI FORZA & AREE DI MIGLIORAMENTO ───────────────────── */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+          {/* Forze */}
+          <div className="bg-paper-50 border border-paper-200 rounded-md shadow-sm-ink p-6">
+            <div className="flex items-center gap-2 mb-5">
+              <TrendingUp className="w-5 h-5 text-level-avanzato" />
+              <h2 className="font-display text-[20px] font-medium text-ink-900">Punti di Forza</h2>
             </div>
             <div className="space-y-4">
-              {topSkills.map((skill, index) => {
-                const level = getLevelBadge(skill.final_score)
-                return (
-                  <div key={skill.skill_category} className="border-l-4 pl-4" style={{ borderColor: skillColors[skill.skill_category as keyof typeof skillColors] }}>
-                    <div className="flex justify-between items-center mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg font-semibold text-gray-700">{index + 1}</span>
-                        <span className="font-semibold text-gray-900">{categoryLabels[skill.skill_category]}</span>
-                      </div>
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${level.color}`}>
-                        {level.text}
-                      </span>
+              {topSkills.map((skill, i) => (
+                <div key={skill.skill_category}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-bold text-ink-400 w-4">{i + 1}</span>
+                      <span className="text-[14px] font-medium text-ink-800">{categoryLabels[skill.skill_category]}</span>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <div className="flex-1 bg-gray-200 rounded-full h-3">
-                        <div 
-                          className="h-3 rounded-full transition-all duration-500"
-                          style={{ 
-                            width: `${(skill.final_score / 5) * 100}%`,
-                            backgroundColor: skillColors[skill.skill_category as keyof typeof skillColors]
-                          }}
-                        ></div>
-                      </div>
-                      <span className="text-lg font-bold text-gray-900">{skill.final_score}/5.0</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[13px] font-bold text-ink-900">{Number(skill.final_score).toFixed(2)}</span>
+                      <LevelBadge score={skill.final_score} />
                     </div>
                   </div>
-                )
-              })}
+                  <div className="w-full bg-paper-200 rounded-sm h-1.5">
+                    <div className="h-1.5 rounded-sm transition-all" style={{ width: `${(skill.final_score / 5) * 100}%`, backgroundColor: skillColors[skill.skill_category] }} />
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                <span className="text-2xl">📈</span>
-              </div>
-              <h2 className="text-2xl font-bold text-gray-900">Aree di Miglioramento</h2>
+          {/* Aree di miglioramento */}
+          <div className="bg-paper-50 border border-paper-200 rounded-md shadow-sm-ink p-6">
+            <div className="flex items-center gap-2 mb-5">
+              <TrendingDown className="w-5 h-5 text-sienna-600" />
+              <h2 className="font-display text-[20px] font-medium text-ink-900">Aree di Miglioramento</h2>
             </div>
             <div className="space-y-4">
-              {bottomSkills.map((skill, index) => {
-                const level = getLevelBadge(skill.final_score)
-                return (
-                  <div key={skill.skill_category} className="border-l-4 pl-4" style={{ borderColor: skillColors[skill.skill_category as keyof typeof skillColors] }}>
-                    <div className="flex justify-between items-center mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg font-semibold text-gray-700">{index + 1}</span>
-                        <span className="font-semibold text-gray-900">{categoryLabels[skill.skill_category]}</span>
-                      </div>
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${level.color}`}>
-                        {level.text}
-                      </span>
+              {bottomSkills.map((skill, i) => (
+                <div key={skill.skill_category}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-bold text-ink-400 w-4">{i + 1}</span>
+                      <span className="text-[14px] font-medium text-ink-800">{categoryLabels[skill.skill_category]}</span>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <div className="flex-1 bg-gray-200 rounded-full h-3">
-                        <div 
-                          className="h-3 rounded-full transition-all duration-500"
-                          style={{ 
-                            width: `${(skill.final_score / 5) * 100}%`,
-                            backgroundColor: skillColors[skill.skill_category as keyof typeof skillColors]
-                          }}
-                        ></div>
-                      </div>
-                      <span className="text-lg font-bold text-gray-900">{skill.final_score}/5.0</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[13px] font-bold text-ink-900">{Number(skill.final_score).toFixed(2)}</span>
+                      <LevelBadge score={skill.final_score} />
                     </div>
                   </div>
-                )
-              })}
+                  <div className="w-full bg-paper-200 rounded-sm h-1.5">
+                    <div className="h-1.5 rounded-sm transition-all" style={{ width: `${(skill.final_score / 5) * 100}%`, backgroundColor: skillColors[skill.skill_category] }} />
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
 
-        {/* RADAR CHART */}
-        <div className="bg-white rounded-xl shadow-lg p-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Panoramica Competenze</h2>
-          <div className="h-96">
+        {/* ── RADAR CHART ──────────────────────────────────────────────── */}
+        <div className="bg-paper-50 border border-paper-200 rounded-md shadow-sm-ink p-8">
+          <h2 className="font-display text-[20px] font-medium text-ink-900 mb-6">Panoramica Competenze</h2>
+          <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <RadarChart data={radarData}>
-                <defs>
-                  <radialGradient id="colorGradient">
-                    <stop offset="0%" stopColor="#8B5CF6" stopOpacity={0.8} />
-                    <stop offset="33%" stopColor="#EC4899" stopOpacity={0.7} />
-                    <stop offset="66%" stopColor="#3B82F6" stopOpacity={0.6} />
-                    <stop offset="100%" stopColor="#10B981" stopOpacity={0.5} />
-                  </radialGradient>
-                </defs>
-                <PolarGrid stroke="#e5e7eb" />
-                <PolarAngleAxis dataKey="skill" tick={{ fill: '#374151', fontSize: 12 }} />
-                <PolarRadiusAxis angle={90} domain={[0, 5]} tick={{ fill: '#6b7280' }} />
-                <Radar 
-                  name="Competenze" 
-                  dataKey="score" 
-                  stroke="#8B5CF6" 
-                  fill="url(#colorGradient)" 
-                  fillOpacity={0.6} 
-                />
+                <PolarGrid stroke="#ECE6D8" />
+                <PolarAngleAxis dataKey="skill" tick={{ fill: '#3A4A5C', fontSize: 11, fontFamily: 'IBM Plex Sans' }} />
+                <PolarRadiusAxis angle={90} domain={[0, 5]} tick={{ fill: '#8A9BB0', fontSize: 10 }} />
+                <Radar name="Competenze" dataKey="score" stroke="#0E1A2B" fill="#0E1A2B" fillOpacity={0.15} strokeWidth={2} />
               </RadarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* BAR CHART */}
-        <div className="bg-white rounded-xl shadow-lg p-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Dettaglio per Categoria</h2>
-          <div className="h-96 mb-6">
+        {/* ── BAR CHART ────────────────────────────────────────────────── */}
+        <div className="bg-paper-50 border border-paper-200 rounded-md shadow-sm-ink p-8">
+          <h2 className="font-display text-[20px] font-medium text-ink-900 mb-6">Dettaglio per Categoria</h2>
+          <div className="h-72 mb-4">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={barData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis 
-                  dataKey="name" 
-                  angle={-45} 
-                  textAnchor="end" 
-                  height={100}
-                  tick={{ fill: '#374151', fontSize: 11 }}
-                />
-                <YAxis domain={[0, 5]} tick={{ fill: '#6b7280' }} />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
-                  formatter={(value: any) => [`${value}/5.0`, 'Punteggio']}
-                />
-                <Bar dataKey="score" radius={[8, 8, 0, 0]}>
+              <BarChart data={barData} margin={{ bottom: 60 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#ECE6D8" vertical={false} />
+                <XAxis dataKey="name" angle={-40} textAnchor="end" height={80} tick={{ fill: '#3A4A5C', fontSize: 10, fontFamily: 'IBM Plex Sans' }} />
+                <YAxis domain={[0, 5]} tick={{ fill: '#8A9BB0', fontSize: 10 }} />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar dataKey="score" radius={[2, 2, 0, 0]}>
                   {barData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={skillColors[entry.category as keyof typeof skillColors]} />
+                    <Cell key={`cell-${index}`} fill={skillColors[entry.category]} />
                   ))}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
-          
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {/* Legenda */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             {Object.entries(categoryLabels).map(([key, label]) => (
               <div key={key} className="flex items-center gap-2">
-                <div 
-                  className="w-4 h-4 rounded" 
-                  style={{ backgroundColor: skillColors[key as keyof typeof skillColors] }}
-                ></div>
-                <span className="text-sm text-gray-700">{label}</span>
+                <span className="w-3 h-3 rounded-sm flex-shrink-0" style={{ backgroundColor: skillColors[key] }} />
+                <span className="text-[11px] text-ink-600">{label}</span>
               </div>
             ))}
           </div>
         </div>
 
+        {/* ── REPORT QUALITATIVO ───────────────────────────────────────── */}
+        {generatingReport && (
+          <div className="bg-paper-50 border border-paper-200 rounded-md p-10 text-center">
+            <div className="w-8 h-8 border-2 border-ink-900 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <p className="font-body text-[14px] text-ink-500">Generazione report AI in corso…</p>
+          </div>
+        )}
+
         {qualitativeReport && (
           <>
-            {/* PROFILO PROFESSIONALE */}
-            <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl shadow-lg p-8 text-white">
-              <div className="flex items-center gap-3 mb-4">
-                <span className="text-3xl">💡</span>
-                <h2 className="text-3xl font-bold">Il Tuo Profilo Professionale</h2>
-              </div>
-              
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 mb-6">
-                <p className="text-lg leading-relaxed">
+            {/* ── PROFILO PROFESSIONALE ──── */}
+            <div className="bg-ink-900 rounded-md p-8 text-paper-50">
+              <p className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400 mb-1">Analisi AI</p>
+              <h2 className="font-display text-display-3 mb-6">Il Tuo Profilo Professionale</h2>
+
+              <div className="bg-ink-800 rounded-md p-6 mb-6">
+                <p className="font-body text-[15px] leading-relaxed text-paper-100">
                   {qualitativeReport.profile_insights?.summary}
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="font-semibold text-xl mb-3">Profilo Suggerito:</h3>
-                  <p className="text-2xl font-bold bg-white/20 rounded-lg p-4 inline-block">
-                    {qualitativeReport.profile_insights?.suggested_profile}
-                  </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div className="bg-ink-800 rounded-md p-5">
+                  <p className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400 mb-2">Profilo Suggerito</p>
+                  <p className="font-display text-[20px] text-paper-50">{qualitativeReport.profile_insights?.suggested_profile}</p>
                 </div>
-
-                <div>
-                  <h3 className="font-semibold text-xl mb-3">Ruoli Ideali:</h3>
+                <div className="bg-ink-800 rounded-md p-5">
+                  <p className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400 mb-2">Ruoli Ideali</p>
                   <div className="flex flex-wrap gap-2">
                     {qualitativeReport.profile_insights?.ideal_roles?.map((role: string, idx: number) => (
-                      <span key={idx} className="bg-white/20 px-4 py-2 rounded-lg text-sm font-medium">
+                      <span key={idx} className="bg-ink-700 text-paper-100 text-[12px] px-3 py-1 rounded-sm">
                         {role}
                       </span>
                     ))}
@@ -392,20 +379,20 @@ export default function ResultsPage() {
               </div>
 
               {qualitativeReport.profile_insights?.unique_strengths && (
-                <div className="mt-6 bg-white/10 backdrop-blur-sm rounded-xl p-6">
-                  <h3 className="font-semibold text-xl mb-2">La Tua Unicità:</h3>
-                  <p className="text-lg">{qualitativeReport.profile_insights.unique_strengths}</p>
+                <div className="bg-ink-800 rounded-md p-5 mb-4">
+                  <p className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400 mb-2">La Tua Unicità</p>
+                  <p className="font-body text-[15px] text-paper-100">{qualitativeReport.profile_insights.unique_strengths}</p>
                 </div>
               )}
 
-              {qualitativeReport.profile_insights?.patterns && (
-                <div className="mt-6">
-                  <h3 className="font-semibold text-xl mb-3">Pattern Comportamentali:</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {qualitativeReport.profile_insights.patterns.map((pattern: string, idx: number) => (
-                      <div key={idx} className="bg-white/10 backdrop-blur-sm rounded-lg p-4 flex items-start gap-3">
-                        <span className="text-xl">✓</span>
-                        <p>{pattern}</p>
+              {qualitativeReport.profile_insights?.patterns?.length > 0 && (
+                <div>
+                  <p className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400 mb-3">Pattern Comportamentali</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {qualitativeReport.profile_insights.patterns.map((p: string, idx: number) => (
+                      <div key={idx} className="bg-ink-800 rounded-md p-4 flex items-start gap-3">
+                        <span className="text-level-avanzato mt-0.5 text-[16px]">✓</span>
+                        <p className="font-body text-[13px] text-paper-100">{p}</p>
                       </div>
                     ))}
                   </div>
@@ -413,285 +400,233 @@ export default function ResultsPage() {
               )}
             </div>
 
-            {/* ===== SEZIONE ESCO ===== */}
+            {/* ── ESCO OVERVIEW ──── */}
             {qualitativeReport.profile_insights?.esco_profile_summary && (
-              <div className="bg-white rounded-xl shadow-lg p-8 border-l-4 border-blue-600">
-                <div className="flex items-center gap-3 mb-6">
-                  <span className="text-3xl">🇪🇺</span>
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-900">Profilo ESCO Europeo</h2>
-                    <p className="text-sm text-gray-500 mt-1">
-                      Framework European Skills, Competences, Qualifications and Occupations — v1.2 (maggio 2024)
-                    </p>
-                  </div>
+              <div className="bg-paper-50 border border-paper-200 rounded-md shadow-sm-ink p-8">
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="text-[22px]">🇪🇺</span>
+                  <h2 className="font-display text-[20px] font-medium text-ink-900">Profilo ESCO Europeo</h2>
+                </div>
+                <p className="text-[12px] text-ink-400 mb-5">Framework European Skills, Competences, Qualifications and Occupations — v1.2 (maggio 2024)</p>
+
+                <div className="bg-paper-100 border border-paper-200 rounded-md p-5 mb-6">
+                  <p className="font-body text-[14px] text-ink-700 leading-relaxed">{qualitativeReport.profile_insights.esco_profile_summary}</p>
                 </div>
 
-                <div className="bg-blue-50 rounded-xl p-6 mb-6">
-                  <p className="text-gray-800 leading-relaxed">
-                    {qualitativeReport.profile_insights.esco_profile_summary}
-                  </p>
-                </div>
-
-                {/* Griglia livelli ESCO per competenza */}
-                <h3 className="font-semibold text-gray-900 mb-4">Livello ESCO per Competenza:</h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                <h3 className="text-[12px] font-medium text-ink-600 uppercase tracking-eyebrow mb-3">Livello ESCO per Competenza</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                   {Object.entries(qualitativeReport.category_interpretations || {}).map(([category, interp]: [string, any]) => {
-                    const escoLevel = interp.esco_mapping?.esco_level || interp.level
+                    const escoLevel = interp.esco_mapping?.esco_level || interp.level || 'Base'
                     const escoGroup = interp.esco_mapping?.esco_group
-                    const levelColors: Record<string, string> = {
-                      'Esperto':     'bg-green-100 border-green-400 text-green-800',
-                      'Avanzato':    'bg-blue-100 border-blue-400 text-blue-800',
-                      'Intermedio':  'bg-yellow-100 border-yellow-400 text-yellow-800',
-                      'Base':        'bg-gray-100 border-gray-400 text-gray-700',
-                    }
-                    const colorClass = levelColors[escoLevel] || levelColors['Base']
+                    const levelKeyMap: Record<string, string> = { 'Esperto': 'esperto', 'Avanzato': 'avanzato', 'Intermedio': 'intermedio', 'Base': 'base' }
+                    const { className } = levelStyle[levelKeyMap[escoLevel] ?? 'base']
                     return (
-                      <div
-                        key={category}
-                        className={`rounded-lg border-2 p-3 ${colorClass}`}
-                      >
-                        <p className="font-semibold text-sm mb-1">{categoryLabels[category]}</p>
-                        <p className="text-xs font-bold uppercase tracking-wide">{escoLevel}</p>
-                        {escoGroup && (
-                          <p className="text-xs mt-1 opacity-75 leading-tight">{escoGroup}</p>
-                        )}
+                      <div key={category} className={`border rounded-md p-3 ${className}`}>
+                        <p className="text-[12px] font-semibold mb-0.5">{categoryLabels[category]}</p>
+                        <p className="text-[10px] font-bold uppercase tracking-eyebrow">{escoLevel}</p>
+                        {escoGroup && <p className="text-[10px] mt-1 opacity-70 leading-snug">{escoGroup}</p>}
                       </div>
                     )
                   })}
                 </div>
-
-                <p className="text-xs text-gray-400 mt-4 text-right">
-                  © Commissione Europea — ESCO v1.2 | Competenze mappate da ValutoLab
-                </p>
+                <p className="text-[10px] text-ink-400 mt-4 text-right">© Commissione Europea — ESCO v1.2 | Competenze mappate da ValutoLab</p>
               </div>
             )}
 
-            {/* INTERPRETAZIONE QUALITATIVA */}
-            <div className="bg-white rounded-xl shadow-lg p-8">
-              <div className="flex items-center gap-3 mb-6">
-                <span className="text-3xl">🎓</span>
-                <h2 className="text-3xl font-bold text-gray-900">Interpretazione Qualitativa</h2>
-              </div>
-
-              <div className="space-y-6">
+            {/* ── INTERPRETAZIONE QUALITATIVA ──── */}
+            <div className="bg-paper-50 border border-paper-200 rounded-md shadow-sm-ink p-8">
+              <h2 className="font-display text-[20px] font-medium text-ink-900 mb-6">Interpretazione Qualitativa</h2>
+              <div className="space-y-5">
                 {Object.entries(qualitativeReport.category_interpretations || {}).map(([category, interp]: [string, any]) => {
-                  const level = getLevelBadge(interp.score)
                   const escoMapping = interp.esco_mapping
+                  const escoLevel = escoMapping?.esco_level || 'Base'
+                  const levelKeyMap: Record<string, string> = { 'Esperto': 'esperto', 'Avanzato': 'avanzato', 'Intermedio': 'intermedio', 'Base': 'base' }
+                  const { className: escoClass } = levelStyle[levelKeyMap[escoLevel] ?? 'base']
                   return (
-                    <div 
-                      key={category} 
-                      className="border-l-4 rounded-r-xl p-6 bg-gray-50"
-                      style={{ borderColor: skillColors[category as keyof typeof skillColors] }}
-                    >
-                      <div className="flex justify-between items-start mb-4">
-                        <div>
-                          <h3 className="text-xl font-bold text-gray-900">{categoryLabels[category]}</h3>
-                          <div className="flex items-center gap-3 mt-2">
-                            <span className="text-2xl font-bold" style={{ color: skillColors[category as keyof typeof skillColors] }}>
-                              {interp.score}/5.0
+                    <div key={category} className="border border-paper-200 rounded-md overflow-hidden">
+                      {/* Header skill */}
+                      <div className="flex items-center justify-between px-5 py-3 bg-paper-100 border-b border-paper-200">
+                        <div className="flex items-center gap-3">
+                          <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: skillColors[category] }} />
+                          <h3 className="font-display text-[16px] font-medium text-ink-900">{categoryLabels[category]}</h3>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-[14px] text-ink-900">{Number(interp.score).toFixed(2)}/5,0</span>
+                          <LevelBadge score={interp.score} />
+                          {escoMapping?.esco_level && (
+                            <span className={`text-[10px] font-semibold uppercase tracking-eyebrow px-2 py-0.5 border rounded-sm ${escoClass}`}>
+                              🇪🇺 {escoMapping.esco_level}
                             </span>
-                            <span className={`px-3 py-1 rounded-full text-sm font-semibold ${level.color}`}>
-                              {level.text}
-                            </span>
-                            {/* Badge ESCO inline */}
-                            {escoMapping?.esco_level && (
-                              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1">
-                                🇪🇺 ESCO {escoMapping.esco_level}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <p className="text-gray-700 mb-4 leading-relaxed">{interp.description}</p>
-
-                      {interp.behavioral_notes && (
-                        <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-4">
-                          <p className="text-sm font-semibold text-blue-900 mb-1">Note Comportamentali:</p>
-                          <p className="text-blue-800">{interp.behavioral_notes}</p>
-                        </div>
-                      )}
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <div>
-                          <h4 className="font-semibold text-green-800 mb-2 flex items-center gap-2">
-                            <span>✓</span> Punti di Forza
-                          </h4>
-                          <ul className="space-y-1">
-                            {interp.strengths?.map((strength: string, idx: number) => (
-                              <li key={idx} className="text-sm text-gray-700 flex items-start gap-2">
-                                <span className="text-green-600 mt-1">•</span>
-                                <span>{strength}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-
-                        <div>
-                          <h4 className="font-semibold text-orange-800 mb-2 flex items-center gap-2">
-                            <span>↗</span> Aree di Miglioramento
-                          </h4>
-                          <ul className="space-y-1">
-                            {interp.improvements?.map((improvement: string, idx: number) => (
-                              <li key={idx} className="text-sm text-gray-700 flex items-start gap-2">
-                                <span className="text-orange-600 mt-1">•</span>
-                                <span>{improvement}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      </div>
-
-                      {/* Box ESCO skills per categoria */}
-                      {escoMapping && (escoMapping.esco_skills_demonstrated?.length > 0 || escoMapping.esco_skills_to_develop?.length > 0) && (
-                        <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
-                          <p className="text-xs font-bold text-blue-700 uppercase tracking-wide mb-3 flex items-center gap-1">
-                            🇪🇺 Skill ESCO v1.2 — {escoMapping.esco_group}
-                          </p>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {escoMapping.esco_skills_demonstrated?.length > 0 && (
-                              <div>
-                                <p className="text-xs font-semibold text-green-700 mb-1">✓ Dimostrate</p>
-                                <div className="flex flex-wrap gap-1">
-                                  {escoMapping.esco_skills_demonstrated.map((skill: string, idx: number) => (
-                                    <span key={idx} className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
-                                      {skill}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                            {escoMapping.esco_skills_to_develop?.length > 0 && (
-                              <div>
-                                <p className="text-xs font-semibold text-orange-700 mb-1">↗ Da sviluppare</p>
-                                <div className="flex flex-wrap gap-1">
-                                  {escoMapping.esco_skills_to_develop.map((skill: string, idx: number) => (
-                                    <span key={idx} className="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded-full">
-                                      {skill}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                          {escoMapping.recognition_note && (
-                            <p className="text-xs text-blue-600 mt-3 italic">{escoMapping.recognition_note}</p>
                           )}
                         </div>
-                      )}
+                      </div>
+
+                      <div className="p-5 space-y-4">
+                        <p className="font-body text-[14px] text-ink-700 leading-relaxed">{interp.description}</p>
+
+                        {interp.behavioral_notes && (
+                          <div className="bg-paper-100 border-l-4 border-ink-900 pl-4 py-2">
+                            <p className="text-[11px] font-semibold text-ink-600 uppercase tracking-eyebrow mb-1">Note Comportamentali</p>
+                            <p className="text-[13px] text-ink-700">{interp.behavioral_notes}</p>
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {interp.strengths?.length > 0 && (
+                            <div>
+                              <p className="text-[11px] font-semibold uppercase tracking-eyebrow text-level-avanzato mb-2">✓ Punti di Forza</p>
+                              <ul className="space-y-1">
+                                {interp.strengths.map((s: string, idx: number) => (
+                                  <li key={idx} className="text-[13px] text-ink-700 flex items-start gap-2">
+                                    <span className="text-level-avanzato mt-0.5">•</span>{s}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          {interp.improvements?.length > 0 && (
+                            <div>
+                              <p className="text-[11px] font-semibold uppercase tracking-eyebrow text-sienna-600 mb-2">↗ Aree di Miglioramento</p>
+                              <ul className="space-y-1">
+                                {interp.improvements.map((s: string, idx: number) => (
+                                  <li key={idx} className="text-[13px] text-ink-700 flex items-start gap-2">
+                                    <span className="text-sienna-600 mt-0.5">•</span>{s}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* ESCO skills tags */}
+                        {escoMapping && (escoMapping.esco_skills_demonstrated?.length > 0 || escoMapping.esco_skills_to_develop?.length > 0) && (
+                          <div className="bg-paper-100 border border-paper-200 rounded-md p-4">
+                            <p className="text-[10px] font-bold text-ink-500 uppercase tracking-eyebrow mb-3">🇪🇺 Skill ESCO v1.2 — {escoMapping.esco_group}</p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              {escoMapping.esco_skills_demonstrated?.length > 0 && (
+                                <div>
+                                  <p className="text-[10px] font-semibold text-level-avanzato mb-1">✓ Dimostrate</p>
+                                  <div className="flex flex-wrap gap-1">
+                                    {escoMapping.esco_skills_demonstrated.map((sk: string, i: number) => (
+                                      <span key={i} className="bg-green-50 text-level-avanzato border border-green-200 text-[10px] px-2 py-0.5 rounded-sm">{sk}</span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              {escoMapping.esco_skills_to_develop?.length > 0 && (
+                                <div>
+                                  <p className="text-[10px] font-semibold text-sienna-600 mb-1">↗ Da sviluppare</p>
+                                  <div className="flex flex-wrap gap-1">
+                                    {escoMapping.esco_skills_to_develop.map((sk: string, i: number) => (
+                                      <span key={i} className="bg-sienna-50 text-sienna-700 border border-sienna-300 text-[10px] px-2 py-0.5 rounded-sm">{sk}</span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )
                 })}
               </div>
             </div>
 
-            {/* PIANO DI SVILUPPO */}
-            <div className="bg-white rounded-xl shadow-lg p-8">
-              <div className="flex items-center gap-3 mb-6">
-                <span className="text-3xl">🎯</span>
-                <h2 className="text-3xl font-bold text-gray-900">Piano di Sviluppo Personalizzato</h2>
-              </div>
+            {/* ── PIANO DI SVILUPPO ──── */}
+            <div className="bg-paper-50 border border-paper-200 rounded-md shadow-sm-ink p-8">
+              <h2 className="font-display text-[20px] font-medium text-ink-900 mb-6">Piano di Sviluppo Personalizzato</h2>
 
-              <div className="bg-blue-50 border-l-4 border-blue-600 p-6 mb-6 rounded-r-xl">
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">⏱️</span>
+              {/* Timeline */}
+              {qualitativeReport.development_plan?.timeline && (
+                <div className="flex items-center gap-3 bg-paper-100 border border-paper-200 rounded-md px-5 py-3 mb-6">
+                  <Calendar className="w-4 h-4 text-ink-500" />
                   <div>
-                    <p className="font-semibold text-blue-900">Timeline Consigliata</p>
-                    <p className="text-blue-800 text-lg">{qualitativeReport.development_plan?.timeline}</p>
+                    <p className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400">Timeline Consigliata</p>
+                    <p className="text-[14px] font-medium text-ink-900">{qualitativeReport.development_plan.timeline}</p>
                   </div>
                 </div>
-              </div>
+              )}
 
-              <div className="space-y-6 mb-8">
+              {/* Focus areas */}
+              <div className="space-y-4 mb-6">
                 {qualitativeReport.development_plan?.focus_areas?.map((area: any, idx: number) => {
-                  const priorityColors: Record<string, string> = {
-                    'Alta': 'bg-red-100 text-red-800 border-red-300',
-                    'Media': 'bg-yellow-100 text-yellow-800 border-yellow-300',
-                    'Bassa': 'bg-green-100 text-green-800 border-green-300'
+                  const priorityStyle: Record<string, string> = {
+                    'Alta':   'text-sienna-700 bg-sienna-50 border-sienna-300',
+                    'Media':  'text-level-intermedio bg-amber-50 border-amber-200',
+                    'Bassa':  'text-level-avanzato bg-green-50 border-green-200',
                   }
-                  const priorityColor = priorityColors[area.priority] || priorityColors['Media']
-
+                  const pStyle = priorityStyle[area.priority] ?? priorityStyle['Media']
                   return (
-                    <div key={idx} className="border-2 border-gray-200 rounded-xl p-6">
-                      <div className="flex justify-between items-start mb-4">
+                    <div key={idx} className="border border-paper-200 rounded-md overflow-hidden">
+                      <div className="flex items-center justify-between px-5 py-3 bg-paper-100 border-b border-paper-200">
                         <div>
-                          <h3 className="text-xl font-bold text-gray-900">{area.skill}</h3>
-                          <div className="flex items-center gap-3 mt-2">
-                            <span className="text-sm text-gray-600">
-                              Attuale: <span className="font-semibold">{area.current_score}/5.0</span>
-                            </span>
-                            <span className="text-gray-400">→</span>
-                            <span className="text-sm text-gray-600">
-                              Obiettivo: <span className="font-semibold">{area.target_score}/5.0</span>
-                            </span>
+                          <h3 className="font-display text-[16px] font-medium text-ink-900">{area.skill}</h3>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[12px] text-ink-500">Attuale: <span className="font-semibold text-ink-800">{area.current_score}/5,0</span></span>
+                            <span className="text-ink-400">→</span>
+                            <span className="text-[12px] text-ink-500">Obiettivo: <span className="font-semibold text-ink-800">{area.target_score}/5,0</span></span>
                           </div>
                         </div>
-                        <span className={`px-3 py-1 rounded-full text-sm font-semibold border-2 ${priorityColor}`}>
+                        <span className={`text-[10px] font-semibold uppercase tracking-eyebrow px-2 py-1 border rounded-sm ${pStyle}`}>
                           Priorità {area.priority}
                         </span>
                       </div>
 
-                      {area.gap_analysis && (
-                        <div className="bg-purple-50 border-l-4 border-purple-500 p-4 mb-4 rounded-r">
-                          <p className="text-sm font-semibold text-purple-900 mb-1">Gap Analysis:</p>
-                          <p className="text-purple-800">{area.gap_analysis}</p>
-                        </div>
-                      )}
+                      <div className="p-5 space-y-4">
+                        {area.gap_analysis && (
+                          <div className="bg-paper-100 border-l-4 border-ink-400 pl-4 py-2">
+                            <p className="text-[11px] font-semibold text-ink-500 uppercase tracking-eyebrow mb-1">Gap Analysis</p>
+                            <p className="text-[13px] text-ink-700">{area.gap_analysis}</p>
+                          </div>
+                        )}
 
-                      {/* Obiettivo ESCO nel piano di sviluppo */}
-                      {area.esco_target && (
-                        <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4 rounded-r flex items-start gap-2">
-                          <span className="text-lg">🇪🇺</span>
+                        {area.esco_target && (
+                          <div className="bg-paper-100 border-l-4 border-level-esperto pl-4 py-2">
+                            <p className="text-[11px] font-semibold text-level-esperto uppercase tracking-eyebrow mb-1">🇪🇺 Obiettivo ESCO</p>
+                            <p className="text-[13px] text-ink-700">{area.esco_target}</p>
+                          </div>
+                        )}
+
+                        {area.actions?.length > 0 && (
                           <div>
-                            <p className="text-xs font-bold text-blue-700 uppercase tracking-wide mb-1">Obiettivo ESCO</p>
-                            <p className="text-blue-800 text-sm">{area.esco_target}</p>
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="mb-4">
-                        <h4 className="font-semibold text-gray-900 mb-3">Azioni Concrete:</h4>
-                        <div className="space-y-2">
-                          {area.actions?.map((action: string, actionIdx: number) => (
-                            <div key={actionIdx} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                              <span className="text-purple-600 font-bold text-lg">{actionIdx + 1}</span>
-                              <p className="text-gray-700 flex-1">{action}</p>
+                            <p className="text-[11px] font-semibold text-ink-600 uppercase tracking-eyebrow mb-2">Azioni Concrete</p>
+                            <div className="space-y-2">
+                              {area.actions.map((action: string, aIdx: number) => (
+                                <div key={aIdx} className="flex items-start gap-3 bg-paper-100 border border-paper-200 rounded-md px-4 py-3">
+                                  <span className="text-[12px] font-bold text-ink-400 w-4 flex-shrink-0 mt-0.5">{aIdx + 1}</span>
+                                  <p className="text-[13px] text-ink-700">{action}</p>
+                                </div>
+                              ))}
                             </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {area.resources && area.resources.length > 0 && (
-                        <div>
-                          <h4 className="font-semibold text-gray-900 mb-2">Risorse Consigliate:</h4>
-                          <div className="flex flex-wrap gap-2">
-                            {area.resources.map((resource: string, resIdx: number) => (
-                              <span key={resIdx} className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
-                                {resource}
-                              </span>
-                            ))}
                           </div>
-                        </div>
-                      )}
+                        )}
+
+                        {area.resources?.length > 0 && (
+                          <div>
+                            <p className="text-[11px] font-semibold text-ink-600 uppercase tracking-eyebrow mb-2">Risorse Consigliate</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {area.resources.map((r: string, rIdx: number) => (
+                                <span key={rIdx} className="bg-paper-200 text-ink-700 text-[11px] px-2.5 py-1 rounded-sm border border-paper-300">{r}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )
                 })}
               </div>
 
-              {qualitativeReport.development_plan?.quick_wins && (
-                <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 border-2 border-green-200">
-                  <div className="flex items-center gap-3 mb-4">
-                    <span className="text-3xl">⚡</span>
-                    <h3 className="text-2xl font-bold text-gray-900">Quick Wins</h3>
-                  </div>
-                  <p className="text-gray-700 mb-4">Azioni immediate che puoi intraprendere da subito:</p>
+              {/* Quick wins */}
+              {qualitativeReport.development_plan?.quick_wins?.length > 0 && (
+                <div className="bg-paper-100 border border-paper-200 rounded-md p-6">
+                  <p className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400 mb-4">⚡ Quick Wins</p>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     {qualitativeReport.development_plan.quick_wins.map((win: string, idx: number) => (
-                      <div key={idx} className="bg-white rounded-lg p-4 shadow-sm border border-green-200">
-                        <div className="flex items-start gap-2">
-                          <span className="text-green-600 font-bold text-lg">{idx + 1}</span>
-                          <p className="text-sm text-gray-800">{win}</p>
-                        </div>
+                      <div key={idx} className="bg-paper-50 border border-paper-200 rounded-md p-4 flex items-start gap-2">
+                        <span className="text-[12px] font-bold text-level-avanzato flex-shrink-0">{idx + 1}</span>
+                        <p className="text-[13px] text-ink-700">{win}</p>
                       </div>
                     ))}
                   </div>
@@ -701,31 +636,19 @@ export default function ResultsPage() {
           </>
         )}
 
-        {generatingReport && (
-          <div className="bg-white rounded-xl shadow-lg p-8">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">Generazione report qualitativo in corso...</p>
-            </div>
-          </div>
-        )}
-
+        {/* ── CONDIVISIONE ──────────────────────────────────────────────── */}
         {userId && (
-          <ShareSection 
-            assessmentId={assessmentId}
-            userId={userId}
-          />
+          <ShareSection assessmentId={assessmentId} userId={userId} />
         )}
 
-        <div className="flex justify-center">
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="bg-purple-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-purple-700 transition shadow-lg"
-          >
-            Torna alla Dashboard
-          </button>
+        {/* ── FOOTER NAV ───────────────────────────────────────────────── */}
+        <div className="flex justify-center pb-6">
+          <Button variant="secondary" onClick={() => router.push('/dashboard')} className="flex items-center gap-2">
+            <ArrowLeft className="w-4 h-4" /> Torna alla Dashboard
+          </Button>
         </div>
-      </div>
+
+      </main>
     </div>
   )
 }

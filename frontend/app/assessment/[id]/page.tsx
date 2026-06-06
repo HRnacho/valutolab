@@ -6,6 +6,9 @@ import { useAuth } from '@/lib/AuthContext'
 import { api } from '@/lib/api'
 import { questions, Question } from '@/data/questions'
 import SituationalQuestion from '@/components/SituationalQuestion'
+import { Wordmark } from '@/components/ui/Wordmark'
+import { Button } from '@/components/ui/Button'
+import { ArrowLeft, ArrowRight, CheckCircle } from 'lucide-react'
 
 interface SituationalQuestionData {
   id: string
@@ -19,6 +22,14 @@ interface SituationalQuestionData {
   }>
 }
 
+const likertLabels: Record<number, string> = {
+  1: "Per niente d'accordo",
+  2: "Poco d'accordo",
+  3: "Mediamente d'accordo",
+  4: "Abbastanza d'accordo",
+  5: "Pienamente d'accordo",
+}
+
 export default function AssessmentPage() {
   const router = useRouter()
   const params = useParams()
@@ -29,22 +40,16 @@ export default function AssessmentPage() {
   const [saving, setSaving] = useState(false)
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
 
-  // Risposte Likert (numerico 1-5)
   const [answers, setAnswers] = useState<Record<string, number>>({})
-
-  // Risposte profiling (testo)
   const [profilingAnswers, setProfilingAnswers] = useState<Record<string, string>>({})
-  // Testo corrente per textarea in editing
   const [textareaValue, setTextareaValue] = useState('')
 
-  // Situational
   const [showSituational, setShowSituational] = useState(false)
   const [situationalQuestions, setSituationalQuestions] = useState<SituationalQuestionData[]>([])
   const [currentSituationalIndex, setCurrentSituationalIndex] = useState(0)
   const [situationalAnswers, setSituationalAnswers] = useState<Record<string, string>>({})
   const [loadingSituational, setLoadingSituational] = useState(false)
 
-  // Lista domande filtrata (considera condizionali)
   const filteredQuestions = useMemo<Question[]>(() => {
     return questions.filter(q => {
       if (!q.conditionalKey) return true
@@ -52,94 +57,64 @@ export default function AssessmentPage() {
     })
   }, [profilingAnswers])
 
-  // Lista domande SOLO Likert (per scoring e completeness check)
   const likertQuestions = useMemo(() => {
     return filteredQuestions.filter(q => q.category !== 'profiling')
   }, [filteredQuestions])
 
   useEffect(() => {
     const checkAssessment = async () => {
-      if (!user) {
-        router.push('/login')
-        return
-      }
-
+      if (!user) { router.push('/login'); return }
       const assessmentRes = await api.assessments.get(assessmentId)
       const assessment = assessmentRes.assessment
       if (!assessment) { router.push('/dashboard'); return }
       if (assessment.status === 'completed') { router.push(`/dashboard/results/${assessmentId}`); return }
-
       const responsesRes = await api.assessments.responses.list(assessmentId)
       const existingAnswers = responsesRes.responses || []
-
       if (existingAnswers.length > 0) {
         const numericMap: Record<string, number> = {}
         const textMap: Record<string, string> = {}
         existingAnswers.forEach((ans: any) => {
-          if (ans.answer_text != null) {
-            textMap[ans.question_id] = ans.answer_text
-          } else if (ans.answer_value != null) {
-            numericMap[ans.question_id] = ans.answer_value
-          }
+          if (ans.answer_text != null) textMap[ans.question_id] = ans.answer_text
+          else if (ans.answer_value != null) numericMap[ans.question_id] = ans.answer_value
         })
         setAnswers(numericMap)
         setProfilingAnswers(textMap)
       }
-
       setLoading(false)
     }
     checkAssessment()
   }, [assessmentId, router])
 
-  // Sync textarea value when navigating to a textarea question
   useEffect(() => {
     const q = filteredQuestions[currentQuestionIndex]
-    if (q?.type === 'textarea') {
-      setTextareaValue(profilingAnswers[String(q.id)] ?? '')
-    }
+    if (q?.type === 'textarea') setTextareaValue(profilingAnswers[String(q.id)] ?? '')
   }, [currentQuestionIndex, filteredQuestions])
 
-  // Fire-and-forget: salva in background senza bloccare la navigazione
   const saveProfilingResponse = (questionId: string, text: string) => {
     api.assessments.responses.upsert(assessmentId, {
-      question_id: questionId,
-      answer_text: text,
-      answer_value: null,
-      skill_category: 'profiling',
+      question_id: questionId, answer_text: text, answer_value: null, skill_category: 'profiling',
     }).catch(err => console.warn('Profiling save failed (non-blocking):', err))
   }
 
-  // ── Likert answer ───────────────────────────────────────────────────────────
   const handleAnswer = async (value: number) => {
     const question = filteredQuestions[currentQuestionIndex]
-    const newAnswers = { ...answers, [question.id]: value }
-    setAnswers(newAnswers)
-    // Naviga subito, salva in background
-    if (currentQuestionIndex < filteredQuestions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1)
-    }
+    setAnswers(prev => ({ ...prev, [question.id]: value }))
+    if (currentQuestionIndex < filteredQuestions.length - 1) setCurrentQuestionIndex(prev => prev + 1)
     api.assessments.responses.upsert(assessmentId, {
-      question_id: String(question.id),
-      answer_value: value,
-      skill_category: question.category,
+      question_id: String(question.id), answer_value: value, skill_category: question.category,
     }).catch(err => console.warn('Likert save failed:', err))
   }
 
-  // ── Single-choice profiling answer ─────────────────────────────────────────
   const handleSingleChoice = (option: string) => {
     const question = filteredQuestions[currentQuestionIndex]
     const qid = String(question.id)
     setProfilingAnswers(prev => ({ ...prev, [qid]: option }))
-    // Naviga subito, salva in background
-    if (currentQuestionIndex < filteredQuestions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1)
-    }
+    if (currentQuestionIndex < filteredQuestions.length - 1) setCurrentQuestionIndex(prev => prev + 1)
     saveProfilingResponse(qid, option)
   }
 
-  // ── Navigation ──────────────────────────────────────────────────────────────
   const handlePrevious = () => {
-    if (currentQuestionIndex > 0) setCurrentQuestionIndex(currentQuestionIndex - 1)
+    if (currentQuestionIndex > 0) setCurrentQuestionIndex(prev => prev - 1)
   }
 
   const handleNext = () => {
@@ -149,21 +124,16 @@ export default function AssessmentPage() {
       setProfilingAnswers(prev => ({ ...prev, [qid]: textareaValue }))
       saveProfilingResponse(qid, textareaValue)
     }
-    if (currentQuestionIndex < filteredQuestions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1)
-    }
+    if (currentQuestionIndex < filteredQuestions.length - 1) setCurrentQuestionIndex(prev => prev + 1)
   }
 
-  // ── Complete Likert phase ───────────────────────────────────────────────────
   const handleCompleteLikert = async () => {
-    // Save textarea if we are currently on one
     const currentQ = filteredQuestions[currentQuestionIndex]
     if (currentQ?.type === 'textarea') {
       const qid = String(currentQ.id)
       setProfilingAnswers(prev => ({ ...prev, [qid]: textareaValue }))
-      await saveProfilingResponse(qid, textareaValue)
+      saveProfilingResponse(qid, textareaValue)
     }
-
     const unanswered = likertQuestions.filter(q => answers[q.id] == null)
     if (unanswered.length > 0) {
       alert(`Per favore rispondi a tutte le domande. Mancano ${unanswered.length} risposte.`)
@@ -171,7 +141,6 @@ export default function AssessmentPage() {
       setCurrentQuestionIndex(firstIdx)
       return
     }
-
     await loadSituationalQuestions()
     setShowSituational(true)
   }
@@ -179,7 +148,7 @@ export default function AssessmentPage() {
   const loadSituationalQuestions = async () => {
     setLoadingSituational(true)
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://valutolab-backend.onrender.com'
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'
       const response = await fetch(`${apiUrl}/api/situational-questions`)
       if (response.ok) {
         const data = await response.json()
@@ -192,53 +161,40 @@ export default function AssessmentPage() {
     }
   }
 
-  // ── Situational ─────────────────────────────────────────────────────────────
   const handleSituationalAnswer = (option: string) => {
     const question = situationalQuestions[currentSituationalIndex]
-    setSituationalAnswers({ ...situationalAnswers, [question.id]: option })
+    setSituationalAnswers(prev => ({ ...prev, [question.id]: option }))
   }
 
   const handleSituationalNext = () => {
     const currentQuestion = situationalQuestions[currentSituationalIndex]
-    if (!situationalAnswers[currentQuestion.id]) {
-      alert('Per favore seleziona una risposta prima di continuare.')
-      return
-    }
-    if (currentSituationalIndex < situationalQuestions.length - 1) {
-      setCurrentSituationalIndex(currentSituationalIndex + 1)
-    }
+    if (!situationalAnswers[currentQuestion.id]) { alert('Per favore seleziona una risposta prima di continuare.'); return }
+    if (currentSituationalIndex < situationalQuestions.length - 1) setCurrentSituationalIndex(prev => prev + 1)
   }
 
   const handleSituationalPrevious = () => {
-    if (currentSituationalIndex > 0) setCurrentSituationalIndex(currentSituationalIndex - 1)
+    if (currentSituationalIndex > 0) setCurrentSituationalIndex(prev => prev - 1)
   }
 
-  // ── Complete assessment ─────────────────────────────────────────────────────
   const handleCompleteAssessment = async () => {
     const unansweredSituational = situationalQuestions.filter(q => !situationalAnswers[q.id])
     if (unansweredSituational.length > 0) {
       alert(`Per favore rispondi a tutte le domande situazionali. Mancano ${unansweredSituational.length} risposte.`)
       return
     }
-
     setSaving(true)
     try {
       if (!user) return
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://valutolab-backend.onrender.com'
-
-      // Save situational responses
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'
       const responsesPayload = situationalQuestions.map(q => ({
-        questionId: q.id,
-        selectedOption: situationalAnswers[q.id],
+        questionId: q.id, selectedOption: situationalAnswers[q.id],
       }))
       const responseSituational = await fetch(`${apiUrl}/api/situational-responses`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ assessmentId, userId: user.id, responses: responsesPayload }),
       })
       if (!responseSituational.ok) throw new Error('Failed to save situational responses')
 
-      // Build user_context from profiling answers and save (non-blocking)
       const userContext = {
         employment_status: profilingAnswers['profiling_1'] ?? null,
         years_at_company: profilingAnswers['profiling_2'] ?? null,
@@ -249,7 +205,6 @@ export default function AssessmentPage() {
       api.assessments.saveUserContext(assessmentId, userContext)
         .catch(err => console.warn('saveUserContext failed (non-blocking):', err))
 
-      // Calculate Likert category scores (excludes profiling)
       const categoryScores: Record<string, { total: number; count: number }> = {}
       likertQuestions.forEach(question => {
         const answer = answers[question.id]
@@ -259,20 +214,13 @@ export default function AssessmentPage() {
           categoryScores[question.category].count += 1
         }
       })
-
       const results = Object.entries(categoryScores).map(([category, data]) => ({
-        skill_category: category,
-        score: parseFloat((data.total / data.count).toFixed(2)),
-        percentile: null,
-        strengths: [],
-        improvements: [],
+        skill_category: category, score: parseFloat((data.total / data.count).toFixed(2)),
+        percentile: null, strengths: [], improvements: [],
       }))
-
       await api.assessments.results.upsert(assessmentId, results)
-
       const totalScore = results.reduce((sum, r) => sum + r.score, 0) / results.length
       await api.assessments.complete(assessmentId, parseFloat(totalScore.toFixed(2)))
-
       router.push(`/dashboard/results/${assessmentId}`)
     } catch (error) {
       console.error('Error completing assessment:', error)
@@ -282,50 +230,55 @@ export default function AssessmentPage() {
     }
   }
 
-  // ── Render ──────────────────────────────────────────────────────────────────
-
-  if (loading) {
+  // ── Loading ─────────────────────────────────────────────────────────────────
+  if (loading || (showSituational && loadingSituational)) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-paper-100">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Caricamento assessment...</p>
+          <div className="w-8 h-8 border-2 border-ink-900 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="mt-4 font-body text-ink-500 text-[14px]">
+            {loadingSituational ? 'Caricamento scenari situazionali…' : 'Caricamento assessment…'}
+          </p>
         </div>
       </div>
     )
   }
 
+  // ── FASE SITUAZIONALE ───────────────────────────────────────────────────────
   if (showSituational) {
-    if (loadingSituational) {
-      return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Caricamento domande situazionali...</p>
-          </div>
-        </div>
-      )
-    }
     if (situationalQuestions.length === 0) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
-          <p className="text-gray-600">Errore nel caricamento delle domande situazionali.</p>
+        <div className="min-h-screen flex items-center justify-center bg-paper-100">
+          <p className="font-body text-[14px] text-ink-500">Errore nel caricamento delle domande situazionali.</p>
         </div>
       )
     }
-
     const currentQuestion = situationalQuestions[currentSituationalIndex]
+    const sitProgress = ((currentSituationalIndex + 1) / situationalQuestions.length) * 100
+
     return (
-      <div className="min-h-screen bg-gray-50">
-        <header className="bg-white shadow">
-          <div className="max-w-4xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
-            <h1 className="text-2xl font-bold text-gray-900">Assessment Situazionale</h1>
-            <p className="text-sm text-gray-600 mt-1">
-              Leggi ogni situazione e scegli l&apos;opzione che meglio rappresenta come agiresti
-            </p>
+      <div className="min-h-screen bg-paper-100 font-body text-ink-900">
+        {/* Header */}
+        <header className="bg-paper-50 border-b border-paper-200 sticky top-0 z-40">
+          <div className="max-w-3xl mx-auto px-6 h-14 flex items-center justify-between">
+            <Wordmark size={18} />
+            <span className="text-[12px] text-ink-500 font-medium">Fase situazionale</span>
           </div>
         </header>
-        <main className="max-w-4xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+
+        <main className="max-w-3xl mx-auto px-6 py-8 space-y-6">
+          {/* Progress */}
+          <div>
+            <div className="flex justify-between text-[12px] text-ink-500 mb-1.5">
+              <span>Scenario {currentSituationalIndex + 1} di {situationalQuestions.length}</span>
+              <span>{Math.round(sitProgress)}%</span>
+            </div>
+            <div className="w-full bg-paper-200 rounded-sm h-1.5">
+              <div className="bg-ink-900 h-1.5 rounded-sm transition-all" style={{ width: `${sitProgress}%` }} />
+            </div>
+          </div>
+
+          {/* Question card */}
           <SituationalQuestion
             situation={currentQuestion.situation}
             options={currentQuestion.options}
@@ -334,30 +287,25 @@ export default function AssessmentPage() {
             questionNumber={currentSituationalIndex + 1}
             totalQuestions={situationalQuestions.length}
           />
-          <div className="flex justify-between items-center mt-6">
-            <button
-              onClick={handleSituationalPrevious}
-              disabled={currentSituationalIndex === 0}
-              className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
-            >
-              ← Precedente
-            </button>
+
+          {/* Nav */}
+          <div className="flex justify-between items-center">
+            <Button variant="secondary" onClick={handleSituationalPrevious} disabled={currentSituationalIndex === 0}
+              className="flex items-center gap-2">
+              <ArrowLeft className="w-4 h-4" /> Precedente
+            </Button>
             {currentSituationalIndex < situationalQuestions.length - 1 ? (
-              <button
-                onClick={handleSituationalNext}
+              <Button variant="primary" onClick={handleSituationalNext}
                 disabled={!situationalAnswers[currentQuestion.id]}
-                className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
-              >
-                Successiva →
-              </button>
+                className="flex items-center gap-2">
+                Successiva <ArrowRight className="w-4 h-4" />
+              </Button>
             ) : (
-              <button
-                onClick={handleCompleteAssessment}
+              <Button variant="accent" onClick={handleCompleteAssessment}
                 disabled={saving || !situationalAnswers[currentQuestion.id]}
-                className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition font-semibold"
-              >
-                {saving ? 'Salvataggio...' : 'Completa Assessment ✓'}
-              </button>
+                className="flex items-center gap-2">
+                {saving ? 'Salvataggio…' : <><CheckCircle className="w-4 h-4" /> Completa Assessment</>}
+              </Button>
             )}
           </div>
         </main>
@@ -365,141 +313,133 @@ export default function AssessmentPage() {
     )
   }
 
+  // ── FASE LIKERT / PROFILING ─────────────────────────────────────────────────
   const currentQuestion = filteredQuestions[currentQuestionIndex]
   if (!currentQuestion) return null
 
   const isLastQuestion = currentQuestionIndex === filteredQuestions.length - 1
   const isProfiling = currentQuestion.category === 'profiling'
-
-  // Progress: count only Likert answers for the progress bar
   const answeredLikert = Object.keys(answers).length
-  const progress = likertQuestions.length > 0
-    ? (answeredLikert / likertQuestions.length) * 100
-    : 0
+  const progress = likertQuestions.length > 0 ? (answeredLikert / likertQuestions.length) * 100 : 0
+
+  // Numero di domanda "visibile" (solo Likert, non profiling)
+  const likertIndex = likertQuestions.findIndex(q => q.id === currentQuestion.id)
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow">
-        <div className="max-w-4xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
-          <h1 className="text-2xl font-bold text-gray-900">Assessment Soft Skills</h1>
-          <p className="text-sm text-gray-600 mt-1">
-            {isProfiling
-              ? 'Domanda di profilazione'
-              : `Domanda ${currentQuestionIndex + 1} di ${filteredQuestions.length}`}
-          </p>
+    <div className="min-h-screen bg-paper-100 font-body text-ink-900">
+      {/* Header */}
+      <header className="bg-paper-50 border-b border-paper-200 sticky top-0 z-40">
+        <div className="max-w-3xl mx-auto px-6 h-14 flex items-center justify-between">
+          <Wordmark size={18} />
+          <span className="text-[12px] text-ink-500 font-medium">
+            {isProfiling ? 'Profilazione' : `Domanda ${likertIndex + 1} / ${likertQuestions.length}`}
+          </span>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        {/* Progress bar */}
-        <div className="mb-8">
-          <div className="flex justify-between text-sm text-gray-600 mb-2">
-            <span>Progresso</span>
-            <span>{Math.round(progress)}%</span>
+      <main className="max-w-3xl mx-auto px-6 py-8 space-y-6">
+
+        {/* Progress bar — solo Likert */}
+        {!isProfiling && (
+          <div>
+            <div className="flex justify-between text-[12px] text-ink-500 mb-1.5">
+              <span>Progresso</span>
+              <span>{Math.round(progress)}%</span>
+            </div>
+            <div className="w-full bg-paper-200 rounded-sm h-1.5">
+              <div className="bg-ink-900 h-1.5 rounded-sm transition-all duration-300" style={{ width: `${progress}%` }} />
+            </div>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-3">
-            <div
-              className="bg-purple-600 h-3 rounded-full transition-all duration-300"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-        </div>
+        )}
 
         {/* Question card */}
-        <div className="bg-white rounded-lg shadow-lg p-8 mb-6">
+        <div className="bg-paper-50 border border-paper-200 rounded-md shadow-sm-ink p-8">
           {isProfiling && (
-            <span className="inline-block mb-3 text-xs font-semibold uppercase tracking-wider text-purple-600 bg-purple-50 px-3 py-1 rounded-full">
+            <span className="inline-block mb-4 text-[10px] font-semibold uppercase tracking-eyebrow text-sienna-600 bg-sienna-50 border border-sienna-300 px-3 py-1 rounded-sm">
               Domanda di profilazione
             </span>
           )}
-          <h2 className="text-xl font-semibold text-gray-900 mb-8">
+          <h2 className="font-display text-[20px] font-medium text-ink-900 mb-8 leading-snug">
             {currentQuestion.question}
           </h2>
 
-          {/* ── LIKERT ──────────────────────────────────────────────────── */}
+          {/* ── LIKERT ─────────────────────────────────────────────────────── */}
           {currentQuestion.type === 'likert' && (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {[1, 2, 3, 4, 5].map(value => (
                 <button
                   key={value}
                   onClick={() => handleAnswer(value)}
-                  className={`w-full p-4 rounded-lg border-2 transition-all ${
+                  className={`w-full px-5 py-3.5 rounded-sm border text-left transition-all font-body text-[14px] ${
                     answers[currentQuestion.id] === value
-                      ? 'border-purple-600 bg-purple-50'
-                      : 'border-gray-200 hover:border-purple-300 hover:bg-gray-50'
+                      ? 'border-ink-900 bg-ink-900 text-paper-50 font-medium'
+                      : 'border-paper-200 bg-paper-50 text-ink-800 hover:border-ink-500 hover:bg-paper-100'
                   }`}
                 >
-                  <span className="font-medium text-gray-900">
-                    {value === 1 && "Per niente d'accordo"}
-                    {value === 2 && "Poco d'accordo"}
-                    {value === 3 && "Mediamente d'accordo"}
-                    {value === 4 && "Abbastanza d'accordo"}
-                    {value === 5 && "Pienamente d'accordo"}
-                  </span>
+                  <span className="text-[11px] font-bold mr-3 opacity-50">{value}</span>
+                  {likertLabels[value]}
                 </button>
               ))}
             </div>
           )}
 
-          {/* ── SINGLE CHOICE ────────────────────────────────────────────── */}
+          {/* ── SINGLE CHOICE ──────────────────────────────────────────────── */}
           {currentQuestion.type === 'single_choice' && (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {currentQuestion.options?.map(option => (
                 <button
                   key={option}
                   onClick={() => handleSingleChoice(option)}
-                  className={`w-full p-4 rounded-lg border-2 text-left transition-all ${
+                  className={`w-full px-5 py-3.5 rounded-sm border text-left transition-all font-body text-[14px] ${
                     profilingAnswers[String(currentQuestion.id)] === option
-                      ? 'border-purple-600 bg-purple-50'
-                      : 'border-gray-200 hover:border-purple-300 hover:bg-gray-50'
+                      ? 'border-sienna-600 bg-sienna-50 text-sienna-900 font-medium'
+                      : 'border-paper-200 bg-paper-50 text-ink-800 hover:border-sienna-400 hover:bg-paper-100'
                   }`}
                 >
-                  <span className="font-medium text-gray-900">{option}</span>
+                  {option}
                 </button>
               ))}
             </div>
           )}
 
-          {/* ── TEXTAREA ─────────────────────────────────────────────────── */}
+          {/* ── TEXTAREA ───────────────────────────────────────────────────── */}
           {currentQuestion.type === 'textarea' && (
-            <div>
+            <div className="space-y-2">
               <textarea
                 rows={5}
                 value={textareaValue}
                 onChange={e => setTextareaValue(e.target.value)}
-                placeholder="Scrivi qui la tua risposta (facoltativo)..."
-                className="w-full p-4 rounded-lg border-2 border-gray-200 focus:border-purple-500 focus:outline-none resize-none text-gray-900 text-sm"
+                placeholder="Scrivi qui la tua risposta (facoltativo)…"
+                className="w-full px-4 py-3 rounded-sm border border-paper-200 bg-paper-100 focus:border-ink-600 focus:outline-none resize-none font-body text-[14px] text-ink-900 placeholder-ink-400"
               />
-              <p className="text-xs text-gray-400 mt-1">Campo facoltativo — puoi lasciarlo vuoto</p>
+              <p className="text-[11px] text-ink-400">Campo facoltativo — puoi lasciarlo vuoto</p>
             </div>
           )}
         </div>
 
         {/* Navigation */}
         <div className="flex justify-between items-center">
-          <button
-            onClick={handlePrevious}
-            disabled={currentQuestionIndex === 0}
-            className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
-          >
-            ← Precedente
-          </button>
+          <Button variant="secondary" onClick={handlePrevious} disabled={currentQuestionIndex === 0}
+            className="flex items-center gap-2">
+            <ArrowLeft className="w-4 h-4" /> Precedente
+          </Button>
 
           {isLastQuestion ? (
-            <button
-              onClick={handleCompleteLikert}
-              className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold"
-            >
-              Continua con Domande Situazionali →
-            </button>
+            <Button variant="accent" onClick={handleCompleteLikert} className="flex items-center gap-2">
+              Continua <ArrowRight className="w-4 h-4" />
+            </Button>
           ) : currentQuestion.type === 'textarea' ? (
-            <button
-              onClick={handleNext}
-              className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
-            >
-              Successiva →
-            </button>
-          ) : null}
+            <Button variant="primary" onClick={handleNext} className="flex items-center gap-2">
+              Successiva <ArrowRight className="w-4 h-4" />
+            </Button>
+          ) : (
+            // Likert e single_choice avanzano automaticamente al click — bottone disabilitato come navigazione manuale
+            <Button variant="ghost" onClick={handleNext}
+              disabled={currentQuestion.type === 'likert' && answers[currentQuestion.id] == null}
+              className="flex items-center gap-2 text-ink-600">
+              Successiva <ArrowRight className="w-4 h-4" />
+            </Button>
+          )}
         </div>
       </main>
     </div>
