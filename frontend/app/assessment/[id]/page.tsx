@@ -238,7 +238,7 @@ export default function AssessmentPage() {
       })
       if (!responseSituational.ok) throw new Error('Failed to save situational responses')
 
-      // Build user_context from profiling answers and save
+      // Build user_context from profiling answers and save (non-blocking)
       const userContext = {
         employment_status: profilingAnswers['profiling_1'] ?? null,
         years_at_company: profilingAnswers['profiling_2'] ?? null,
@@ -246,7 +246,8 @@ export default function AssessmentPage() {
         assessment_motivation: profilingAnswers['profiling_4'] ?? null,
         development_goals: profilingAnswers['profiling_5'] ?? null,
       }
-      await api.assessments.saveUserContext(assessmentId, userContext)
+      api.assessments.saveUserContext(assessmentId, userContext)
+        .catch(err => console.warn('saveUserContext failed (non-blocking):', err))
 
       // Calculate Likert category scores (excludes profiling)
       const categoryScores: Record<string, { total: number; count: number }> = {}
