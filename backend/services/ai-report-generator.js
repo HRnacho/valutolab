@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { supabase } from '../config/supabase.js';
+import db from '../config/database.js';
 import { categoryLabels } from '../data/questions.js';
 
 // Inizializza client Anthropic
@@ -274,27 +274,24 @@ REGOLE IMPORTANTI:
  * Recupera dati assessment con weighted blend
  */
 async function getAssessmentData(assessmentId) {
-  const { data: assessment, error: assessmentError } = await supabase
-    .from('assessments')
-    .select('*')
-    .eq('id', assessmentId)
-    .single();
+  const { rows: assessmentRows } = await db.query(
+    'SELECT * FROM assessments WHERE id = $1',
+    [assessmentId]
+  );
+  if (!assessmentRows[0]) throw new Error(`Assessment not found: ${assessmentId}`);
+  const assessment = assessmentRows[0];
 
-  if (assessmentError) throw new Error(`Assessment not found: ${assessmentError.message}`);
-
-  const { data: results, error: resultsError } = await supabase
-    .from('combined_assessment_results')
-    .select('*')
-    .eq('assessment_id', assessmentId);
-
-  if (resultsError) throw new Error(`Results not found: ${resultsError.message}`);
+  const { rows: results } = await db.query(
+    'SELECT * FROM combined_assessment_results WHERE assessment_id = $1',
+    [assessmentId]
+  );
 
   const categoryScores = {};
   results.forEach(r => {
     categoryScores[r.skill_category] = {
       likert: parseFloat(r.likert_score) || 0,
-      sjt: parseFloat(r.sjt_score) || 0,
-      final: parseFloat(r.final_score) || 0
+      sjt:    parseFloat(r.sjt_score)    || 0,
+      final:  parseFloat(r.final_score)  || 0
     };
   });
 
@@ -310,52 +307,46 @@ async function getAssessmentData(assessmentId) {
  * Recupera risposte situazionali con dettagli
  */
 async function getSituationalData(assessmentId) {
-  const { data: responses, error } = await supabase
-    .from('situational_responses')
-    .select(`
-      *,
-      question:situational_questions(
-        primary_skill,
-        situation,
-        options
-      )
-    `)
-    .eq('assessment_id', assessmentId);
+  try {
+    const { rows } = await db.query(
+      `SELECT sr.*, sq.primary_skill, sq.situation, sq.options, sr.skill_weights
+       FROM situational_responses sr
+       JOIN situational_questions sq ON sq.id = sr.question_id
+       WHERE sr.assessment_id = $1`,
+      [assessmentId]
+    );
 
-  if (error) {
-    console.error('Error fetching situational responses:', error);
+    return rows.map(r => {
+      const options = Array.isArray(r.options) ? r.options : JSON.parse(r.options || '[]');
+      const selectedOption = options.find(opt => opt.label === r.selected_option);
+      return {
+        skill:         r.primary_skill,
+        situation:     r.situation,
+        selected:      r.selected_option,
+        selectedText:  selectedOption?.text || '',
+        skillWeights:  r.skill_weights
+      };
+    });
+  } catch (err) {
+    console.error('Error fetching situational responses:', err);
     return [];
   }
-
-  return responses.map(r => {
-    const question = r.question;
-    const selectedOption = question.options.find(opt => opt.label === r.selected_option);
-    return {
-      skill: question.primary_skill,
-      situation: question.situation,
-      selected: r.selected_option,
-      selectedText: selectedOption?.text || '',
-      skillWeights: r.skill_weights
-    };
-  });
 }
 
 /**
  * Recupera profilo utente
  */
 async function getUserProfile(userId) {
-  const { data: profile, error } = await supabase
-    .from('user_profiles')
-    .select('*')
-    .eq('id', userId)
-    .single();
-
-  if (error) {
+  try {
+    const { rows } = await db.query(
+      'SELECT * FROM user_profiles WHERE id = $1',
+      [userId]
+    );
+    return rows[0] ?? { role: null, industry: null, seniority: null };
+  } catch (err) {
     console.warn('User profile not found, using defaults');
     return { role: null, industry: null, seniority: null };
   }
-
-  return profile;
 }
 
 /**
@@ -448,25 +439,25 @@ export async function generateQualitativeReport(assessmentId) {
     const enrichedInterpretations = enrichWithEscoData(reportData.category_interpretations);
 
     // 6. Salva in database (hr_notes salvato separatamente, mai esposto al candidato via /api/data)
-    const { data: savedReport, error: saveError } = await supabase
-      .from('qualitative_reports')
-      .insert({
-        assessment_id: assessmentId,
-        user_id: assessmentData.userId,
-        category_interpretations: enrichedInterpretations,
-        development_plan: reportData.development_plan,
-        profile_insights: reportData.profile_insights,
-        hr_notes: reportData.hr_notes ?? null,
-        ai_model: 'claude-sonnet-4-6',
-        generation_tokens: response.usage.output_tokens
-      })
-      .select()
-      .single();
-
-    if (saveError) {
-      console.error('❌ Failed to save report:', saveError);
-      throw new Error(`Failed to save report: ${saveError.message}`);
-    }
+    const { rows: insertRows } = await db.query(
+      `INSERT INTO qualitative_reports
+         (assessment_id, user_id, category_interpretations,
+          development_plan, profile_insights, hr_notes,
+          ai_model, generation_tokens)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING *`,
+      [
+        assessmentId,
+        assessmentData.userId,
+        JSON.stringify(enrichedInterpretations),
+        JSON.stringify(reportData.development_plan),
+        JSON.stringify(reportData.profile_insights),
+        reportData.hr_notes ? JSON.stringify(reportData.hr_notes) : null,
+        'claude-sonnet-4-6',
+        response.usage.output_tokens
+      ]
+    );
+    const savedReport = insertRows[0];
 
     console.log(`💾 Report saved successfully: ${savedReport.id}`);
     console.log(`🇪🇺 ESCO v1.2 data included in all 12 categories`);
@@ -483,18 +474,11 @@ export async function generateQualitativeReport(assessmentId) {
  * Recupera report qualitativo esistente
  */
 export async function getQualitativeReport(assessmentId) {
-  const { data: report, error } = await supabase
-    .from('qualitative_reports')
-    .select('*')
-    .eq('assessment_id', assessmentId)
-    .single();
-
-  if (error) {
-    if (error.code === 'PGRST116') return null;
-    throw new Error(`Failed to fetch report: ${error.message}`);
-  }
-
-  return report;
+  const { rows } = await db.query(
+    'SELECT * FROM qualitative_reports WHERE assessment_id = $1 LIMIT 1',
+    [assessmentId]
+  );
+  return rows[0] ?? null;
 }
 
 /**
