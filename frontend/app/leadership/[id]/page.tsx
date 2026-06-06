@@ -4,23 +4,25 @@ import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { useAuth } from '@/lib/AuthContext'
 import { api } from '@/lib/api'
+import { Wordmark } from '@/components/ui/Wordmark'
+import { Button } from '@/components/ui/Button'
+import { ArrowLeft, ArrowRight, CheckCircle } from 'lucide-react'
 
 interface Question {
   id: string
   dimension: string
   domanda: string
-  opzioni: {
-    A: string
-    B: string
-    C: string
-    D: string
-  }
-  pesi: {
-    A: number
-    B: number
-    C: number
-    D: number
-  }
+  opzioni: { A: string; B: string; C: string; D: string }
+  pesi: { A: number; B: number; C: number; D: number }
+}
+
+const dimensionNames: Record<string, string> = {
+  visione_strategica:      'Visione Strategica',
+  people_management:       'People Management',
+  decisionalita:           'Decisionalità',
+  change_management:       'Change Management',
+  influenza_persuasione:   'Influenza & Persuasione',
+  orientamento_risultati:  'Orientamento ai Risultati'
 }
 
 export default function LeadershipAssessmentPage() {
@@ -30,7 +32,6 @@ export default function LeadershipAssessmentPage() {
   const { user: authUser } = useAuth()
 
   const [loading, setLoading] = useState(true)
-  const [user, setUser] = useState<any>(null)
   const [questions, setQuestions] = useState<Question[]>([])
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [answers, setAnswers] = useState<Record<string, string>>({})
@@ -39,129 +40,71 @@ export default function LeadershipAssessmentPage() {
   useEffect(() => {
     const init = async () => {
       const user = authUser
-      if (!user) {
-        router.push('/login')
-        return
-      }
-      setUser(user)
+      if (!user) { router.push('/login'); return }
 
-      // Carica domande
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://valutolab-backend.onrender.com'
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'
         const response = await fetch(`${apiUrl}/api/leadership/questions`)
         const data = await response.json()
+        if (data.success) setQuestions(data.data.questions)
 
-        if (data.success) {
-          setQuestions(data.data.questions)
-        }
-
-       // Carica risposte salvate
         const responsesRes = await api.leadership.responses.list(assessmentId)
         const savedResponses = responsesRes.responses || []
-
         if (savedResponses.length > 0) {
           const answersMap: Record<string, string> = {}
           savedResponses.forEach((r: any) => { answersMap[r.question_id] = r.answer })
           setAnswers(answersMap)
-}
-
+        }
         setLoading(false)
-      } catch (error) {
-        console.error('Error loading questions:', error)
+      } catch {
         alert('Errore nel caricamento delle domande')
       }
     }
-
     init()
-  }, [router, assessmentId])
+  }, [router, assessmentId, authUser])
 
   const handleAnswer = async (answer: string) => {
     const currentQuestion = questions[currentQuestionIndex]
     const score = currentQuestion.pesi[answer as keyof typeof currentQuestion.pesi]
+    setAnswers(prev => ({ ...prev, [currentQuestion.id]: answer }))
 
-    // Salva risposta localmente
-    setAnswers({
-      ...answers,
-      [currentQuestion.id]: answer
-    })
-
-    // Salva su backend
     setSaving(true)
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://valutolab-backend.onrender.com'
-      
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'
       await fetch(`${apiUrl}/api/leadership/${assessmentId}/response`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          questionId: currentQuestion.id,
-          dimension: currentQuestion.dimension,
-          answer: answer,
-          score: score
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ questionId: currentQuestion.id, dimension: currentQuestion.dimension, answer, score })
       })
-    } catch (error) {
-      console.error('Error saving answer:', error)
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const handleNext = () => {
-    if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1)
-    }
-  }
-
-  const handlePrevious = () => {
-    if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(currentQuestionIndex - 1)
-    }
+    } catch { /* fire and forget */ }
+    finally { setSaving(false) }
   }
 
   const handleComplete = async () => {
-    // Verifica che tutte le domande abbiano risposta
-    const allAnswered = questions.every(q => answers[q.id])
-
-    if (!allAnswered) {
+    if (!questions.every(q => answers[q.id])) {
       alert('Rispondi a tutte le domande prima di completare')
       return
     }
-
     setSaving(true)
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://valutolab-backend.onrender.com'
-      
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'
       const response = await fetch(`${apiUrl}/api/leadership/${assessmentId}/calculate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        method: 'POST', headers: { 'Content-Type': 'application/json' }
       })
-
       const data = await response.json()
-
-      if (data.success) {
-        router.push(`/leadership/${assessmentId}/results`)
-      } else {
-        throw new Error(data.message)
-      }
-    } catch (error) {
-      console.error('Error completing assessment:', error)
-      alert('Errore nel completamento dell\'assessment')
-    } finally {
-      setSaving(false)
-    }
+      if (data.success) router.push(`/leadership/${assessmentId}/results`)
+      else throw new Error(data.message)
+    } catch {
+      alert("Errore nel completamento dell'assessment")
+    } finally { setSaving(false) }
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-paper-100">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Caricamento assessment...</p>
+          <div className="w-8 h-8 border-2 border-ink-900 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="mt-4 font-body text-[14px] text-ink-500">Caricamento assessment…</p>
         </div>
       </div>
     )
@@ -169,102 +112,80 @@ export default function LeadershipAssessmentPage() {
 
   if (questions.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <p className="text-red-600">Errore nel caricamento delle domande</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-paper-100">
+        <p className="font-body text-[14px] text-sienna-600">Errore nel caricamento delle domande</p>
       </div>
     )
   }
 
   const currentQuestion = questions[currentQuestionIndex]
   const currentAnswer = answers[currentQuestion.id]
-  const progress = Math.round((Object.keys(answers).length / questions.length) * 100)
+  const answeredCount = Object.keys(answers).length
+  const progress = Math.round((answeredCount / questions.length) * 100)
   const isLastQuestion = currentQuestionIndex === questions.length - 1
 
-  const dimensionNames: Record<string, string> = {
-    visione_strategica: 'Visione Strategica',
-    people_management: 'People Management',
-    decisionalita: 'Decisionalità',
-    change_management: 'Change Management',
-    influenza_persuasione: 'Influenza & Persuasione',
-    orientamento_risultati: 'Orientamento ai Risultati'
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-orange-50">
-      {/* Header */}
-      <nav className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">
-              Leadership Deep Dive
-            </h1>
+    <div className="min-h-screen bg-paper-100 font-body text-ink-900">
+
+      {/* ── HEADER ─────────────────────────────────────────────────── */}
+      <header className="bg-paper-50 border-b border-paper-200 sticky top-0 z-40">
+        <div className="max-w-4xl mx-auto px-6">
+          <div className="flex items-center justify-between h-14">
             <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600">
-                {Object.keys(answers).length}/{questions.length} completate
+              <Wordmark size={18} />
+              <span className="text-[10px] font-semibold uppercase tracking-eyebrow text-level-intermedio bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-sm">
+                Leadership Deep Dive
               </span>
             </div>
+            <span className="text-[12px] text-ink-400">
+              {answeredCount}/{questions.length} completate
+            </span>
           </div>
         </div>
-      </nav>
 
-      {/* Progress Bar */}
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-semibold text-gray-700">
-              Domanda {currentQuestionIndex + 1} di {questions.length}
-            </span>
-            <span className="text-sm font-semibold text-yellow-600">
-              {progress}% completato
-            </span>
+        {/* Progress */}
+        <div className="max-w-4xl mx-auto px-6 pb-3">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[11px] font-medium text-ink-500">Domanda {currentQuestionIndex + 1} di {questions.length}</span>
+            <span className="text-[11px] font-medium text-level-intermedio">{progress}% completato</span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-3">
-            <div 
-              className="bg-gradient-to-r from-yellow-500 to-orange-600 h-3 rounded-full transition-all duration-500"
-              style={{ width: `${progress}%` }}
-            ></div>
+          <div className="w-full bg-paper-200 rounded-sm h-1.5">
+            <div className="bg-ink-900 h-1.5 rounded-sm transition-all duration-500" style={{ width: `${progress}%` }} />
           </div>
         </div>
-      </div>
+      </header>
 
-      {/* Question Card */}
-      <main className="max-w-4xl mx-auto px-4 py-8">
-        <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
-          {/* Dimensione Badge */}
-          <div className="mb-6">
-            <span className="inline-block bg-yellow-100 text-yellow-800 px-4 py-2 rounded-full text-sm font-semibold">
-              📊 {dimensionNames[currentQuestion.dimension]}
+      {/* ── MAIN ───────────────────────────────────────────────────── */}
+      <main className="max-w-4xl mx-auto px-6 py-8 space-y-4">
+
+        {/* Question card */}
+        <div className="bg-paper-50 border border-paper-200 rounded-md shadow-sm-ink p-8">
+          {/* Dimension badge */}
+          <div className="mb-5">
+            <span className="text-[10px] font-semibold uppercase tracking-eyebrow px-2.5 py-1 rounded-sm border text-level-intermedio bg-amber-50 border-amber-200">
+              {dimensionNames[currentQuestion.dimension]}
             </span>
           </div>
 
-          {/* Domanda */}
-          <h2 className="text-2xl font-bold text-gray-900 mb-8">
+          <h2 className="font-display text-[22px] text-ink-900 mb-8 leading-snug">
             {currentQuestion.domanda}
           </h2>
 
-          {/* Opzioni */}
-          <div className="space-y-4">
-            {(['A', 'B', 'C', 'D'] as const).map((option) => (
-              <button
-                key={option}
-                onClick={() => handleAnswer(option)}
-                className={`w-full text-left p-6 rounded-xl border-2 transition-all ${
+          <div className="space-y-3">
+            {(['A', 'B', 'C', 'D'] as const).map(option => (
+              <button key={option} onClick={() => handleAnswer(option)}
+                className={`w-full text-left p-5 rounded-md border-2 transition-all ${
                   currentAnswer === option
-                    ? 'border-yellow-500 bg-yellow-50 shadow-lg'
-                    : 'border-gray-200 hover:border-yellow-300 hover:bg-yellow-50/50'
-                }`}
-              >
-                <div className="flex items-start">
-                  <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold mr-4 ${
-                    currentAnswer === option
-                      ? 'bg-yellow-500 text-white'
-                      : 'bg-gray-200 text-gray-600'
+                    ? 'border-ink-900 bg-ink-900 text-paper-50'
+                    : 'border-paper-200 bg-paper-50 hover:border-ink-400 hover:bg-paper-100'
+                }`}>
+                <div className="flex items-start gap-4">
+                  <div className={`flex-shrink-0 w-7 h-7 rounded-sm flex items-center justify-center text-[12px] font-bold ${
+                    currentAnswer === option ? 'bg-ink-700 text-paper-50' : 'bg-paper-200 text-ink-600'
                   }`}>
                     {option}
                   </div>
-                  <p className="text-gray-700 flex-1">
+                  <p className={`text-[14px] leading-relaxed ${currentAnswer === option ? 'text-paper-100' : 'text-ink-700'}`}>
                     {currentQuestion.opzioni[option]}
                   </p>
                 </div>
@@ -272,59 +193,51 @@ export default function LeadershipAssessmentPage() {
             ))}
           </div>
 
-          {/* Auto-save indicator */}
           {saving && (
-            <div className="mt-4 text-center text-sm text-gray-500">
-              💾 Salvataggio in corso...
-            </div>
+            <p className="mt-4 text-center text-[12px] text-ink-400">
+              <span className="inline-block w-3 h-3 border border-ink-400 border-t-transparent rounded-full animate-spin mr-1.5 align-middle" />
+              Salvataggio…
+            </p>
           )}
         </div>
 
         {/* Navigation */}
         <div className="flex justify-between items-center">
-          <button
-            onClick={handlePrevious}
+          <Button variant="secondary" onClick={() => setCurrentQuestionIndex(i => i - 1)}
             disabled={currentQuestionIndex === 0}
-            className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
-          >
-            ← Precedente
-          </button>
+            className="flex items-center gap-2">
+            <ArrowLeft className="w-4 h-4" /> Precedente
+          </Button>
 
           {!isLastQuestion ? (
-            <button
-              onClick={handleNext}
+            <Button variant="primary" onClick={() => setCurrentQuestionIndex(i => i + 1)}
               disabled={!currentAnswer}
-              className="px-6 py-3 bg-gradient-to-r from-yellow-500 to-orange-600 text-white rounded-lg font-semibold hover:from-yellow-600 hover:to-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-lg"
-            >
-              Successiva →
-            </button>
+              className="flex items-center gap-2">
+              Successiva <ArrowRight className="w-4 h-4" />
+            </Button>
           ) : (
-            <button
-              onClick={handleComplete}
-              disabled={!currentAnswer || saving || Object.keys(answers).length !== questions.length}
-              className="px-8 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg font-bold hover:from-green-600 hover:to-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-lg"
-            >
-              {saving ? 'Elaborazione...' : 'Completa Assessment ✓'}
-            </button>
+            <Button variant="primary" onClick={handleComplete}
+              disabled={!currentAnswer || saving || answeredCount !== questions.length}
+              className="flex items-center gap-2">
+              <CheckCircle className="w-4 h-4" />
+              {saving ? 'Elaborazione…' : 'Completa Assessment'}
+            </Button>
           )}
         </div>
 
-        {/* Progress Grid */}
-        <div className="mt-8 bg-white rounded-xl p-6 shadow-lg">
-          <h3 className="font-semibold text-gray-900 mb-4">Progresso Domande</h3>
-          <div className="grid grid-cols-10 gap-2">
+        {/* Progress grid */}
+        <div className="bg-paper-50 border border-paper-200 rounded-md shadow-sm-ink p-5">
+          <p className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400 mb-3">Progresso Domande</p>
+          <div className="grid grid-cols-10 gap-1.5">
             {questions.map((q, index) => (
-              <button
-                key={q.id}
-                onClick={() => setCurrentQuestionIndex(index)}
-                className={`aspect-square rounded-lg text-sm font-semibold transition ${
+              <button key={q.id} onClick={() => setCurrentQuestionIndex(index)}
+                className={`aspect-square rounded-sm text-[11px] font-semibold transition ${
                   answers[q.id]
-                    ? 'bg-yellow-500 text-white'
+                    ? 'bg-ink-900 text-paper-50'
                     : index === currentQuestionIndex
-                    ? 'bg-yellow-200 text-yellow-900 ring-2 ring-yellow-500'
-                    : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                }`}
-              >
+                    ? 'bg-paper-200 text-ink-900 ring-2 ring-ink-900 ring-offset-1'
+                    : 'bg-paper-200 text-ink-500 hover:bg-paper-300'
+                }`}>
                 {index + 1}
               </button>
             ))}
