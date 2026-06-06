@@ -161,15 +161,14 @@ Pesi skill: ${JSON.stringify(choice.skillWeights)}`;
     }
   }
 
-  // Sezione hr_notes: solo se B2B
+  // Sezione hr_notes: solo se B2B (max 3 frasi totali, compatto)
   const hrNotesInstruction = isB2B
     ? `
 "hr_notes": {
-  "hiring_recommendation": "Valutazione complessiva per la selezione: Consigliato / Da valutare / Non adatto + motivazione sintetica",
-  "fit_for_role": "Analisi del fit rispetto a un ruolo manageriale/professionale generico in base ai pattern comportamentali",
-  "risk_flags": ["Eventuali aree di rischio per il contesto aziendale (es. gap leadership, bassa resilienza sotto pressione)"],
-  "onboarding_suggestions": ["Suggerimento 1 per l'onboarding o integrazione nel team", "Suggerimento 2"],
-  "development_priority_hr": "Competenza su cui investire prioritariamente per massimizzare il contributo in azienda"
+  "hiring_recommendation": "Consigliato/Da valutare/Non adatto + 1 frase motivazione",
+  "fit_for_role": "1 frase sul fit comportamentale per ruolo professionale",
+  "risk_flags": ["max 2 aree di rischio brevi"],
+  "development_priority_hr": "1 competenza prioritaria da sviluppare in azienda"
 }`
     : '';
 
@@ -218,16 +217,15 @@ Genera un report qualitativo professionale in formato JSON con questa struttura 
     "communication": {
       "score": 4.3,
       "level": "Avanzato",
-      "description": "Descrizione del livello basata SIA su autovalutazione CHE su scelte comportamentali (2-3 frasi). Se disponibile, collega l'analisi al contesto lavorativo dichiarato.",
-      "strengths": ["punto forza 1 confermato da scelte situazionali", "punto forza 2"],
-      "improvements": ["area miglioramento 1 emersa dalle scelte comportamentali", "area miglioramento 2"],
-      "behavioral_notes": "Note specifiche sulle scelte situazionali per questa competenza",
-      "contextual_notes": "Come questa competenza si applica al contesto specifico dichiarato dall'utente (settore, ruolo, obiettivi). Lascia vuoto se non ci sono dati di contesto.",
+      "description": "MAX 2 frasi: livello raggiunto + 1 osservazione comportamentale chiave.",
+      "strengths": ["punto forza chiave (max 12 parole)", "secondo punto forza (max 12 parole)"],
+      "improvements": ["area miglioramento principale (max 12 parole)", "seconda area (max 12 parole)"],
+      "behavioral_notes": "1 frase breve sulle scelte situazionali per questa competenza.",
+      "contextual_notes": "1-2 frasi: applicazione al contesto dichiarato. Stringa vuota se nessun contesto disponibile.",
       "esco_mapping": {
         "esco_level": "Avanzato",
-        "esco_skills_demonstrated": ["comunicare con gli altri", "ascoltare attivamente"],
-        "esco_skills_to_develop": ["dare feedback costruttivo"],
-        "recognition_note": "Competenza riconosciuta nel framework europeo ESCO v1.2 come skill trasversale ad alta domanda nel mercato del lavoro europeo."
+        "esco_skills_demonstrated": ["skill 1", "skill 2"],
+        "esco_skills_to_develop": ["skill da sviluppare"]
       }
     }
   },
@@ -239,42 +237,37 @@ Genera un report qualitativo professionale in formato JSON con questa struttura 
         "current_score": 4.0,
         "target_score": 4.5,
         "priority": "Alta",
-        "gap_analysis": "Differenza tra come ti percepisci e come agisci realmente",
-        "esco_target": "Raggiungere il livello Esperto ESCO nel gruppo 'Lavorare con gli altri'",
-        "actions": [
-          "Azione concreta 1 con timeline specifica",
-          "Azione concreta 2 con timeline specifica",
-          "Azione concreta 3 con timeline specifica"
-        ],
-        "resources": ["Libro/Corso consigliato 1", "Risorsa 2"]
+        "gap_analysis": "1 frase: gap autopercezione vs comportamento reale.",
+        "actions": ["Azione 1 con timeline", "Azione 2 con timeline"],
+        "resources": ["Risorsa 1"]
       }
     ],
     "timeline": "90 giorni",
-    "quick_wins": ["Quick win 1 basato su pattern comportamentali", "Quick win 2", "Quick win 3"]
+    "quick_wins": ["Quick win 1", "Quick win 2"]
   },
 
   "profile_insights": {
-    "summary": "Sintesi del profilo complessivo in 3-4 frasi che integra autovalutazione, pattern comportamentali e contesto dichiarato dall'utente",
-    "patterns": ["Pattern comportamentale 1 identificato dalle scelte situazionali", "Pattern 2"],
-    "self_awareness": "Livello di autoconsapevolezza: quanto la percezione corrisponde al comportamento reale",
-    "suggested_profile": "Es: Technical Leader, Strategic Thinker, People Manager",
-    "ideal_roles": ["Ruolo ideale 1", "Ruolo ideale 2", "Ruolo ideale 3"],
-    "unique_strengths": "Cosa distingue positivamente questo profilo basato su dati comportamentali",
-    "esco_profile_summary": "Sintesi ESCO: quali aree trasversali del framework europeo questo professionista padroneggia e quali rappresentano un'opportunità di crescita certificabile."
+    "summary": "2-3 frasi: sintesi profilo con pattern comportamentali e contesto utente.",
+    "patterns": ["Pattern 1 da scelte situazionali", "Pattern 2"],
+    "self_awareness": "1 frase: grado di corrispondenza autopercezione/comportamento.",
+    "suggested_profile": "Es: Technical Leader, Strategic Thinker",
+    "ideal_roles": ["Ruolo 1", "Ruolo 2"],
+    "unique_strengths": "1-2 frasi: cosa distingue questo profilo.",
+    "esco_profile_summary": "1-2 frasi: aree ESCO padroneggiate e opportunità di crescita."
   }${isB2B ? `,\n\n  ${hrNotesInstruction}` : ''}
 }
 
 REGOLE IMPORTANTI:
-1. Usa un tono professionale ma accessibile in italiano
-2. Sii specifico e concreto, evita frasi generiche
-3. Ogni azione nel development_plan deve essere SMART (Specific, Measurable, Achievable, Relevant, Time-bound)
-4. Basa tutto sui dati forniti, specialmente le scelte situazionali
-5. Rispondi SOLO con il JSON, NESSUN testo aggiuntivo prima o dopo
-6. Assicurati che il JSON sia valido e parsabile
-7. Includi TUTTE le 12 categorie in category_interpretations, ognuna con il campo esco_mapping
-8. Le scelte situazionali hanno più peso nel giudizio rispetto all'autovalutazione
-9. In esco_skills_demonstrated metti le skill effettivamente evidenziate dai punteggi alti
-10. In esco_skills_to_develop metti le skill con punteggi bassi o gap comportamentali${hrNotesRule}`;
+1. Tono professionale in italiano, specifico e concreto
+2. Rispondi SOLO con il JSON valido — NESSUN testo prima o dopo
+3. Includi TUTTE le 12 categorie in category_interpretations
+4. Le scelte situazionali hanno più peso dell'autovalutazione
+5. RISPETTA RIGOROSAMENTE i limiti di lunghezza indicati nella struttura — è critico per non superare il limite di token
+6. description: MAX 2 frasi per categoria
+7. strengths e improvements: MAX 2 elementi, MAX 12 parole ciascuno
+8. behavioral_notes e contextual_notes: MAX 1-2 frasi
+9. development_plan: MAX 3 focus_areas, MAX 2 actions ciascuna
+10. esco_mapping: NO campo recognition_note${hrNotesRule}`;
 }
 
 /**
