@@ -194,13 +194,13 @@ export default function ResultsPage() {
       <main className="max-w-6xl mx-auto px-6 lg:px-8 py-10 space-y-8">
 
         {/* ── HERO SCORES ──────────────────────────────────────────────── */}
-        <div className="bg-ink-900 rounded-md p-8 text-paper-50">
+        <div className="bg-paper-50 border border-paper-200 rounded-md shadow-sm-ink p-8">
           <p className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400 mb-1">Assessment Soft Skills</p>
-          <h1 className="font-display text-display-2 mb-8">Risultati</h1>
+          <h1 className="font-display text-display-2 text-ink-900 mb-8">Risultati</h1>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Punteggio generale */}
-            <div className="bg-ink-800 rounded-md p-6 flex items-center gap-5">
+            <div className="bg-ink-900 rounded-md p-6 flex items-center gap-5">
               <ScoreRing value={assessment?.total_score ?? 0} size={80} />
               <div>
                 <p className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400 mb-1">Punteggio</p>
@@ -211,7 +211,7 @@ export default function ResultsPage() {
             </div>
 
             {/* Percentuale */}
-            <div className="bg-ink-800 rounded-md p-6">
+            <div className="bg-ink-900 rounded-md p-6">
               <p className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400 mb-2">Percentuale competenze</p>
               <p className="font-display text-[48px] leading-none text-paper-50">
                 {Math.round((assessment?.total_score / 5) * 100)}<span className="text-[24px] text-ink-400">%</span>
@@ -219,7 +219,7 @@ export default function ResultsPage() {
             </div>
 
             {/* ESCO */}
-            <div className="bg-ink-800 rounded-md p-6">
+            <div className="bg-ink-900 rounded-md p-6">
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-[16px]">🇪🇺</span>
                 <p className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400">Standard ESCO v1.2</p>
@@ -305,7 +305,7 @@ export default function ResultsPage() {
                 <PolarGrid stroke="#ECE6D8" />
                 <PolarAngleAxis dataKey="skill" tick={{ fill: '#3A4A5C', fontSize: 11, fontFamily: 'IBM Plex Sans' }} />
                 <PolarRadiusAxis angle={90} domain={[0, 5]} tick={{ fill: '#8A9BB0', fontSize: 10 }} />
-                <Radar name="Competenze" dataKey="score" stroke="#0E1A2B" fill="#0E1A2B" fillOpacity={0.15} strokeWidth={2} />
+                <Radar name="Competenze" dataKey="score" stroke="#0E1A2B" fill="#0E1A2B" fillOpacity={0.35} strokeWidth={2} />
               </RadarChart>
             </ResponsiveContainer>
           </div>
@@ -351,22 +351,22 @@ export default function ResultsPage() {
         {qualitativeReport && (
           <>
             {/* ── PROFILO PROFESSIONALE ──── */}
-            <div className="bg-ink-900 rounded-md p-8 text-paper-50">
+            <div className="bg-paper-50 border border-paper-200 rounded-md shadow-sm-ink p-8">
               <p className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400 mb-1">Analisi AI</p>
-              <h2 className="font-display text-display-3 mb-6">Il Tuo Profilo Professionale</h2>
+              <h2 className="font-display text-display-3 text-ink-900 mb-6">Il Tuo Profilo Professionale</h2>
 
-              <div className="bg-ink-800 rounded-md p-6 mb-6">
-                <p className="font-body text-[15px] leading-relaxed text-paper-100">
+              <div className="bg-paper-100 border border-paper-200 rounded-md p-6 mb-6">
+                <p className="font-body text-[15px] leading-relaxed text-ink-700">
                   {qualitativeReport.profile_insights?.summary}
                 </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <div className="bg-ink-800 rounded-md p-5">
+                <div className="bg-ink-900 rounded-md p-5">
                   <p className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400 mb-2">Profilo Suggerito</p>
                   <p className="font-display text-[20px] text-paper-50">{qualitativeReport.profile_insights?.suggested_profile}</p>
                 </div>
-                <div className="bg-ink-800 rounded-md p-5">
+                <div className="bg-ink-900 rounded-md p-5">
                   <p className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400 mb-2">Ruoli Ideali</p>
                   <div className="flex flex-wrap gap-2">
                     {qualitativeReport.profile_insights?.ideal_roles?.map((role: string, idx: number) => (
@@ -379,9 +379,9 @@ export default function ResultsPage() {
               </div>
 
               {qualitativeReport.profile_insights?.unique_strengths && (
-                <div className="bg-ink-800 rounded-md p-5 mb-4">
+                <div className="bg-paper-100 border border-paper-200 rounded-md p-5 mb-4">
                   <p className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400 mb-2">La Tua Unicità</p>
-                  <p className="font-body text-[15px] text-paper-100">{qualitativeReport.profile_insights.unique_strengths}</p>
+                  <p className="font-body text-[15px] text-ink-700">{qualitativeReport.profile_insights.unique_strengths}</p>
                 </div>
               )}
 
@@ -390,9 +390,9 @@ export default function ResultsPage() {
                   <p className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400 mb-3">Pattern Comportamentali</p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     {qualitativeReport.profile_insights.patterns.map((p: string, idx: number) => (
-                      <div key={idx} className="bg-ink-800 rounded-md p-4 flex items-start gap-3">
+                      <div key={idx} className="bg-paper-100 border border-paper-200 rounded-md p-4 flex items-start gap-3">
                         <span className="text-level-avanzato mt-0.5 text-[16px]">✓</span>
-                        <p className="font-body text-[13px] text-paper-100">{p}</p>
+                        <p className="font-body text-[13px] text-ink-700">{p}</p>
                       </div>
                     ))}
                   </div>
