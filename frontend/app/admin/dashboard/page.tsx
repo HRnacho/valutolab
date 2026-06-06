@@ -1,9 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/AuthContext'
+import { Wordmark } from '@/components/ui/Wordmark'
+import { Button } from '@/components/ui/Button'
+import { Users, FileText, CheckCircle, Building2, Mail, Download, Plus, X, AlertTriangle } from 'lucide-react'
 
 // ==================== INTERFACES ====================
 interface Stats {
@@ -39,15 +41,6 @@ interface Assessment {
   userEmail: string
 }
 
-interface EmailLog {
-  id: string
-  recipient: string
-  subject: string
-  sent_at: string
-  status: 'sent' | 'failed'
-}
-
-// ==================== NEW: TRIAL INTERFACE ====================
 interface Trial {
   id: string
   company_name: string
@@ -66,87 +59,56 @@ interface Trial {
 
 // ==================== CONSTANTS ====================
 const categoryLabels: Record<string, string> = {
-  communication: 'Comunicazione',
-  leadership: 'Leadership',
-  problem_solving: 'Problem Solving',
-  teamwork: 'Lavoro di Squadra',
-  time_management: 'Gestione del Tempo',
-  adaptability: 'Adattabilità',
-  creativity: 'Creatività',
-  critical_thinking: 'Pensiero Critico',
-  empathy: 'Empatia',
-  resilience: 'Resilienza',
-  negotiation: 'Negoziazione',
-  decision_making: 'Decision Making'
+  communication: 'Comunicazione', leadership: 'Leadership', problem_solving: 'Problem Solving',
+  teamwork: 'Lavoro di Squadra', time_management: 'Gestione del Tempo', adaptability: 'Adattabilità',
+  creativity: 'Creatività', critical_thinking: 'Pensiero Critico', empathy: 'Empatia',
+  resilience: 'Resilienza', negotiation: 'Negoziazione', decision_making: 'Decision Making'
 }
 
 const emailTemplates = {
-  welcome: {
-    subject: 'Benvenuto su ValutoLab! 🚀',
-    body: `Ciao {name},
-
-Benvenuto su ValutoLab, la piattaforma per valutare le tue soft skills professionali.
-
-Inizia subito il tuo primo assessment per scoprire i tuoi punti di forza!
-
-🔗 Accedi alla dashboard: https://valutolab.com/dashboard
-
-Un saluto,
-Il Team ValutoLab`
-  },
-  reminder: {
-    subject: 'Completa il tuo Assessment su ValutoLab ⏰',
-    body: `Ciao {name},
-
-Abbiamo notato che hai iniziato un assessment ma non l'hai ancora completato.
-
-Bastano solo 10-15 minuti per terminarlo e scoprire il tuo profilo professionale!
-
-🔗 Riprendi l'assessment: https://valutolab.com/dashboard
-
-Ti aspettiamo!
-Il Team ValutoLab`
-  },
-  congrats: {
-    subject: 'Ottimi risultati! 🎉',
-    body: `Ciao {name},
-
-Complimenti per l'eccellente punteggio nel tuo assessment!
-
-Il tuo profilo mostra competenze professionali di alto livello.
-
-🔗 Visualizza i tuoi risultati: https://valutolab.com/dashboard
-📱 Scarica il badge LinkedIn per condividere il tuo successo!
-
-Continua così!
-Il Team ValutoLab`
-  },
-  custom: {
-    subject: '',
-    body: ''
-  }
+  welcome: { subject: 'Benvenuto su ValutoLab! 🚀', body: `Ciao {name},\n\nBenvenuto su ValutoLab, la piattaforma per valutare le tue soft skills professionali.\n\nIniziasubito il tuo primo assessment!\n\n🔗 https://valutolab.com/dashboard\n\nIl Team ValutoLab` },
+  reminder: { subject: 'Completa il tuo Assessment su ValutoLab ⏰', body: `Ciao {name},\n\nHai iniziato un assessment ma non l'hai ancora completato.\n\nBastano solo 10-15 minuti!\n\n🔗 https://valutolab.com/dashboard\n\nIl Team ValutoLab` },
+  congrats: { subject: 'Ottimi risultati! 🎉', body: `Ciao {name},\n\nComplimenti per l'eccellente punteggio!\n\n🔗 https://valutolab.com/dashboard\n\nIl Team ValutoLab` },
+  custom: { subject: '', body: '' }
 }
 
-// ==================== MAIN COMPONENT ====================
+// ==================== HELPERS ====================
+const inputCls = 'w-full px-3 py-2 border border-paper-300 rounded-sm bg-paper-100 focus:border-ink-600 focus:outline-none font-body text-[13px] text-ink-900 placeholder-ink-400'
+const labelCls = 'block text-[11px] font-medium text-ink-600 uppercase tracking-eyebrow mb-1.5'
+
+const TrialStatusBadge = ({ trial }: { trial: Trial }) => {
+  const now = new Date()
+  const expires = new Date(trial.expires_at)
+  if (trial.status === 'pending')
+    return <span className="text-[10px] font-semibold uppercase tracking-eyebrow px-2 py-0.5 rounded-sm border text-level-intermedio bg-amber-50 border-amber-200">In attesa</span>
+  if (trial.status === 'converted')
+    return <span className="text-[10px] font-semibold uppercase tracking-eyebrow px-2 py-0.5 rounded-sm border text-level-esperto bg-teal-50 border-teal-200">Convertito</span>
+  if (trial.status === 'active' && expires > now) {
+    const daysLeft = Math.ceil((expires.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+    return <span className="text-[10px] font-semibold uppercase tracking-eyebrow px-2 py-0.5 rounded-sm border text-level-avanzato bg-green-50 border-green-200">Attivo ({daysLeft}gg)</span>
+  }
+  return <span className="text-[10px] font-semibold uppercase tracking-eyebrow px-2 py-0.5 rounded-sm border text-sienna-700 bg-sienna-50 border-sienna-300">Scaduto</span>
+}
+
+const thCls = 'px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-eyebrow text-ink-400'
+const tdCls = 'px-4 py-3 text-[13px]'
+
+// ==================== MAIN ====================
 export default function AdminDashboard() {
   const router = useRouter()
   const { user: authUser, logout, loading: authLoading } = useAuth()
   const [loading, setLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
   const [currentAdminEmail, setCurrentAdminEmail] = useState('')
-  
-  // Data states
+
   const [stats, setStats] = useState<Stats | null>(null)
   const [users, setUsers] = useState<User[]>([])
   const [assessments, setAssessments] = useState<Assessment[]>([])
-  const [emailLogs, setEmailLogs] = useState<EmailLog[]>([])
   const [trials, setTrials] = useState<Trial[]>([])
-  
-  // UI states
+
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'assessments' | 'email' | 'trials'>('overview')
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-  
-  // User Management states
+
   const [showCreateUserModal, setShowCreateUserModal] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
   const [selectedUsers, setSelectedUsers] = useState<string[]>([])
@@ -154,720 +116,341 @@ export default function AdminDashboard() {
   const [userFilter, setUserFilter] = useState<'all' | 'active' | 'blocked'>('all')
   const [creatingUser, setCreatingUser] = useState(false)
   const [blockingUser, setBlockingUser] = useState<string | null>(null)
-  
-  // Create User form
-  const [newUserForm, setNewUserForm] = useState({
-    email: '',
-    fullName: '',
-    password: ''
-  })
-  
-  // Email states
+  const [newUserForm, setNewUserForm] = useState({ email: '', fullName: '', password: '' })
+
   const [showEmailModal, setShowEmailModal] = useState(false)
-  const [emailForm, setEmailForm] = useState({
-    recipients: 'all' as 'all' | 'completed' | 'incomplete' | 'selected' | 'custom',
-    customEmails: '',
-    template: 'custom' as keyof typeof emailTemplates,
-    subject: '',
-    body: ''
-  })
+  const [emailForm, setEmailForm] = useState({ recipients: 'all' as 'all' | 'completed' | 'incomplete' | 'selected' | 'custom', customEmails: '', template: 'custom' as keyof typeof emailTemplates, subject: '', body: '' })
   const [sendingEmail, setSendingEmail] = useState(false)
-  
-  // Assessment filter states
+
   const [assessmentFilter, setAssessmentFilter] = useState<'all' | 'completed' | 'in_progress'>('all')
   const [assessmentSearchTerm, setAssessmentSearchTerm] = useState('')
 
-  // Trial states
   const [activatingTrial, setActivatingTrial] = useState<string | null>(null)
   const [trialFilter, setTrialFilter] = useState<'all' | 'pending' | 'active' | 'expired'>('all')
   const [showActivateModal, setShowActivateModal] = useState<Trial | null>(null)
   const [activateForm, setActivateForm] = useState({ quota: 20, days: 30 })
 
-  // ==================== EFFECTS ====================
   useEffect(() => {
     const checkAdmin = async () => {
       if (authLoading) return
       const user = authUser
-      if (!user) {
-        router.push('/login')
-        return
-      }
-
-      // Il role 'admin' è già nel JWT — nessuna query Supabase necessaria
-      if (user.role !== 'admin') {
-        router.push('/dashboard')
-        return
-      }
-
+      if (!user) { router.push('/login'); return }
+      if (user.role !== 'admin') { router.push('/dashboard'); return }
       setIsAdmin(true)
       setCurrentAdminEmail(user.email || '')
       await loadData()
       setLoading(false)
     }
-
     checkAdmin()
   }, [router, authUser, authLoading])
 
   useEffect(() => {
     if (message) {
-      const timer = setTimeout(() => setMessage(null), 4000)
-      return () => clearTimeout(timer)
+      const t = setTimeout(() => setMessage(null), 4000)
+      return () => clearTimeout(t)
     }
   }, [message])
 
-  // ==================== DATA LOADING ====================
   const loadData = async () => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://valutolab-backend.onrender.com'
-
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'
     try {
-      // Load stats
-      const statsResponse = await fetch(`${apiUrl}/api/admin/stats`)
-      const statsData = await statsResponse.json()
-      if (statsData.success) setStats(statsData.stats)
-
-      // Load users
-      const usersResponse = await fetch(`${apiUrl}/api/admin/users`)
-      const usersData = await usersResponse.json()
-      if (usersData.success) setUsers(usersData.users)
-
-      // Load assessments
-      const assessmentsResponse = await fetch(`${apiUrl}/api/admin/assessments`)
-      const assessmentsData = await assessmentsResponse.json()
-      if (assessmentsData.success) setAssessments(assessmentsData.assessments)
-
-      // Load trials
-      const trialsResponse = await fetch(`${apiUrl}/api/v1/trial/list`)
-      const trialsData = await trialsResponse.json()
-      if (trialsData.success) setTrials(trialsData.trials)
-
-    } catch (error) {
-      console.error('Error loading admin data:', error)
-      showMessage('error', 'Errore nel caricamento dei dati')
-    }
+      const [sR, uR, aR, tR] = await Promise.all([
+        fetch(`${apiUrl}/api/admin/stats`),
+        fetch(`${apiUrl}/api/admin/users`),
+        fetch(`${apiUrl}/api/admin/assessments`),
+        fetch(`${apiUrl}/api/v1/trial/list`),
+      ])
+      const [sD, uD, aD, tD] = await Promise.all([sR.json(), uR.json(), aR.json(), tR.json()])
+      if (sD.success) setStats(sD.stats)
+      if (uD.success) setUsers(uD.users)
+      if (aD.success) setAssessments(aD.assessments)
+      if (tD.success) setTrials(tD.trials)
+    } catch { showMsg('error', 'Errore nel caricamento dei dati') }
   }
 
-  // ==================== HELPER FUNCTIONS ====================
-  const showMessage = (type: 'success' | 'error', text: string) => {
-    setMessage({ type, text })
-  }
+  const showMsg = (type: 'success' | 'error', text: string) => setMessage({ type, text })
 
   const exportToCSV = (data: any[], filename: string) => {
-    if (data.length === 0) return
-
+    if (!data.length) return
     const headers = Object.keys(data[0])
-    const csvContent = [
-      headers.join(','),
-      ...data.map(row => headers.map(header => JSON.stringify(row[header] || '')).join(','))
-    ].join('\n')
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    link.href = URL.createObjectURL(blob)
-    link.download = `${filename}_${new Date().toISOString().split('T')[0]}.csv`
-    link.click()
+    const csv = [headers.join(','), ...data.map(r => headers.map(h => JSON.stringify(r[h] || '')).join(','))].join('\n')
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }))
+    a.download = `${filename}_${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
   }
 
-  const getTrialStatusBadge = (trial: Trial) => {
-    const now = new Date()
-    const expires = new Date(trial.expires_at)
-    
-    if (trial.status === 'pending') {
-      return <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">⏳ In attesa</span>
-    }
-    if (trial.status === 'converted') {
-      return <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">💼 Convertito</span>
-    }
-    if (trial.status === 'active' && expires > now) {
-      const daysLeft = Math.ceil((expires.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-      return <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">✅ Attivo ({daysLeft}gg)</span>
-    }
-    return <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">❌ Scaduto</span>
-  }
-
-  // ==================== TRIAL HANDLERS ====================
+  // ── Trial handlers ──
   const handleActivateTrial = async () => {
     if (!showActivateModal) return
     setActivatingTrial(showActivateModal.id)
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'}/api/v1/trial/activate/${showActivateModal.id}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            assessment_quota: activateForm.quota,
-            days: activateForm.days
-          })
-        }
-      )
-      const data = await response.json()
-      if (data.success) {
-        showMessage('success', `✅ Trial attivato! Magic link inviato a ${showActivateModal.contact_email}`)
-        setShowActivateModal(null)
-        await loadData()
-      } else {
-        showMessage('error', data.error || 'Errore attivazione')
-      }
-    } catch (error) {
-      console.error('Error activating trial:', error)
-      showMessage('error', 'Errore attivazione trial')
-    } finally {
-      setActivatingTrial(null)
-    }
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'}/api/v1/trial/activate/${showActivateModal.id}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assessment_quota: activateForm.quota, days: activateForm.days })
+      })
+      const data = await res.json()
+      if (data.success) { showMsg('success', `Trial attivato! Magic link inviato a ${showActivateModal.contact_email}`); setShowActivateModal(null); await loadData() }
+      else showMsg('error', data.error || 'Errore attivazione')
+    } catch { showMsg('error', 'Errore attivazione trial') }
+    finally { setActivatingTrial(null) }
   }
 
   const handleUpdateTrialStatus = async (trialId: string, status: string) => {
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'}/api/v1/trial/update/${trialId}`,
-        {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status })
-        }
-      )
-      const data = await response.json()
-      if (data.success) {
-        showMessage('success', 'Status aggiornato!')
-        await loadData()
-      } else {
-        showMessage('error', 'Errore aggiornamento')
-      }
-    } catch (error) {
-      showMessage('error', 'Errore aggiornamento')
-    }
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/trial/update/${trialId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) })
+      const data = await res.json()
+      if (data.success) { showMsg('success', 'Status aggiornato!'); await loadData() } else showMsg('error', 'Errore aggiornamento')
+    } catch { showMsg('error', 'Errore aggiornamento') }
   }
 
   const handleDeleteTrial = async (trialId: string) => {
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'}/api/v1/trial/delete/${trialId}`,
-        { method: 'DELETE' }
-      )
-      const data = await response.json()
-      if (data.success) {
-        showMessage('success', 'Trial eliminato!')
-        await loadData()
-      } else {
-        showMessage('error', 'Errore eliminazione')
-      }
-    } catch (error) {
-      showMessage('error', 'Errore eliminazione')
-    }
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/trial/delete/${trialId}`, { method: 'DELETE' })
+      const data = await res.json()
+      if (data.success) { showMsg('success', 'Trial eliminato!'); await loadData() } else showMsg('error', 'Errore eliminazione')
+    } catch { showMsg('error', 'Errore eliminazione') }
   }
 
-  const filteredTrials = trials.filter(trial => {
-    if (trialFilter === 'all') return true
-    if (trialFilter === 'pending') return trial.status === 'pending'
-    if (trialFilter === 'active') return trial.status === 'active'
-    if (trialFilter === 'expired') return trial.status === 'expired'
-    return true
-  })
-  // ==================== USER MANAGEMENT HANDLERS ====================
+  // ── User handlers ──
   const handleCreateUser = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setCreatingUser(true)
-
+    e.preventDefault(); setCreatingUser(true)
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'
-      
-      const response = await fetch(`${apiUrl}/api/admin/users/create`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: newUserForm.email,
-          fullName: newUserForm.fullName,
-          password: newUserForm.password
-        })
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/create`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: newUserForm.email, fullName: newUserForm.fullName, password: newUserForm.password })
       })
-
-      const data = await response.json()
-
-      if (data.success) {
-        showMessage('success', 'Utente creato con successo!')
-        setShowCreateUserModal(false)
-        setNewUserForm({ email: '', fullName: '', password: '' })
-        await loadData()
-      } else {
-        showMessage('error', data.message || 'Errore nella creazione utente')
-      }
-    } catch (error) {
-      console.error('Error creating user:', error)
-      showMessage('error', 'Errore nella creazione utente')
-    } finally {
-      setCreatingUser(false)
-    }
+      const data = await res.json()
+      if (data.success) { showMsg('success', 'Utente creato!'); setShowCreateUserModal(false); setNewUserForm({ email: '', fullName: '', password: '' }); await loadData() }
+      else showMsg('error', data.message || 'Errore creazione utente')
+    } catch { showMsg('error', 'Errore creazione utente') }
+    finally { setCreatingUser(false) }
   }
 
-  const handleBlockUser = async (userId: string, currentlyBlocked: boolean) => {
+  const handleBlockUser = async (userId: string, blocked: boolean) => {
     setBlockingUser(userId)
-
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://valutolab-backend.onrender.com'
-      
-      const response = await fetch(`${apiUrl}/api/admin/users/${userId}/block`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ blocked: !currentlyBlocked })
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${userId}/block`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ blocked: !blocked })
       })
-
-      const data = await response.json()
-
-      if (data.success) {
-        showMessage('success', currentlyBlocked ? 'Utente sbloccato!' : 'Utente bloccato!')
-        await loadData()
-      } else {
-        showMessage('error', 'Errore nell\'operazione')
-      }
-    } catch (error) {
-      console.error('Error blocking user:', error)
-      showMessage('error', 'Errore nell\'operazione')
-    } finally {
-      setBlockingUser(null)
-    }
+      const data = await res.json()
+      if (data.success) { showMsg('success', blocked ? 'Utente sbloccato!' : 'Utente bloccato!'); await loadData() }
+      else showMsg('error', "Errore nell'operazione")
+    } catch { showMsg('error', "Errore nell'operazione") }
+    finally { setBlockingUser(null) }
   }
 
   const handleDeleteUser = async (userId: string) => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://valutolab-backend.onrender.com'
-      
-      const response = await fetch(`${apiUrl}/api/admin/users/${userId}`, {
-        method: 'DELETE'
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
-        showMessage('success', 'Utente eliminato con successo')
-        setShowDeleteConfirm(null)
-        await loadData()
-      } else {
-        showMessage('error', 'Errore nell\'eliminazione')
-      }
-    } catch (error) {
-      console.error('Error deleting user:', error)
-      showMessage('error', 'Errore nell\'eliminazione')
-    }
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${userId}`, { method: 'DELETE' })
+      const data = await res.json()
+      if (data.success) { showMsg('success', 'Utente eliminato'); setShowDeleteConfirm(null); await loadData() }
+      else showMsg('error', "Errore nell'eliminazione")
+    } catch { showMsg('error', "Errore nell'eliminazione") }
   }
 
-  const handleDeleteAssessment = async (assessmentId: string) => {
-    if (!confirm('Sei sicuro di voler eliminare questo assessment?')) return
-
+  const handleDeleteAssessment = async (id: string) => {
+    if (!confirm('Eliminare questo assessment?')) return
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://valutolab-backend.onrender.com'
-      
-      const response = await fetch(`${apiUrl}/api/admin/assessments/${assessmentId}`, {
-        method: 'DELETE'
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
-        showMessage('success', 'Assessment eliminato')
-        await loadData()
-      } else {
-        showMessage('error', 'Errore nell\'eliminazione')
-      }
-    } catch (error) {
-      console.error('Error deleting assessment:', error)
-      showMessage('error', 'Errore nell\'eliminazione')
-    }
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/assessments/${id}`, { method: 'DELETE' })
+      const data = await res.json()
+      if (data.success) { showMsg('success', 'Assessment eliminato'); await loadData() }
+      else showMsg('error', "Errore nell'eliminazione")
+    } catch { showMsg('error', "Errore nell'eliminazione") }
   }
 
-  // ==================== EMAIL HANDLERS ====================
   const handleSendEmail = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSendingEmail(true)
-
+    e.preventDefault(); setSendingEmail(true)
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://valutolab-backend.onrender.com'
-      
       let recipients: string[] = []
-      
-      if (emailForm.recipients === 'all') {
-        recipients = users.map(u => u.email)
-      } else if (emailForm.recipients === 'completed') {
-        const completedUsers = users.filter(u => u.assessmentCount > 0)
-        recipients = completedUsers.map(u => u.email)
-      } else if (emailForm.recipients === 'incomplete') {
-        const incompleteUsers = users.filter(u => u.assessmentCount === 0)
-        recipients = incompleteUsers.map(u => u.email)
-      } else if (emailForm.recipients === 'selected') {
-        recipients = users.filter(u => selectedUsers.includes(u.id)).map(u => u.email)
-      } else if (emailForm.recipients === 'custom') {
-        recipients = emailForm.customEmails.split(',').map(e => e.trim()).filter(e => e)
-      }
-
-      const response = await fetch(`${apiUrl}/api/admin/emails/send`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          recipients,
-          subject: emailForm.subject,
-          body: emailForm.body
-        })
+      if (emailForm.recipients === 'all') recipients = users.map(u => u.email)
+      else if (emailForm.recipients === 'completed') recipients = users.filter(u => u.assessmentCount > 0).map(u => u.email)
+      else if (emailForm.recipients === 'incomplete') recipients = users.filter(u => u.assessmentCount === 0).map(u => u.email)
+      else if (emailForm.recipients === 'selected') recipients = users.filter(u => selectedUsers.includes(u.id)).map(u => u.email)
+      else if (emailForm.recipients === 'custom') recipients = emailForm.customEmails.split(',').map(e => e.trim()).filter(Boolean)
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/emails/send`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipients, subject: emailForm.subject, body: emailForm.body })
       })
-
-      const data = await response.json()
-
-      if (data.success) {
-        showMessage('success', `Email inviata a ${recipients.length} destinatari!`)
-        setShowEmailModal(false)
-        setEmailForm({
-          recipients: 'all',
-          customEmails: '',
-          template: 'custom',
-          subject: '',
-          body: ''
-        })
-      } else {
-        showMessage('error', 'Errore nell\'invio email')
-      }
-    } catch (error) {
-      console.error('Error sending email:', error)
-      showMessage('error', 'Errore nell\'invio email')
-    } finally {
-      setSendingEmail(false)
-    }
+      const data = await res.json()
+      if (data.success) { showMsg('success', `Email inviata a ${recipients.length} destinatari!`); setShowEmailModal(false); setEmailForm({ recipients: 'all', customEmails: '', template: 'custom', subject: '', body: '' }) }
+      else showMsg('error', "Errore nell'invio email")
+    } catch { showMsg('error', "Errore nell'invio email") }
+    finally { setSendingEmail(false) }
   }
 
   const handleTemplateChange = (template: keyof typeof emailTemplates) => {
-    setEmailForm({
-      ...emailForm,
-      template,
-      subject: emailTemplates[template].subject,
-      body: emailTemplates[template].body
-    })
+    setEmailForm({ ...emailForm, template, subject: emailTemplates[template].subject, body: emailTemplates[template].body })
   }
 
-  // ==================== EXPORT HANDLERS ====================
-  const handleExportUsers = () => {
-    const exportData = filteredUsers.map(u => ({
-      Email: u.email,
-      Nome: u.full_name || 'N/A',
-      'Assessment Completati': u.assessmentCount,
-      'Data Registrazione': new Date(u.created_at).toLocaleDateString('it-IT'),
-      Status: u.is_blocked ? 'Bloccato' : 'Attivo'
-    }))
-    exportToCSV(exportData, 'valutolab_utenti')
-  }
+  const handleExportUsers = () => exportToCSV(filteredUsers.map(u => ({ Email: u.email, Nome: u.full_name || 'N/A', Assessment: u.assessmentCount, Registrato: new Date(u.created_at).toLocaleDateString('it-IT'), Status: u.is_blocked ? 'Bloccato' : 'Attivo' })), 'valutolab_utenti')
+  const handleExportAssessments = () => exportToCSV(filteredAssessments.map(a => ({ Utente: a.userName, Email: a.userEmail, Status: a.status === 'completed' ? 'Completato' : 'In corso', Punteggio: a.total_score != null ? Number(a.total_score).toFixed(1) : '-', Creazione: new Date(a.created_at).toLocaleDateString('it-IT') })), 'valutolab_assessments')
 
-  const handleExportAssessments = () => {
-    const exportData = filteredAssessments.map(a => ({
-      Utente: a.userName,
-      Email: a.userEmail,
-      Status: a.status === 'completed' ? 'Completato' : 'In corso',
-      Punteggio: a.total_score != null ? Number(a.total_score).toFixed(1) : '-',
-      'Data Creazione': new Date(a.created_at).toLocaleDateString('it-IT'),
-      'Data Completamento': a.completed_at ? new Date(a.completed_at).toLocaleDateString('it-IT') : '-'
-    }))
-    exportToCSV(exportData, 'valutolab_assessments')
-  }
-
-  // ==================== FILTERING ====================
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = user.email.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-                         (user.full_name || '').toLowerCase().includes(userSearchTerm.toLowerCase())
-    
-    const matchesFilter = userFilter === 'all' ||
-                         (userFilter === 'blocked' && user.is_blocked) ||
-                         (userFilter === 'active' && !user.is_blocked)
-    
-    return matchesSearch && matchesFilter
+  const filteredUsers = users.filter(u => {
+    const ms = u.email.toLowerCase().includes(userSearchTerm.toLowerCase()) || (u.full_name || '').toLowerCase().includes(userSearchTerm.toLowerCase())
+    const mf = userFilter === 'all' || (userFilter === 'blocked' && u.is_blocked) || (userFilter === 'active' && !u.is_blocked)
+    return ms && mf
   })
 
-  const filteredAssessments = assessments.filter(assessment => {
-    const matchesSearch = assessment.userName.toLowerCase().includes(assessmentSearchTerm.toLowerCase()) ||
-                         assessment.userEmail.toLowerCase().includes(assessmentSearchTerm.toLowerCase())
-    
-    const matchesFilter = assessmentFilter === 'all' ||
-                         (assessmentFilter === 'completed' && assessment.status === 'completed') ||
-                         (assessmentFilter === 'in_progress' && assessment.status === 'in_progress')
-    
-    return matchesSearch && matchesFilter
+  const filteredAssessments = assessments.filter(a => {
+    const ms = a.userName.toLowerCase().includes(assessmentSearchTerm.toLowerCase()) || a.userEmail.toLowerCase().includes(assessmentSearchTerm.toLowerCase())
+    const mf = assessmentFilter === 'all' || (assessmentFilter === 'completed' && a.status === 'completed') || (assessmentFilter === 'in_progress' && a.status === 'in_progress')
+    return ms && mf
   })
 
-  const handleSignOut = async () => {
-    await logout()
-    router.push('/login')
-  }
+  const filteredTrials = trials.filter(t => trialFilter === 'all' || t.status === trialFilter)
 
-  // ==================== RENDER ====================
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Caricamento dashboard admin...</p>
-        </div>
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-paper-100">
+      <div className="text-center">
+        <div className="w-8 h-8 border-2 border-ink-900 border-t-transparent rounded-full animate-spin mx-auto" />
+        <p className="mt-4 font-body text-[14px] text-ink-500">Caricamento dashboard admin…</p>
       </div>
-    )
-  }
+    </div>
+  )
 
-  if (!isAdmin) {
-    return null
-  }
+  if (!isAdmin) return null
 
-  const completionRate = stats ? Math.round((stats.completedAssessments / stats.totalAssessments) * 100) : 0
   const pendingTrials = trials.filter(t => t.status === 'pending').length
-  const activeTrials = trials.filter(t => t.status === 'active').length
+  const activeTrials  = trials.filter(t => t.status === 'active').length
+
+  const tabs: { key: typeof activeTab; label: string; badge?: number }[] = [
+    { key: 'overview',    label: 'Panoramica' },
+    { key: 'users',       label: `Utenti (${users.length})` },
+    { key: 'assessments', label: `Assessment (${assessments.length})` },
+    { key: 'trials',      label: `Trial Aziende (${trials.length})`, badge: pendingTrials },
+    { key: 'email',       label: 'Email' },
+  ]
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Message Toast */}
+    <div className="min-h-screen bg-paper-100 font-body text-ink-900">
+
+      {/* Toast */}
       {message && (
-        <div className={`fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg ${
-          message.type === 'success' ? 'bg-green-500' : 'bg-red-500'
-        } text-white font-semibold animate-slide-in`}>
+        <div className={`fixed top-4 right-4 z-50 px-5 py-3 rounded-sm shadow-lg-ink text-[14px] font-medium text-paper-50 ${message.type === 'success' ? 'bg-ink-900' : 'bg-sienna-600'}`}>
           {message.text}
         </div>
       )}
 
-      {/* Navigation */}
-      <nav className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+      {/* ── HEADER ─────────────────────────────────────────────────── */}
+      <header className="bg-paper-50 border-b border-paper-200 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-4">
-              <h1 className="text-2xl font-bold text-gray-900">ValutoLab Admin</h1>
-              <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-semibold">
-                🔒 Admin Dashboard
+              <Wordmark size={20} />
+              <span className="text-[10px] font-semibold uppercase tracking-eyebrow text-sienna-700 bg-sienna-50 border border-sienna-300 px-2.5 py-1 rounded-sm">
+                Admin
               </span>
             </div>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600">{currentAdminEmail}</span>
-              <button
-                onClick={() => router.push('/dashboard')}
-                className="text-gray-600 hover:text-gray-900"
-              >
-                Dashboard Utente
-              </button>
-              <button
-                onClick={handleSignOut}
-                className="text-gray-600 hover:text-gray-900"
-              >
-                Esci
-              </button>
+            <div className="flex items-center gap-5">
+              <span className="text-[12px] text-ink-400">{currentAdminEmail}</span>
+              <button onClick={() => router.push('/dashboard')} className="text-[13px] text-ink-500 hover:text-ink-900 transition-colors">Dashboard utente</button>
+              <button onClick={async () => { await logout(); router.push('/login') }} className="text-[13px] text-ink-500 hover:text-sienna-600 transition-colors">Esci</button>
             </div>
           </div>
         </div>
-      </nav>
+      </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        {/* Tabs */}
-        <div className="mb-6">
-          <div className="border-b border-gray-200">
-            <nav className="flex gap-8">
-              <button
-                onClick={() => setActiveTab('overview')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'overview'
-                    ? 'border-purple-600 text-purple-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                📊 Panoramica
-              </button>
-              <button
-                onClick={() => setActiveTab('users')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'users'
-                    ? 'border-purple-600 text-purple-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                👥 Utenti ({users.length})
-              </button>
-              <button
-                onClick={() => setActiveTab('assessments')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'assessments'
-                    ? 'border-purple-600 text-purple-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                📋 Assessment ({assessments.length})
-              </button>
-              <button
-                onClick={() => setActiveTab('trials')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm relative ${
-                  activeTab === 'trials'
-                    ? 'border-purple-600 text-purple-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                🏢 Trial Aziende ({trials.length})
-                {pendingTrials > 0 && (
-                  <span className="absolute -top-1 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
-                    {pendingTrials}
-                  </span>
+      <main className="max-w-7xl mx-auto px-6 lg:px-8 py-8 space-y-6">
+
+        {/* ── TITLE ──────────────────────────────────────────────────── */}
+        <div>
+          <p className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400 mb-1">Pannello di controllo</p>
+          <h1 className="font-display text-display-3 text-ink-900">Admin Dashboard</h1>
+        </div>
+
+        {/* ── TABS ───────────────────────────────────────────────────── */}
+        <div className="bg-paper-50 border border-paper-200 rounded-md shadow-sm-ink">
+          <div className="flex border-b border-paper-200 overflow-x-auto">
+            {tabs.map(tab => (
+              <button key={tab.key} onClick={() => setActiveTab(tab.key)}
+                className={`relative px-5 py-3.5 text-[13px] font-medium whitespace-nowrap transition-colors border-b-2 -mb-px flex-shrink-0 ${
+                  activeTab === tab.key ? 'border-ink-900 text-ink-900' : 'border-transparent text-ink-500 hover:text-ink-800'
+                }`}>
+                {tab.label}
+                {tab.badge != null && tab.badge > 0 && (
+                  <span className="ml-1.5 inline-flex items-center justify-center w-4 h-4 bg-sienna-600 text-paper-50 text-[9px] font-bold rounded-full">{tab.badge}</span>
                 )}
               </button>
-              <button
-                onClick={() => setActiveTab('email')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'email'
-                    ? 'border-purple-600 text-purple-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                📧 Email
-              </button>
-            </nav>
+            ))}
           </div>
-        </div>
 
-        {/* ==================== OVERVIEW TAB ==================== */}
-        {activeTab === 'overview' && stats && (
-          <div className="space-y-6">
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="bg-white rounded-xl shadow-lg p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Utenti Totali</p>
-                    <p className="text-3xl font-bold text-gray-900">{stats.totalUsers}</p>
-                    <p className="text-xs text-green-600 mt-1">+{stats.newUsersLast7Days} ultimi 7gg</p>
-                  </div>
-                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-xl shadow-lg p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Assessment Totali</p>
-                    <p className="text-3xl font-bold text-gray-900">{stats.totalAssessments}</p>
-                    <p className="text-xs text-blue-600 mt-1">+{stats.completedLast7Days} completati/7gg</p>
-                  </div>
-                  <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-xl shadow-lg p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Completati</p>
-                    <p className="text-3xl font-bold text-green-600">{stats.completedAssessments}</p>
-                    <p className="text-xs text-gray-600 mt-1">{stats.inProgressAssessments} in corso</p>
-                  </div>
-                  <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                    <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-xl shadow-lg p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Trial Aziende</p>
-                    <p className="text-3xl font-bold text-gray-900">{trials.length}</p>
-                    <p className="text-xs text-orange-600 mt-1">{pendingTrials} in attesa · {activeTrials} attivi</p>
-                  </div>
-                  <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                    <span className="text-2xl">🏢</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl shadow-lg p-6 text-white">
-              <h3 className="text-lg font-bold mb-4">⚡ Azioni Rapide</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <button
-                  onClick={() => {
-                    setActiveTab('users')
-                    setShowCreateUserModal(true)
-                  }}
-                  className="bg-white/20 hover:bg-white/30 backdrop-blur rounded-lg p-4 text-center transition"
-                >
-                  <div className="text-2xl mb-2">👤</div>
-                  <div className="font-semibold">Crea Utente</div>
-                </button>
-                <button
-                  onClick={() => setActiveTab('trials')}
-                  className="bg-white/20 hover:bg-white/30 backdrop-blur rounded-lg p-4 text-center transition relative"
-                >
-                  <div className="text-2xl mb-2">🏢</div>
-                  <div className="font-semibold">Trial Aziende</div>
-                  {pendingTrials > 0 && (
-                    <span className="absolute top-2 right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
-                      {pendingTrials}
-                    </span>
-                  )}
-                </button>
-                <button
-                  onClick={handleExportUsers}
-                  className="bg-white/20 hover:bg-white/30 backdrop-blur rounded-lg p-4 text-center transition"
-                >
-                  <div className="text-2xl mb-2">📊</div>
-                  <div className="font-semibold">Export Utenti</div>
-                </button>
-                <button
-                  onClick={() => {
-                    setActiveTab('email')
-                    setShowEmailModal(true)
-                  }}
-                  className="bg-white/20 hover:bg-white/30 backdrop-blur rounded-lg p-4 text-center transition"
-                >
-                  <div className="text-2xl mb-2">📧</div>
-                  <div className="font-semibold">Invia Email</div>
-                </button>
-              </div>
-            </div>
-
-            {/* Category Averages */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-6">Punteggi Medi per Competenza</h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {Object.entries(stats.categoryAverages).map(([category, score]) => (
-                  <div key={category} className="bg-gray-50 rounded-lg p-4">
-                    <p className="text-sm text-gray-600 mb-1">{categoryLabels[category]}</p>
-                    <div className="flex items-baseline gap-1">
-                      <p className="text-2xl font-bold text-gray-900">{score}</p>
-                      <p className="text-sm text-gray-500">/5.0</p>
+          {/* ══════════ OVERVIEW ══════════ */}
+          {activeTab === 'overview' && stats && (
+            <div className="p-6 space-y-6">
+              {/* Stats */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {[
+                  { icon: Users,       label: 'Utenti Totali',    value: stats.totalUsers,            sub: `+${stats.newUsersLast7Days} ultimi 7gg` },
+                  { icon: FileText,    label: 'Assessment Totali', value: stats.totalAssessments,      sub: `+${stats.completedLast7Days} completati/7gg` },
+                  { icon: CheckCircle, label: 'Completati',        value: stats.completedAssessments,  sub: `${stats.inProgressAssessments} in corso` },
+                  { icon: Building2,   label: 'Trial Aziende',     value: trials.length,               sub: `${pendingTrials} in attesa · ${activeTrials} attivi` },
+                ].map(({ icon: Icon, label, value, sub }) => (
+                  <div key={label} className="bg-paper-100 border border-paper-200 rounded-md p-5">
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400">{label}</p>
+                      <Icon className="w-4 h-4 text-ink-400" />
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                      <div
-                        className="bg-gradient-to-r from-purple-600 to-blue-600 h-2 rounded-full"
-                        style={{ width: `${(parseFloat(score) / 5) * 100}%` }}
-                      ></div>
-                    </div>
+                    <p className="font-display text-[28px] leading-none text-ink-900">{value}</p>
+                    <p className="text-[11px] text-ink-400 mt-1">{sub}</p>
                   </div>
                 ))}
               </div>
-            </div>
-          </div>
-        )}
 
-        {/* ==================== USERS TAB ==================== */}
-        {activeTab === 'users' && (
-          <div className="space-y-4">
-            <div className="bg-white rounded-xl shadow-lg p-4">
-              <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-                <div className="flex gap-2 flex-1 w-full md:w-auto">
-                  <input
-                    type="text"
-                    placeholder="🔍 Cerca per email o nome..."
-                    value={userSearchTerm}
-                    onChange={(e) => setUserSearchTerm(e.target.value)}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  />
-                  <select
-                    value={userFilter}
-                    onChange={(e) => setUserFilter(e.target.value as any)}
-                    className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  >
+              {/* Quick actions */}
+              <div className="bg-ink-900 rounded-md p-6">
+                <p className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400 mb-4">Azioni Rapide</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {[
+                    { icon: Plus,     label: 'Crea Utente',     action: () => { setActiveTab('users'); setShowCreateUserModal(true) } },
+                    { icon: Building2, label: 'Trial Aziende',   action: () => setActiveTab('trials'), badge: pendingTrials },
+                    { icon: Download, label: 'Export Utenti',   action: handleExportUsers },
+                    { icon: Mail,     label: 'Invia Email',     action: () => { setActiveTab('email'); setShowEmailModal(true) } },
+                  ].map(({ icon: Icon, label, action, badge }) => (
+                    <button key={label} onClick={action}
+                      className="relative bg-ink-800 hover:bg-ink-700 rounded-md p-4 text-left transition-colors flex flex-col gap-2">
+                      <Icon className="w-5 h-5 text-paper-300" />
+                      <p className="text-[13px] font-medium text-paper-50">{label}</p>
+                      {badge != null && badge > 0 && (
+                        <span className="absolute top-2 right-2 w-5 h-5 bg-sienna-600 text-paper-50 text-[9px] font-bold rounded-full flex items-center justify-center">{badge}</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Category averages */}
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400 mb-3">Punteggi Medi per Competenza</p>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {Object.entries(stats.categoryAverages).map(([category, score]) => (
+                    <div key={category} className="bg-paper-100 border border-paper-200 rounded-md p-4">
+                      <p className="text-[11px] text-ink-500 mb-1">{categoryLabels[category]}</p>
+                      <div className="flex items-baseline gap-1 mb-2">
+                        <p className="font-display text-[20px] text-ink-900">{score}</p>
+                        <p className="text-[11px] text-ink-400">/5,0</p>
+                      </div>
+                      <div className="w-full bg-paper-200 rounded-sm h-1">
+                        <div className="bg-ink-900 h-1 rounded-sm" style={{ width: `${(parseFloat(score) / 5) * 100}%` }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ══════════ USERS ══════════ */}
+          {activeTab === 'users' && (
+            <div className="p-6 space-y-4">
+              {/* Toolbar */}
+              <div className="flex flex-col md:flex-row gap-3 items-start md:items-center justify-between">
+                <div className="flex gap-2 flex-1">
+                  <input type="text" placeholder="Cerca per email o nome…" value={userSearchTerm}
+                    onChange={e => setUserSearchTerm(e.target.value)}
+                    className={`${inputCls} flex-1`} />
+                  <select value={userFilter} onChange={e => setUserFilter(e.target.value as any)}
+                    className={`${inputCls} w-auto`}>
                     <option value="all">Tutti</option>
                     <option value="active">Attivi</option>
                     <option value="blocked">Bloccati</option>
@@ -875,424 +458,261 @@ export default function AdminDashboard() {
                 </div>
                 <div className="flex gap-2">
                   {selectedUsers.length > 0 && (
-                    <button
-                      onClick={() => {
-                        setEmailForm({ ...emailForm, recipients: 'selected' })
-                        setShowEmailModal(true)
-                      }}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold"
-                    >
-                      📧 Email a {selectedUsers.length}
-                    </button>
+                    <Button variant="secondary" className="text-[12px]"
+                      onClick={() => { setEmailForm({ ...emailForm, recipients: 'selected' }); setShowEmailModal(true) }}>
+                      <Mail className="w-3.5 h-3.5 mr-1" /> Email a {selectedUsers.length}
+                    </Button>
                   )}
-                  <button
-                    onClick={handleExportUsers}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold"
-                  >
-                    📊 Export CSV
-                  </button>
-                  <button
-                    onClick={() => setShowCreateUserModal(true)}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-semibold"
-                  >
-                    ➕ Crea Utente
-                  </button>
+                  <Button variant="secondary" className="text-[12px] flex items-center gap-1.5" onClick={handleExportUsers}>
+                    <Download className="w-3.5 h-3.5" /> CSV
+                  </Button>
+                  <Button variant="primary" className="text-[12px] flex items-center gap-1.5" onClick={() => setShowCreateUserModal(true)}>
+                    <Plus className="w-3.5 h-3.5" /> Crea Utente
+                  </Button>
                 </div>
               </div>
-            </div>
 
-            <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left">
-                        <input
-                          type="checkbox"
-                          checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedUsers(filteredUsers.map(u => u.id))
-                            } else {
-                              setSelectedUsers([])
-                            }
-                          }}
-                          className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-                        />
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nome</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assessment</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ultimo Assessment</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Registrato</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Azioni</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredUsers.map((user) => (
-                      <tr key={user.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4">
-                          <input
-                            type="checkbox"
-                            checked={selectedUsers.includes(user.id)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedUsers([...selectedUsers, user.id])
-                              } else {
-                                setSelectedUsers(selectedUsers.filter(id => id !== user.id))
-                              }
-                            }}
-                            className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-                          />
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">{user.full_name || 'N/A'}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-600">{user.email}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                            {user.assessmentCount} assessment
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                          {user.last_assessment_date ? new Date(user.last_assessment_date).toLocaleDateString('it-IT') : '-'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                          {new Date(user.created_at).toLocaleDateString('it-IT')}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            user.is_blocked ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                          }`}>
-                            {user.is_blocked ? '🔒 Bloccato' : '✅ Attivo'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => handleBlockUser(user.id, user.is_blocked)}
-                              disabled={blockingUser === user.id}
-                              className={`px-3 py-1 rounded font-semibold transition ${
-                                user.is_blocked
-                                  ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                                  : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
-                              } disabled:opacity-50`}
-                            >
-                              {blockingUser === user.id ? '...' : (user.is_blocked ? 'Sblocca' : 'Blocca')}
-                            </button>
-                            <button
-                              onClick={() => setShowDeleteConfirm(user.id)}
-                              className="px-3 py-1 bg-red-100 text-red-700 rounded font-semibold hover:bg-red-200 transition"
-                            >
-                              Elimina
-                            </button>
-                          </div>
-                        </td>
+              {/* Table */}
+              <div className="border border-paper-200 rounded-md overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full">
+                    <thead className="bg-paper-100 border-b border-paper-200">
+                      <tr>
+                        <th className={thCls + ' w-10'}>
+                          <input type="checkbox"
+                            checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0}
+                            onChange={e => setSelectedUsers(e.target.checked ? filteredUsers.map(u => u.id) : [])}
+                            className="rounded-sm border-paper-300" />
+                        </th>
+                        {['Nome', 'Email', 'Assessment', 'Ultimo', 'Registrato', 'Status', 'Azioni'].map(h => <th key={h} className={thCls}>{h}</th>)}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-paper-100">
+                      {filteredUsers.map(user => (
+                        <tr key={user.id} className="hover:bg-paper-100 transition-colors">
+                          <td className={tdCls}>
+                            <input type="checkbox" checked={selectedUsers.includes(user.id)}
+                              onChange={e => setSelectedUsers(e.target.checked ? [...selectedUsers, user.id] : selectedUsers.filter(id => id !== user.id))}
+                              className="rounded-sm border-paper-300" />
+                          </td>
+                          <td className={tdCls + ' font-medium text-ink-900'}>{user.full_name || 'N/A'}</td>
+                          <td className={tdCls + ' text-ink-600'}>{user.email}</td>
+                          <td className={tdCls}>
+                            <span className="text-[10px] font-semibold uppercase tracking-eyebrow px-2 py-0.5 rounded-sm border border-paper-300 bg-paper-100 text-ink-600">{user.assessmentCount}</span>
+                          </td>
+                          <td className={tdCls + ' text-ink-500'}>{user.last_assessment_date ? new Date(user.last_assessment_date).toLocaleDateString('it-IT') : '—'}</td>
+                          <td className={tdCls + ' text-ink-500'}>{new Date(user.created_at).toLocaleDateString('it-IT')}</td>
+                          <td className={tdCls}>
+                            <span className={`text-[10px] font-semibold uppercase tracking-eyebrow px-2 py-0.5 rounded-sm border ${user.is_blocked ? 'text-sienna-700 bg-sienna-50 border-sienna-300' : 'text-level-avanzato bg-green-50 border-green-200'}`}>
+                              {user.is_blocked ? 'Bloccato' : 'Attivo'}
+                            </span>
+                          </td>
+                          <td className={tdCls}>
+                            <div className="flex gap-1.5">
+                              <button onClick={() => handleBlockUser(user.id, user.is_blocked)} disabled={blockingUser === user.id}
+                                className={`text-[11px] font-medium px-2.5 py-1 rounded-sm border transition-colors disabled:opacity-40 ${user.is_blocked ? 'border-green-200 text-level-avanzato hover:bg-green-50' : 'border-amber-200 text-level-intermedio hover:bg-amber-50'}`}>
+                                {blockingUser === user.id ? '…' : (user.is_blocked ? 'Sblocca' : 'Blocca')}
+                              </button>
+                              <button onClick={() => setShowDeleteConfirm(user.id)}
+                                className="text-[11px] font-medium px-2.5 py-1 rounded-sm border border-sienna-300 text-sienna-700 hover:bg-sienna-50 transition-colors">
+                                Elimina
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {filteredUsers.length === 0 && <p className="text-center py-10 text-[13px] text-ink-400">Nessun utente trovato</p>}
               </div>
-              {filteredUsers.length === 0 && (
-                <div className="text-center py-12 text-gray-500">Nessun utente trovato</div>
-              )}
             </div>
-          </div>
-        )}
+          )}
 
-        {/* ==================== ASSESSMENTS TAB ==================== */}
-        {activeTab === 'assessments' && (
-          <div className="space-y-4">
-            <div className="bg-white rounded-xl shadow-lg p-4">
-              <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-                <div className="flex gap-2 flex-1 w-full md:w-auto">
-                  <input
-                    type="text"
-                    placeholder="🔍 Cerca per utente o email..."
-                    value={assessmentSearchTerm}
-                    onChange={(e) => setAssessmentSearchTerm(e.target.value)}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  />
-                  <select
-                    value={assessmentFilter}
-                    onChange={(e) => setAssessmentFilter(e.target.value as any)}
-                    className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  >
+          {/* ══════════ ASSESSMENTS ══════════ */}
+          {activeTab === 'assessments' && (
+            <div className="p-6 space-y-4">
+              <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
+                <div className="flex gap-2 flex-1">
+                  <input type="text" placeholder="Cerca per utente o email…" value={assessmentSearchTerm}
+                    onChange={e => setAssessmentSearchTerm(e.target.value)} className={`${inputCls} flex-1`} />
+                  <select value={assessmentFilter} onChange={e => setAssessmentFilter(e.target.value as any)} className={`${inputCls} w-auto`}>
                     <option value="all">Tutti</option>
                     <option value="completed">Completati</option>
                     <option value="in_progress">In Corso</option>
                   </select>
                 </div>
-                <button
-                  onClick={handleExportAssessments}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold"
-                >
-                  📊 Export CSV
-                </button>
+                <Button variant="secondary" className="text-[12px] flex items-center gap-1.5" onClick={handleExportAssessments}>
+                  <Download className="w-3.5 h-3.5" /> CSV
+                </Button>
               </div>
-            </div>
 
-            <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Utente</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Punteggio</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data Creazione</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data Completamento</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Azioni</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredAssessments.map((assessment) => (
-                      <tr key={assessment.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">{assessment.userName}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-600">{assessment.userEmail}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            assessment.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {assessment.status === 'completed' ? '✅ Completato' : '⏳ In corso'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                          {assessment.total_score != null ? <span className="font-semibold">{Number(assessment.total_score).toFixed(1)}/5.0</span> : '-'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                          {new Date(assessment.created_at).toLocaleDateString('it-IT')}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                          {assessment.completed_at ? new Date(assessment.completed_at).toLocaleDateString('it-IT') : '-'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <div className="flex gap-2">
-                            {assessment.status === 'completed' && (
-                              <button
-                                onClick={() => router.push(`/dashboard/results/${assessment.id}`)}
-                                className="px-3 py-1 bg-purple-100 text-purple-700 rounded font-semibold hover:bg-purple-200 transition"
-                              >
-                                Visualizza
-                              </button>
-                            )}
-                            <button
-                              onClick={() => handleDeleteAssessment(assessment.id)}
-                              className="px-3 py-1 bg-red-100 text-red-700 rounded font-semibold hover:bg-red-200 transition"
-                            >
-                              Elimina
-                            </button>
-                          </div>
-                        </td>
+              <div className="border border-paper-200 rounded-md overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full">
+                    <thead className="bg-paper-100 border-b border-paper-200">
+                      <tr>
+                        {['Utente', 'Email', 'Status', 'Punteggio', 'Creazione', 'Completamento', 'Azioni'].map(h => <th key={h} className={thCls}>{h}</th>)}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {filteredAssessments.length === 0 && (
-                <div className="text-center py-12 text-gray-500">Nessun assessment trovato</div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ==================== TRIALS TAB ==================== */}
-        {activeTab === 'trials' && (
-          <div className="space-y-4">
-            {/* Stats strip */}
-            <div className="grid grid-cols-3 gap-4">
-              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-center">
-                <div className="text-2xl font-bold text-yellow-700">{trials.filter(t => t.status === 'pending').length}</div>
-                <div className="text-sm text-yellow-600 font-medium">⏳ In Attesa</div>
-              </div>
-              <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
-                <div className="text-2xl font-bold text-green-700">{trials.filter(t => t.status === 'active').length}</div>
-                <div className="text-sm text-green-600 font-medium">✅ Attivi</div>
-              </div>
-              <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 text-center">
-                <div className="text-2xl font-bold text-purple-700">{trials.filter(t => t.status === 'converted').length}</div>
-                <div className="text-sm text-purple-600 font-medium">💼 Convertiti</div>
-              </div>
-            </div>
-
-            {/* Toolbar */}
-            <div className="bg-white rounded-xl shadow-lg p-4">
-              <div className="flex gap-2 items-center justify-between">
-                <div className="flex gap-2">
-                  {(['all', 'pending', 'active', 'expired'] as const).map(f => (
-                    <button
-                      key={f}
-                      onClick={() => setTrialFilter(f)}
-                      className={`px-4 py-2 rounded-lg font-semibold text-sm transition ${
-                        trialFilter === f
-                          ? 'bg-purple-600 text-white'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                    >
-                      {f === 'all' ? 'Tutti' : f === 'pending' ? '⏳ In attesa' : f === 'active' ? '✅ Attivi' : '❌ Scaduti'}
-                    </button>
-                  ))}
+                    </thead>
+                    <tbody className="divide-y divide-paper-100">
+                      {filteredAssessments.map(a => (
+                        <tr key={a.id} className="hover:bg-paper-100 transition-colors">
+                          <td className={tdCls + ' font-medium text-ink-900'}>{a.userName}</td>
+                          <td className={tdCls + ' text-ink-600'}>{a.userEmail}</td>
+                          <td className={tdCls}>
+                            <span className={`text-[10px] font-semibold uppercase tracking-eyebrow px-2 py-0.5 rounded-sm border ${a.status === 'completed' ? 'text-level-avanzato bg-green-50 border-green-200' : 'text-level-intermedio bg-amber-50 border-amber-200'}`}>
+                              {a.status === 'completed' ? 'Completato' : 'In corso'}
+                            </span>
+                          </td>
+                          <td className={tdCls + ' font-medium text-ink-900'}>{a.total_score != null ? `${Number(a.total_score).toFixed(1)}/5,0` : '—'}</td>
+                          <td className={tdCls + ' text-ink-500'}>{new Date(a.created_at).toLocaleDateString('it-IT')}</td>
+                          <td className={tdCls + ' text-ink-500'}>{a.completed_at ? new Date(a.completed_at).toLocaleDateString('it-IT') : '—'}</td>
+                          <td className={tdCls}>
+                            <div className="flex gap-1.5">
+                              {a.status === 'completed' && (
+                                <button onClick={() => router.push(`/dashboard/results/${a.id}`)}
+                                  className="text-[11px] font-medium px-2.5 py-1 rounded-sm border border-paper-300 text-ink-700 hover:bg-paper-100 transition-colors">
+                                  Visualizza
+                                </button>
+                              )}
+                              <button onClick={() => handleDeleteAssessment(a.id)}
+                                className="text-[11px] font-medium px-2.5 py-1 rounded-sm border border-sienna-300 text-sienna-700 hover:bg-sienna-50 transition-colors">
+                                Elimina
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-                <div className="text-sm text-gray-500">{filteredTrials.length} trial</div>
+                {filteredAssessments.length === 0 && <p className="text-center py-10 text-[13px] text-ink-400">Nessun assessment trovato</p>}
               </div>
             </div>
+          )}
 
-            {/* Trials Table */}
-            <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Azienda</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contatto</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dimensione</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assessment</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Scadenza</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Richiesta</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Azioni</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredTrials.map((trial) => (
-                      <tr key={trial.id} className={`hover:bg-gray-50 ${trial.status === 'pending' ? 'bg-yellow-50/30' : ''}`}>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-bold text-gray-900">{trial.company_name}</div>
-                          <div className="text-xs text-gray-500">{trial.sector || '-'}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">{trial.contact_name}</div>
-                          <div className="text-xs text-gray-500">{trial.contact_email}</div>
-                          {trial.phone && <div className="text-xs text-gray-500">{trial.phone}</div>}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                          {trial.employees || '-'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-semibold text-gray-900">
-                            {trial.used_assessments}/{trial.assessment_quota}
-                          </div>
-                          <div className="w-20 bg-gray-200 rounded-full h-1.5 mt-1">
-                            <div
-                              className="bg-purple-600 h-1.5 rounded-full"
-                              style={{ width: `${Math.min((trial.used_assessments / trial.assessment_quota) * 100, 100)}%` }}
-                            />
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                          {new Date(trial.expires_at).toLocaleDateString('it-IT')}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {getTrialStatusBadge(trial)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                          {new Date(trial.created_at).toLocaleDateString('it-IT')}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <div className="flex gap-2">
-                            {trial.status === 'pending' && (
-                              <button
-                                onClick={() => {
-                                  setShowActivateModal(trial)
-                                  setActivateForm({ quota: 20, days: 30 })
-                                }}
-                                className="px-3 py-1 bg-green-600 text-white rounded font-semibold hover:bg-green-700 transition"
-                              >
-                                ✅ Attiva
-                              </button>
-                            )}
-                            {trial.status === 'active' && (
-                              <button
-                                onClick={() => handleUpdateTrialStatus(trial.id, 'converted')}
-                                className="px-3 py-1 bg-purple-100 text-purple-700 rounded font-semibold hover:bg-purple-200 transition"
-                              >
-                                💼 Converti
-                              </button>
-                            )}
-                            <button
-                              onClick={() => {
-                                if (confirm(`Eliminare il trial di ${trial.company_name}?`)) {
-                                  handleDeleteTrial(trial.id)
-                                }
-                              }}
-                              className="px-3 py-1 bg-red-100 text-red-700 rounded font-semibold hover:bg-red-200 transition"
-                            >
-                              🗑️ Elimina
-                            </button>
-                          </div>
-                        </td>
+          {/* ══════════ TRIALS ══════════ */}
+          {activeTab === 'trials' && (
+            <div className="p-6 space-y-4">
+              {/* Mini stats */}
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { label: 'In Attesa',   value: trials.filter(t => t.status === 'pending').length,   cls: 'text-level-intermedio' },
+                  { label: 'Attivi',      value: trials.filter(t => t.status === 'active').length,    cls: 'text-level-avanzato' },
+                  { label: 'Convertiti',  value: trials.filter(t => t.status === 'converted').length, cls: 'text-level-esperto' },
+                ].map(({ label, value, cls }) => (
+                  <div key={label} className="bg-paper-100 border border-paper-200 rounded-md p-4 text-center">
+                    <p className={`font-display text-[28px] ${cls}`}>{value}</p>
+                    <p className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400 mt-0.5">{label}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Filter bar */}
+              <div className="flex gap-2 flex-wrap">
+                {(['all', 'pending', 'active', 'expired'] as const).map(f => (
+                  <button key={f} onClick={() => setTrialFilter(f)}
+                    className={`text-[12px] font-medium px-4 py-1.5 rounded-sm border transition-colors ${trialFilter === f ? 'bg-ink-900 text-paper-50 border-ink-900' : 'border-paper-300 text-ink-600 hover:border-ink-500'}`}>
+                    {f === 'all' ? 'Tutti' : f === 'pending' ? 'In attesa' : f === 'active' ? 'Attivi' : 'Scaduti'}
+                  </button>
+                ))}
+                <span className="ml-auto text-[12px] text-ink-400 self-center">{filteredTrials.length} trial</span>
+              </div>
+
+              {/* Table */}
+              <div className="border border-paper-200 rounded-md overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full">
+                    <thead className="bg-paper-100 border-b border-paper-200">
+                      <tr>
+                        {['Azienda', 'Contatto', 'Dimensione', 'Assessment', 'Scadenza', 'Status', 'Richiesta', 'Azioni'].map(h => <th key={h} className={thCls}>{h}</th>)}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {filteredTrials.length === 0 && (
-                <div className="text-center py-12 text-gray-500">
-                  Nessun trial trovato
+                    </thead>
+                    <tbody className="divide-y divide-paper-100">
+                      {filteredTrials.map(trial => (
+                        <tr key={trial.id} className={`hover:bg-paper-100 transition-colors ${trial.status === 'pending' ? 'bg-amber-50/40' : ''}`}>
+                          <td className={tdCls}>
+                            <p className="font-medium text-ink-900">{trial.company_name}</p>
+                            <p className="text-[11px] text-ink-400">{trial.sector || '—'}</p>
+                          </td>
+                          <td className={tdCls}>
+                            <p className="font-medium text-ink-900">{trial.contact_name}</p>
+                            <p className="text-[11px] text-ink-400">{trial.contact_email}</p>
+                            {trial.phone && <p className="text-[11px] text-ink-400">{trial.phone}</p>}
+                          </td>
+                          <td className={tdCls + ' text-ink-600'}>{trial.employees || '—'}</td>
+                          <td className={tdCls}>
+                            <p className="font-medium text-ink-900">{trial.used_assessments}/{trial.assessment_quota}</p>
+                            <div className="w-16 bg-paper-200 rounded-sm h-1 mt-1">
+                              <div className="bg-ink-900 h-1 rounded-sm" style={{ width: `${Math.min((trial.used_assessments / trial.assessment_quota) * 100, 100)}%` }} />
+                            </div>
+                          </td>
+                          <td className={tdCls + ' text-ink-500'}>{new Date(trial.expires_at).toLocaleDateString('it-IT')}</td>
+                          <td className={tdCls}><TrialStatusBadge trial={trial} /></td>
+                          <td className={tdCls + ' text-ink-500'}>{new Date(trial.created_at).toLocaleDateString('it-IT')}</td>
+                          <td className={tdCls}>
+                            <div className="flex gap-1.5">
+                              {trial.status === 'pending' && (
+                                <button onClick={() => { setShowActivateModal(trial); setActivateForm({ quota: 20, days: 30 }) }}
+                                  className="text-[11px] font-medium px-2.5 py-1 rounded-sm border border-green-200 text-level-avanzato hover:bg-green-50 transition-colors">
+                                  Attiva
+                                </button>
+                              )}
+                              {trial.status === 'active' && (
+                                <button onClick={() => handleUpdateTrialStatus(trial.id, 'converted')}
+                                  className="text-[11px] font-medium px-2.5 py-1 rounded-sm border border-teal-200 text-level-esperto hover:bg-teal-50 transition-colors">
+                                  Converti
+                                </button>
+                              )}
+                              <button onClick={() => { if (confirm(`Eliminare il trial di ${trial.company_name}?`)) handleDeleteTrial(trial.id) }}
+                                className="text-[11px] font-medium px-2.5 py-1 rounded-sm border border-sienna-300 text-sienna-700 hover:bg-sienna-50 transition-colors">
+                                Elimina
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              )}
+                {filteredTrials.length === 0 && <p className="text-center py-10 text-[13px] text-ink-400">Nessun trial trovato</p>}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* ==================== EMAIL TAB ==================== */}
-        {activeTab === 'email' && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">📧 Sistema Email</h2>
-                <button
-                  onClick={() => setShowEmailModal(true)}
-                  className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-semibold"
-                >
-                  ✉️ Componi Nuova Email
-                </button>
+          {/* ══════════ EMAIL ══════════ */}
+          {activeTab === 'email' && (
+            <div className="p-6 space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="font-display text-[18px] font-medium text-ink-900">Sistema Email</h2>
+                <Button variant="primary" className="flex items-center gap-2 text-[13px]" onClick={() => setShowEmailModal(true)}>
+                  <Mail className="w-4 h-4" /> Componi Email
+                </Button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-blue-50 rounded-lg p-6 text-center">
-                  <div className="text-4xl mb-2">📨</div>
-                  <div className="text-3xl font-bold text-gray-900">{users.length}</div>
-                  <div className="text-sm text-gray-600 mt-1">Utenti Totali</div>
-                </div>
-                <div className="bg-green-50 rounded-lg p-6 text-center">
-                  <div className="text-4xl mb-2">✅</div>
-                  <div className="text-3xl font-bold text-gray-900">
-                    {users.filter(u => u.assessmentCount > 0).length}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {[
+                  { label: 'Utenti Totali',            value: users.length },
+                  { label: 'Con Assessment Completato', value: users.filter(u => u.assessmentCount > 0).length },
+                  { label: 'Senza Assessment',          value: users.filter(u => u.assessmentCount === 0).length },
+                ].map(({ label, value }) => (
+                  <div key={label} className="bg-paper-100 border border-paper-200 rounded-md p-5">
+                    <p className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400 mb-2">{label}</p>
+                    <p className="font-display text-[28px] text-ink-900">{value}</p>
                   </div>
-                  <div className="text-sm text-gray-600 mt-1">Con Assessment Completato</div>
-                </div>
-                <div className="bg-yellow-50 rounded-lg p-6 text-center">
-                  <div className="text-4xl mb-2">⏳</div>
-                  <div className="text-3xl font-bold text-gray-900">
-                    {users.filter(u => u.assessmentCount === 0).length}
-                  </div>
-                  <div className="text-sm text-gray-600 mt-1">Senza Assessment</div>
-                </div>
+                ))}
               </div>
 
-              <div className="mt-8">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">📋 Template Disponibili</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {Object.entries(emailTemplates).filter(([key]) => key !== 'custom').map(([key, template]) => (
-                    <div key={key} className="border border-gray-200 rounded-lg p-4 hover:border-purple-300 transition">
-                      <h4 className="font-semibold text-gray-900 mb-2">{template.subject}</h4>
-                      <p className="text-sm text-gray-600 line-clamp-3">{template.body}</p>
-                      <button
-                        onClick={() => {
-                          handleTemplateChange(key as keyof typeof emailTemplates)
-                          setShowEmailModal(true)
-                        }}
-                        className="mt-3 text-purple-600 hover:text-purple-700 font-semibold text-sm"
-                      >
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400 mb-3">Template Disponibili</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {Object.entries(emailTemplates).filter(([k]) => k !== 'custom').map(([key, tmpl]) => (
+                    <div key={key} className="bg-paper-100 border border-paper-200 rounded-md p-4 hover:border-ink-500 transition-colors">
+                      <p className="text-[13px] font-medium text-ink-900 mb-1">{tmpl.subject}</p>
+                      <p className="text-[11px] text-ink-500 line-clamp-2">{tmpl.body}</p>
+                      <button onClick={() => { handleTemplateChange(key as keyof typeof emailTemplates); setShowEmailModal(true) }}
+                        className="mt-3 text-[12px] font-medium text-ink-900 hover:text-sienna-600 transition-colors">
                         Usa Template →
                       </button>
                     </div>
@@ -1300,215 +720,110 @@ export default function AdminDashboard() {
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </main>
 
-      {/* ==================== ACTIVATE TRIAL MODAL ==================== */}
+      {/* ═══════════════ MODAL OVERLAY ═══════════════ */}
+      {/* Activate Trial */}
       {showActivateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-bold text-gray-900">✅ Attiva Trial</h3>
-              <button onClick={() => setShowActivateModal(null)} className="text-gray-400 hover:text-gray-600">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+        <div className="fixed inset-0 bg-ink-950/60 flex items-center justify-center p-4 z-50">
+          <div className="bg-paper-50 border border-paper-200 rounded-md shadow-lg-ink p-8 max-w-md w-full">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="font-display text-[20px] font-medium text-ink-900">Attiva Trial</h3>
+              <button onClick={() => setShowActivateModal(null)} className="text-ink-400 hover:text-ink-700"><X className="w-5 h-5" /></button>
             </div>
-
-            <div className="bg-gray-50 rounded-lg p-4 mb-6">
-              <p className="font-bold text-gray-900">{showActivateModal.company_name}</p>
-              <p className="text-sm text-gray-600">{showActivateModal.contact_name}</p>
-              <p className="text-sm text-gray-600">{showActivateModal.contact_email}</p>
+            <div className="bg-paper-100 border border-paper-200 rounded-md p-4 mb-5">
+              <p className="font-medium text-ink-900">{showActivateModal.company_name}</p>
+              <p className="text-[13px] text-ink-500">{showActivateModal.contact_name} — {showActivateModal.contact_email}</p>
             </div>
-
-            <div className="space-y-4">
+            <div className="space-y-4 mb-5">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Assessment da includere
-                </label>
-                <input
-                  type="number"
-                  min={5}
-                  max={100}
-                  value={activateForm.quota}
-                  onChange={(e) => setActivateForm({ ...activateForm, quota: parseInt(e.target.value) })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                />
+                <label className={labelCls}>Assessment da includere</label>
+                <input type="number" min={5} max={100} value={activateForm.quota}
+                  onChange={e => setActivateForm({ ...activateForm, quota: parseInt(e.target.value) })} className={inputCls} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Durata (giorni)
-                </label>
-                <input
-                  type="number"
-                  min={7}
-                  max={90}
-                  value={activateForm.days}
-                  onChange={(e) => setActivateForm({ ...activateForm, days: parseInt(e.target.value) })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                />
+                <label className={labelCls}>Durata (giorni)</label>
+                <input type="number" min={7} max={90} value={activateForm.days}
+                  onChange={e => setActivateForm({ ...activateForm, days: parseInt(e.target.value) })} className={inputCls} />
               </div>
             </div>
-
-            <div className="bg-blue-50 rounded-lg p-4 mt-4 text-sm text-blue-700">
-              📧 Verrà inviato automaticamente un magic link a <strong>{showActivateModal.contact_email}</strong>
+            <div className="bg-paper-100 border border-paper-200 rounded-md px-4 py-3 mb-5 text-[12px] text-ink-600">
+              Verrà inviato un magic link a <strong>{showActivateModal.contact_email}</strong>
             </div>
-
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => setShowActivateModal(null)}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-semibold"
-              >
-                Annulla
-              </button>
-              <button
-                onClick={handleActivateTrial}
-                disabled={activatingTrial === showActivateModal.id}
-                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold disabled:opacity-50"
-              >
-                {activatingTrial === showActivateModal.id ? 'Attivazione...' : '✅ Attiva e Invia Link'}
-              </button>
+            <div className="flex gap-3">
+              <Button variant="secondary" className="flex-1 justify-center" onClick={() => setShowActivateModal(null)}>Annulla</Button>
+              <Button variant="primary" className="flex-1 justify-center" onClick={handleActivateTrial} disabled={activatingTrial === showActivateModal.id}>
+                {activatingTrial === showActivateModal.id ? 'Attivazione…' : 'Attiva e Invia Link'}
+              </Button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ==================== CREATE USER MODAL ==================== */}
+      {/* Create User */}
       {showCreateUserModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-bold text-gray-900">➕ Crea Nuovo Utente</h3>
-              <button
-                onClick={() => {
-                  setShowCreateUserModal(false)
-                  setNewUserForm({ email: '', fullName: '', password: '' })
-                }}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+        <div className="fixed inset-0 bg-ink-950/60 flex items-center justify-center p-4 z-50">
+          <div className="bg-paper-50 border border-paper-200 rounded-md shadow-lg-ink p-8 max-w-md w-full">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="font-display text-[20px] font-medium text-ink-900">Crea Nuovo Utente</h3>
+              <button onClick={() => { setShowCreateUserModal(false); setNewUserForm({ email: '', fullName: '', password: '' }) }}
+                className="text-ink-400 hover:text-ink-700"><X className="w-5 h-5" /></button>
             </div>
             <form onSubmit={handleCreateUser} className="space-y-4">
+              <div><label className={labelCls}>Email *</label><input type="email" required value={newUserForm.email} onChange={e => setNewUserForm({ ...newUserForm, email: e.target.value })} className={inputCls} placeholder="utente@esempio.com" /></div>
+              <div><label className={labelCls}>Nome Completo *</label><input type="text" required value={newUserForm.fullName} onChange={e => setNewUserForm({ ...newUserForm, fullName: e.target.value })} className={inputCls} placeholder="Mario Rossi" /></div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
-                <input
-                  type="email"
-                  required
-                  value={newUserForm.email}
-                  onChange={(e) => setNewUserForm({ ...newUserForm, email: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  placeholder="utente@esempio.com"
-                />
+                <label className={labelCls}>Password Temporanea *</label>
+                <input type="password" required value={newUserForm.password} onChange={e => setNewUserForm({ ...newUserForm, password: e.target.value })} className={inputCls} placeholder="Min 6 caratteri" minLength={6} />
+                <p className="text-[10px] text-ink-400 mt-1">L'utente potrà cambiarla al primo accesso</p>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Nome Completo *</label>
-                <input
-                  type="text"
-                  required
-                  value={newUserForm.fullName}
-                  onChange={(e) => setNewUserForm({ ...newUserForm, fullName: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  placeholder="Mario Rossi"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Password Temporanea *</label>
-                <input
-                  type="password"
-                  required
-                  value={newUserForm.password}
-                  onChange={(e) => setNewUserForm({ ...newUserForm, password: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  placeholder="Min 6 caratteri"
-                  minLength={6}
-                />
-                <p className="text-xs text-gray-500 mt-1">L'utente potrà cambiarla al primo accesso</p>
-              </div>
-              <div className="flex gap-3 mt-6">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowCreateUserModal(false)
-                    setNewUserForm({ email: '', fullName: '', password: '' })
-                  }}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-semibold"
-                >
-                  Annulla
-                </button>
-                <button
-                  type="submit"
-                  disabled={creatingUser}
-                  className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {creatingUser ? 'Creazione...' : 'Crea Utente'}
-                </button>
+              <div className="flex gap-3 pt-2">
+                <Button type="button" variant="secondary" className="flex-1 justify-center"
+                  onClick={() => { setShowCreateUserModal(false); setNewUserForm({ email: '', fullName: '', password: '' }) }}>Annulla</Button>
+                <Button type="submit" variant="primary" className="flex-1 justify-center" disabled={creatingUser}>
+                  {creatingUser ? 'Creazione…' : 'Crea Utente'}
+                </Button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* ==================== DELETE CONFIRM MODAL ==================== */}
+      {/* Delete Confirm */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full">
-            <div className="text-center">
-              <div className="text-6xl mb-4">⚠️</div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Conferma Eliminazione</h3>
-              <p className="text-gray-600 mb-6">
-                Sei sicuro di voler eliminare questo utente?<br />
-                <strong>Questa azione è irreversibile!</strong>
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowDeleteConfirm(null)}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-semibold"
-                >
-                  Annulla
-                </button>
-                <button
-                  onClick={() => handleDeleteUser(showDeleteConfirm)}
-                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-semibold"
-                >
-                  Elimina Definitivamente
-                </button>
-              </div>
+        <div className="fixed inset-0 bg-ink-950/60 flex items-center justify-center p-4 z-50">
+          <div className="bg-paper-50 border border-paper-200 rounded-md shadow-lg-ink p-8 max-w-sm w-full text-center">
+            <div className="w-12 h-12 bg-sienna-50 border border-sienna-200 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="w-6 h-6 text-sienna-600" />
+            </div>
+            <h3 className="font-display text-[20px] font-medium text-ink-900 mb-2">Conferma Eliminazione</h3>
+            <p className="text-[13px] text-ink-500 mb-6">Sei sicuro di voler eliminare questo utente?<br /><strong className="text-ink-900">Questa azione è irreversibile.</strong></p>
+            <div className="flex gap-3">
+              <Button variant="secondary" className="flex-1 justify-center" onClick={() => setShowDeleteConfirm(null)}>Annulla</Button>
+              <button onClick={() => handleDeleteUser(showDeleteConfirm)}
+                className="flex-1 bg-sienna-600 text-paper-50 font-medium text-[14px] px-5 py-3 rounded-sm hover:bg-sienna-700 transition-colors">
+                Elimina
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ==================== EMAIL MODAL ==================== */}
+      {/* Email Modal */}
       {showEmailModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="bg-white rounded-xl shadow-2xl p-8 max-w-2xl w-full my-8">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-bold text-gray-900">📧 Componi Email</h3>
-              <button
-                onClick={() => {
-                  setShowEmailModal(false)
-                  setEmailForm({ recipients: 'all', customEmails: '', template: 'custom', subject: '', body: '' })
-                }}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+        <div className="fixed inset-0 bg-ink-950/60 flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-paper-50 border border-paper-200 rounded-md shadow-lg-ink p-8 max-w-2xl w-full my-8">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="font-display text-[20px] font-medium text-ink-900">Componi Email</h3>
+              <button onClick={() => { setShowEmailModal(false); setEmailForm({ recipients: 'all', customEmails: '', template: 'custom', subject: '', body: '' }) }}
+                className="text-ink-400 hover:text-ink-700"><X className="w-5 h-5" /></button>
             </div>
             <form onSubmit={handleSendEmail} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Template</label>
-                <select
-                  value={emailForm.template}
-                  onChange={(e) => handleTemplateChange(e.target.value as keyof typeof emailTemplates)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                >
+                <label className={labelCls}>Template</label>
+                <select value={emailForm.template} onChange={e => handleTemplateChange(e.target.value as keyof typeof emailTemplates)} className={inputCls}>
                   <option value="custom">Personalizzato</option>
                   <option value="welcome">Benvenuto</option>
                   <option value="reminder">Reminder Completamento</option>
@@ -1516,12 +831,8 @@ export default function AdminDashboard() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Destinatari</label>
-                <select
-                  value={emailForm.recipients}
-                  onChange={(e) => setEmailForm({ ...emailForm, recipients: e.target.value as any })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                >
+                <label className={labelCls}>Destinatari</label>
+                <select value={emailForm.recipients} onChange={e => setEmailForm({ ...emailForm, recipients: e.target.value as any })} className={inputCls}>
                   <option value="all">Tutti gli utenti ({users.length})</option>
                   <option value="completed">Chi ha completato ({users.filter(u => u.assessmentCount > 0).length})</option>
                   <option value="incomplete">Chi non ha completato ({users.filter(u => u.assessmentCount === 0).length})</option>
@@ -1531,57 +842,25 @@ export default function AdminDashboard() {
               </div>
               {emailForm.recipients === 'custom' && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Email (separate da virgola)</label>
-                  <textarea
-                    value={emailForm.customEmails}
-                    onChange={(e) => setEmailForm({ ...emailForm, customEmails: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    rows={3}
-                    placeholder="email1@esempio.com, email2@esempio.com"
-                  />
+                  <label className={labelCls}>Email (separate da virgola)</label>
+                  <textarea value={emailForm.customEmails} onChange={e => setEmailForm({ ...emailForm, customEmails: e.target.value })} className={`${inputCls} resize-none`} rows={3} placeholder="email1@esempio.com, email2@esempio.com" />
                 </div>
               )}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Oggetto *</label>
-                <input
-                  type="text"
-                  required
-                  value={emailForm.subject}
-                  onChange={(e) => setEmailForm({ ...emailForm, subject: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  placeholder="Oggetto dell'email"
-                />
+                <label className={labelCls}>Oggetto *</label>
+                <input type="text" required value={emailForm.subject} onChange={e => setEmailForm({ ...emailForm, subject: e.target.value })} className={inputCls} placeholder="Oggetto dell'email" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Messaggio *</label>
-                <textarea
-                  required
-                  value={emailForm.body}
-                  onChange={(e) => setEmailForm({ ...emailForm, body: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  rows={8}
-                  placeholder="Corpo dell'email..."
-                />
-                <p className="text-xs text-gray-500 mt-1">Puoi usare {'{name}'} per il nome utente</p>
+                <label className={labelCls}>Messaggio *</label>
+                <textarea required value={emailForm.body} onChange={e => setEmailForm({ ...emailForm, body: e.target.value })} className={`${inputCls} resize-none`} rows={8} placeholder="Corpo dell'email…" />
+                <p className="text-[10px] text-ink-400 mt-1">Puoi usare {'{name}'} per il nome utente</p>
               </div>
-              <div className="flex gap-3 mt-6">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowEmailModal(false)
-                    setEmailForm({ recipients: 'all', customEmails: '', template: 'custom', subject: '', body: '' })
-                  }}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-semibold"
-                >
-                  Annulla
-                </button>
-                <button
-                  type="submit"
-                  disabled={sendingEmail}
-                  className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {sendingEmail ? 'Invio in corso...' : '📧 Invia Email'}
-                </button>
+              <div className="flex gap-3 pt-2">
+                <Button type="button" variant="secondary" className="flex-1 justify-center"
+                  onClick={() => { setShowEmailModal(false); setEmailForm({ recipients: 'all', customEmails: '', template: 'custom', subject: '', body: '' }) }}>Annulla</Button>
+                <Button type="submit" variant="primary" className="flex-1 justify-center flex items-center gap-2" disabled={sendingEmail}>
+                  {sendingEmail ? 'Invio…' : <><Mail className="w-4 h-4" /> Invia Email</>}
+                </Button>
               </div>
             </form>
           </div>
@@ -1590,7 +869,3 @@ export default function AdminDashboard() {
     </div>
   )
 }
-
-
-
-

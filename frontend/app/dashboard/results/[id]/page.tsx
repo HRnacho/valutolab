@@ -302,10 +302,17 @@ export default function ResultsPage() {
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <RadarChart data={radarData}>
+                <defs>
+                  <radialGradient id="radarFill" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%"   stopColor="#B0473A" stopOpacity={0.55} />
+                    <stop offset="50%"  stopColor="#2D5F73" stopOpacity={0.40} />
+                    <stop offset="100%" stopColor="#0E1A2B" stopOpacity={0.20} />
+                  </radialGradient>
+                </defs>
                 <PolarGrid stroke="#ECE6D8" />
                 <PolarAngleAxis dataKey="skill" tick={{ fill: '#3A4A5C', fontSize: 11, fontFamily: 'IBM Plex Sans' }} />
                 <PolarRadiusAxis angle={90} domain={[0, 5]} tick={{ fill: '#8A9BB0', fontSize: 10 }} />
-                <Radar name="Competenze" dataKey="score" stroke="#0E1A2B" fill="#0E1A2B" fillOpacity={0.35} strokeWidth={2} />
+                <Radar name="Competenze" dataKey="score" stroke="#0E1A2B" fill="url(#radarFill)" fillOpacity={1} strokeWidth={2} />
               </RadarChart>
             </ResponsiveContainer>
           </div>
