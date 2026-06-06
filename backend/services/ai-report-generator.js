@@ -187,7 +187,7 @@ ${userContextSection}
 PUNTEGGI ASSESSMENT WEIGHTED BLEND (70% Autovalutazione + 30% Comportamentale):
 ${scoresFormatted}
 
-Punteggio generale finale: ${assessmentData.overallScore.toFixed(1)}/5.0
+Punteggio generale finale: ${assessmentData.overallScore != null ? assessmentData.overallScore.toFixed(1) : (assessmentData.categoryScores ? (Object.values(assessmentData.categoryScores).reduce((a, b) => a + b.final, 0) / Object.values(assessmentData.categoryScores).length).toFixed(1) : 'N/A')}/5.0
 
 ANALISI SCELTE SITUAZIONALI:
 L'utente ha completato scenari comportamentali che rivelano il suo approccio reale alle situazioni professionali:
