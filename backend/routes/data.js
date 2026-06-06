@@ -146,16 +146,30 @@ router.get('/assessments/:id/responses/count', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-/** POST /api/data/assessments/:id/responses — upsert singola risposta */
+/** POST /api/data/assessments/:id/responses — upsert singola risposta (Likert o profiling) */
 router.post('/assessments/:id/responses', async (req, res, next) => {
   try {
-    const { question_id, answer_value, skill_category } = req.body;
+    const { question_id, answer_value, answer_text, skill_category } = req.body;
     await db.query(
-      `INSERT INTO assessment_responses (assessment_id, user_id, question_id, answer_value, skill_category)
-       VALUES ($1,$2,$3,$4,$5)
+      `INSERT INTO assessment_responses (assessment_id, user_id, question_id, answer_value, answer_text, skill_category)
+       VALUES ($1,$2,$3,$4,$5,$6)
        ON CONFLICT (assessment_id, question_id)
-       DO UPDATE SET answer_value = EXCLUDED.answer_value`,
-      [req.params.id, userId(req), question_id, answer_value, skill_category]
+       DO UPDATE SET answer_value = EXCLUDED.answer_value,
+                     answer_text  = EXCLUDED.answer_text`,
+      [req.params.id, userId(req), question_id, answer_value ?? null, answer_text ?? null, skill_category]
+    );
+    res.json({ success: true });
+  } catch (err) { next(err); }
+});
+
+/** PUT /api/data/assessments/:id/user-context — salva user_context JSONB */
+router.put('/assessments/:id/user-context', async (req, res, next) => {
+  try {
+    const { user_context } = req.body;
+    await db.query(
+      `UPDATE assessments SET user_context = $1, updated_at = NOW()
+       WHERE id = $2 AND user_id = $3`,
+      [JSON.stringify(user_context), req.params.id, userId(req)]
     );
     res.json({ success: true });
   } catch (err) { next(err); }
@@ -208,11 +222,13 @@ router.post('/assessments/:id/results', async (req, res, next) => {
 
 // ── QUALITATIVE REPORT ────────────────────────────────────────────────────────
 
-/** GET /api/data/assessments/:id/report */
+/** GET /api/data/assessments/:id/report — hr_notes escluso (visibile solo HR) */
 router.get('/assessments/:id/report', async (req, res, next) => {
   try {
     const { rows } = await db.query(
-      'SELECT * FROM qualitative_reports WHERE assessment_id = $1',
+      `SELECT id, assessment_id, user_id, profile_insights, category_interpretations,
+              development_plan, ai_model, generation_tokens, created_at
+       FROM qualitative_reports WHERE assessment_id = $1`,
       [req.params.id]
     );
     res.json({ success: true, report: rows[0] ?? null });

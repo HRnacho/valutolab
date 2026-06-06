@@ -118,9 +118,17 @@ function formatEscoForPrompt() {
 }
 
 /**
- * Costruisce il prompt per Claude AI con weighted blend, analisi situazionale e ESCO v1.2
+ * Costruisce il prompt per Claude AI con weighted blend, analisi situazionale, ESCO v1.2
+ * e personalizzazione tramite userContext (B2C) o logica B2B con hr_notes.
+ *
+ * @param {object} assessmentData
+ * @param {array}  situationalData
+ * @param {object} userProfile      — dati da user_profiles (role, industry, seniority)
+ * @param {object} benchmarkData
+ * @param {object|null} userContext — dati di profilazione raccolti durante l'assessment
+ * @param {boolean} isB2B           — true se l'assessment è legato a un'organizzazione
  */
-function buildAIPrompt(assessmentData, situationalData, userProfile, benchmarkData) {
+function buildAIPrompt(assessmentData, situationalData, userProfile, benchmarkData, userContext = null, isB2B = false) {
   const scoresFormatted = Object.entries(assessmentData.categoryScores)
     .map(([category, scores]) => {
       const esco = ESCO_MAPPING[category];
@@ -139,27 +147,56 @@ Scelta: Opzione ${choice.selected} - ${choice.selectedText}
 Pesi skill: ${JSON.stringify(choice.skillWeights)}`;
   }).join('\n');
 
+  // Contesto di profilazione aggiuntivo (domande di profiling)
+  let userContextSection = '';
+  if (userContext) {
+    const lines = [];
+    if (userContext.employment_status) lines.push(`- Situazione lavorativa: ${userContext.employment_status}`);
+    if (userContext.years_at_company)  lines.push(`- Anni nell'azienda attuale: ${userContext.years_at_company}`);
+    if (userContext.industry)          lines.push(`- Settore dichiarato: ${userContext.industry}`);
+    if (userContext.assessment_motivation) lines.push(`- Motivazione all'assessment: ${userContext.assessment_motivation}`);
+    if (userContext.development_goals) lines.push(`- Obiettivi di sviluppo dichiarati: ${userContext.development_goals}`);
+    if (lines.length > 0) {
+      userContextSection = `\nPROFILO DICHIARATO DALL'UTENTE (domande di profilazione):\n${lines.join('\n')}\n`;
+    }
+  }
+
+  // Sezione hr_notes: solo se B2B
+  const hrNotesInstruction = isB2B
+    ? `
+"hr_notes": {
+  "hiring_recommendation": "Valutazione complessiva per la selezione: Consigliato / Da valutare / Non adatto + motivazione sintetica",
+  "fit_for_role": "Analisi del fit rispetto a un ruolo manageriale/professionale generico in base ai pattern comportamentali",
+  "risk_flags": ["Eventuali aree di rischio per il contesto aziendale (es. gap leadership, bassa resilienza sotto pressione)"],
+  "onboarding_suggestions": ["Suggerimento 1 per l'onboarding o integrazione nel team", "Suggerimento 2"],
+  "development_priority_hr": "Competenza su cui investire prioritariamente per massimizzare il contributo in azienda"
+}`
+    : '';
+
+  const hrNotesRule = isB2B
+    ? '\n11. Includi il campo "hr_notes" con la valutazione per l\'HR — questo campo NON viene mostrato al candidato.'
+    : '';
+
   return `Sei un esperto consulente HR specializzato nello sviluppo delle competenze professionali, certificato nel framework europeo ESCO v1.2 (European Skills, Competences, Qualifications and Occupations - Commissione Europea, aggiornato maggio 2024).
 
 CONTESTO UTENTE:
-- Ruolo: ${userProfile.role || 'Professionista'}
-- Settore: ${userProfile.industry || 'Generale'}
-- Seniority: ${userProfile.seniority || 'Mid-level'}
-
+- Ruolo (profilo): ${userProfile.role || 'Professionista'}
+- Settore (profilo): ${userProfile.industry || 'Generale'}
+- Seniority (profilo): ${userProfile.seniority || 'Mid-level'}
+${userContextSection}
 PUNTEGGI ASSESSMENT WEIGHTED BLEND (70% Autovalutazione + 30% Comportamentale):
 ${scoresFormatted}
 
 Punteggio generale finale: ${assessmentData.overallScore.toFixed(1)}/5.0
 
 ANALISI SCELTE SITUAZIONALI:
-L'utente ha completato 12 scenari comportamentali che rivelano il suo approccio reale alle situazioni professionali:
+L'utente ha completato scenari comportamentali che rivelano il suo approccio reale alle situazioni professionali:
 ${situationalChoices}
 
 FRAMEWORK EUROPEO ESCO v1.2 - RIFERIMENTO:
-Tutte le competenze valutate sono mappate sullo standard europeo ESCO v1.2.
-Scala livelli ESCO da usare nel report:
+Scala livelli ESCO:
 - Punteggio 1.0-2.0 → Livello Base
-- Punteggio 2.1-3.0 → Livello Intermedio  
+- Punteggio 2.1-3.0 → Livello Intermedio
 - Punteggio 3.1-4.0 → Livello Avanzato
 - Punteggio 4.1-5.0 → Livello Esperto
 
@@ -167,12 +204,11 @@ Mappatura competenze → gruppi ESCO:
 ${formatEscoForPrompt()}
 
 ISTRUZIONI ANALISI:
-1. Analizza ENTRAMBI i tipi di dati:
-   - Autovalutazione Likert (come si percepisce)
-   - Scelte situazionali (come agisce realmente)
-2. Identifica eventuali GAP tra autopercezione e comportamento effettivo
-3. Le scelte situazionali rivelano pattern comportamentali più affidabili dell'autovalutazione
-4. Per ogni competenza includi il campo esco_mapping con skill dimostrate e da sviluppare
+1. Personalizza il report in base al contesto dichiarato dall'utente (situazione lavorativa, settore, obiettivi)
+2. Analizza ENTRAMBI i tipi di dati: autovalutazione Likert + scelte situazionali comportamentali
+3. Identifica GAP tra autopercezione e comportamento effettivo
+4. Le scelte situazionali rivelano pattern comportamentali più affidabili dell'autovalutazione
+5. Per ogni competenza includi il campo esco_mapping
 
 COMPITO:
 Genera un report qualitativo professionale in formato JSON con questa struttura ESATTA:
@@ -182,10 +218,11 @@ Genera un report qualitativo professionale in formato JSON con questa struttura 
     "communication": {
       "score": 4.3,
       "level": "Avanzato",
-      "description": "Breve descrizione del livello raggiunto basata SIA su autovalutazione CHE su scelte comportamentali (2-3 frasi in italiano)",
+      "description": "Descrizione del livello basata SIA su autovalutazione CHE su scelte comportamentali (2-3 frasi). Se disponibile, collega l'analisi al contesto lavorativo dichiarato.",
       "strengths": ["punto forza 1 confermato da scelte situazionali", "punto forza 2"],
       "improvements": ["area miglioramento 1 emersa dalle scelte comportamentali", "area miglioramento 2"],
       "behavioral_notes": "Note specifiche sulle scelte situazionali per questa competenza",
+      "contextual_notes": "Come questa competenza si applica al contesto specifico dichiarato dall'utente (settore, ruolo, obiettivi). Lascia vuoto se non ci sono dati di contesto.",
       "esco_mapping": {
         "esco_level": "Avanzato",
         "esco_skills_demonstrated": ["comunicare con gli altri", "ascoltare attivamente"],
@@ -194,7 +231,7 @@ Genera un report qualitativo professionale in formato JSON con questa struttura 
       }
     }
   },
-  
+
   "development_plan": {
     "focus_areas": [
       {
@@ -215,16 +252,16 @@ Genera un report qualitativo professionale in formato JSON con questa struttura 
     "timeline": "90 giorni",
     "quick_wins": ["Quick win 1 basato su pattern comportamentali", "Quick win 2", "Quick win 3"]
   },
-  
+
   "profile_insights": {
-    "summary": "Sintesi del profilo complessivo in 3-4 frasi che integra autovalutazione e pattern comportamentali",
+    "summary": "Sintesi del profilo complessivo in 3-4 frasi che integra autovalutazione, pattern comportamentali e contesto dichiarato dall'utente",
     "patterns": ["Pattern comportamentale 1 identificato dalle scelte situazionali", "Pattern 2"],
     "self_awareness": "Livello di autoconsapevolezza: quanto la percezione corrisponde al comportamento reale",
     "suggested_profile": "Es: Technical Leader, Strategic Thinker, People Manager",
     "ideal_roles": ["Ruolo ideale 1", "Ruolo ideale 2", "Ruolo ideale 3"],
     "unique_strengths": "Cosa distingue positivamente questo profilo basato su dati comportamentali",
     "esco_profile_summary": "Sintesi ESCO: quali aree trasversali del framework europeo questo professionista padroneggia e quali rappresentano un'opportunità di crescita certificabile."
-  }
+  }${isB2B ? `,\n\n  ${hrNotesInstruction}` : ''}
 }
 
 REGOLE IMPORTANTI:
@@ -237,7 +274,7 @@ REGOLE IMPORTANTI:
 7. Includi TUTTE le 12 categorie in category_interpretations, ognuna con il campo esco_mapping
 8. Le scelte situazionali hanno più peso nel giudizio rispetto all'autovalutazione
 9. In esco_skills_demonstrated metti le skill effettivamente evidenziate dai punteggi alti
-10. In esco_skills_to_develop metti le skill con punteggi bassi o gap comportamentali`;
+10. In esco_skills_to_develop metti le skill con punteggi bassi o gap comportamentali${hrNotesRule}`;
 }
 
 /**
@@ -362,7 +399,8 @@ function enrichWithEscoData(categoryInterpretations) {
 }
 
 /**
- * Genera report qualitativo usando Claude AI con weighted blend e ESCO v1.2
+ * Genera report qualitativo usando Claude AI con weighted blend, ESCO v1.2 e personalizzazione
+ * B2C (contextual_notes) / B2B (hr_notes riservato all'HR).
  */
 export async function generateQualitativeReport(assessmentId) {
   try {
@@ -374,19 +412,24 @@ export async function generateQualitativeReport(assessmentId) {
     const userProfile = await getUserProfile(assessmentData.userId);
     const benchmarkData = await getBenchmarkData(userProfile);
 
+    // user_context (profilazione) e organization_id (B2B flag)
+    const userContext = assessmentData.assessment.user_context ?? null;
+    const isB2B = !!assessmentData.assessment.organization_id;
+
     console.log(`📊 Assessment data loaded for user: ${assessmentData.userId}`);
     console.log(`🎯 Situational responses: ${situationalData.length} scenarios`);
     console.log(`👤 User profile: ${userProfile.role || 'N/A'} - ${userProfile.industry || 'N/A'}`);
+    console.log(`🏢 B2B mode: ${isB2B} | User context: ${userContext ? 'present' : 'empty'}`);
     console.log(`🇪🇺 ESCO v1.2 mapping: active (12 competenze)`);
 
     // 2. Costruisci prompt
-    const prompt = buildAIPrompt(assessmentData, situationalData, userProfile, benchmarkData);
+    const prompt = buildAIPrompt(assessmentData, situationalData, userProfile, benchmarkData, userContext, isB2B);
 
     // 3. Chiama Claude API
     console.log('🔮 Calling Claude API with ESCO v1.2 integration...');
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 6000,
+      model: 'claude-sonnet-4-6',
+      max_tokens: 7000,
       temperature: 0.7,
       messages: [{
         role: 'user',
@@ -411,7 +454,7 @@ export async function generateQualitativeReport(assessmentId) {
     // 5. Arricchisci con dati ESCO ufficiali statici
     const enrichedInterpretations = enrichWithEscoData(reportData.category_interpretations);
 
-    // 6. Salva in database
+    // 6. Salva in database (hr_notes salvato separatamente, mai esposto al candidato via /api/data)
     const { data: savedReport, error: saveError } = await supabase
       .from('qualitative_reports')
       .insert({
@@ -420,7 +463,8 @@ export async function generateQualitativeReport(assessmentId) {
         category_interpretations: enrichedInterpretations,
         development_plan: reportData.development_plan,
         profile_insights: reportData.profile_insights,
-        ai_model: 'claude-sonnet-4-20250514',
+        hr_notes: reportData.hr_notes ?? null,
+        ai_model: 'claude-sonnet-4-6',
         generation_tokens: response.usage.output_tokens
       })
       .select()
@@ -433,6 +477,7 @@ export async function generateQualitativeReport(assessmentId) {
 
     console.log(`💾 Report saved successfully: ${savedReport.id}`);
     console.log(`🇪🇺 ESCO v1.2 data included in all 12 categories`);
+    if (isB2B && reportData.hr_notes) console.log(`🔒 hr_notes saved (B2B — not exposed to candidate)`);
 
     return savedReport;
   } catch (error) {

@@ -81,6 +81,8 @@ export const api = {
     inProgress:    ()          => request<any>('/api/data/assessments/in-progress'),
     complete:      (id: string, score: number) =>
       request<any>(`/api/data/assessments/${id}/complete`, { method: 'PUT', body: JSON.stringify({ total_score: score }) }),
+    saveUserContext: (id: string, userContext: Record<string, any>) =>
+      request<any>(`/api/data/assessments/${id}/user-context`, { method: 'PUT', body: JSON.stringify({ user_context: userContext }) }),
 
     responses: {
       list:  (id: string) => request<any>(`/api/data/assessments/${id}/responses`),
