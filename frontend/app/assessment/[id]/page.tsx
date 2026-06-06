@@ -99,13 +99,14 @@ export default function AssessmentPage() {
     }
   }, [currentQuestionIndex, filteredQuestions])
 
-  const saveProfilingResponse = async (questionId: string, text: string) => {
-    await api.assessments.responses.upsert(assessmentId, {
+  // Fire-and-forget: salva in background senza bloccare la navigazione
+  const saveProfilingResponse = (questionId: string, text: string) => {
+    api.assessments.responses.upsert(assessmentId, {
       question_id: questionId,
       answer_text: text,
       answer_value: null,
       skill_category: 'profiling',
-    })
+    }).catch(err => console.warn('Profiling save failed (non-blocking):', err))
   }
 
   // ── Likert answer ───────────────────────────────────────────────────────────
@@ -113,25 +114,27 @@ export default function AssessmentPage() {
     const question = filteredQuestions[currentQuestionIndex]
     const newAnswers = { ...answers, [question.id]: value }
     setAnswers(newAnswers)
-    await api.assessments.responses.upsert(assessmentId, {
+    // Naviga subito, salva in background
+    if (currentQuestionIndex < filteredQuestions.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1)
+    }
+    api.assessments.responses.upsert(assessmentId, {
       question_id: String(question.id),
       answer_value: value,
       skill_category: question.category,
-    })
-    if (currentQuestionIndex < filteredQuestions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1)
-    }
+    }).catch(err => console.warn('Likert save failed:', err))
   }
 
   // ── Single-choice profiling answer ─────────────────────────────────────────
-  const handleSingleChoice = async (option: string) => {
+  const handleSingleChoice = (option: string) => {
     const question = filteredQuestions[currentQuestionIndex]
     const qid = String(question.id)
     setProfilingAnswers(prev => ({ ...prev, [qid]: option }))
-    await saveProfilingResponse(qid, option)
+    // Naviga subito, salva in background
     if (currentQuestionIndex < filteredQuestions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1)
     }
+    saveProfilingResponse(qid, option)
   }
 
   // ── Navigation ──────────────────────────────────────────────────────────────
@@ -139,12 +142,12 @@ export default function AssessmentPage() {
     if (currentQuestionIndex > 0) setCurrentQuestionIndex(currentQuestionIndex - 1)
   }
 
-  const handleNext = async () => {
+  const handleNext = () => {
     const question = filteredQuestions[currentQuestionIndex]
     if (question.type === 'textarea') {
       const qid = String(question.id)
       setProfilingAnswers(prev => ({ ...prev, [qid]: textareaValue }))
-      await saveProfilingResponse(qid, textareaValue)
+      saveProfilingResponse(qid, textareaValue)
     }
     if (currentQuestionIndex < filteredQuestions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1)
