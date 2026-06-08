@@ -8,7 +8,7 @@ import adminRoutes from './routes/admin-pg.js';
 import shareRoutes from './routes/share.js';
 import leadershipRoutes from './routes/leadership.js';
 import organizationsRoutes from './routes/organizations-pg.js';
-import trialRoutes from './routes/trial-pg.js';
+import trialRoutes from './routes/trial.js';
 import trackingRouter from './routes/tracking.js';
 import linkedinRouter from './routes/linkedin.js';
 import { strictLimiter, generalLimiter } from './middleware/rateLimiter.js';
