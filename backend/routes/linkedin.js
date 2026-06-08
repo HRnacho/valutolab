@@ -90,7 +90,7 @@ router.get('/callback', async (req, res) => {
       linkedin_urn: personUrn,
       state: state || '',
     });
-    res.redirect(`${FRONTEND_URL}/dashboard/results/${state}?${params}`);
+    res.redirect(`${FRONTEND_URL}/dashboard?${params}`);
 
   } catch (err) {
     console.error('LinkedIn callback error:', err);

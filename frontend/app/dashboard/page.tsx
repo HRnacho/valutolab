@@ -121,6 +121,15 @@ export default function DashboardPage() {
       }
 
       setLoading(false)
+
+    // Auto-apri badge modal se torniamo da LinkedIn OAuth
+    const params = new URLSearchParams(window.location.search)
+    const linkedinToken = params.get('linkedin_token')
+    const linkedinUrn   = params.get('linkedin_urn')
+    const linkedinState = params.get('state')
+    if (linkedinToken && linkedinUrn && linkedinState) {
+      await handleOpenBadge(linkedinState)
+    }
     }
     fetchData()
   }, [router, authUser, authLoading])
