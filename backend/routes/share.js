@@ -1,250 +1,166 @@
 import express from 'express';
-import { supabase } from '../config/supabase.js';
+import db from '../config/database.js';
 
 const router = express.Router();
 
-// Helper function per formattare nomi categorie
-function formatCategoryName(category) {
-  const categoryMap = {
-    'communication': 'Comunicazione',
-    'leadership': 'Leadership',
-    'problem_solving': 'Problem Solving',
-    'teamwork': 'Lavoro di Squadra',
-    'time_management': 'Gestione del Tempo',
-    'adaptability': 'Adattabilità',
-    'emotional_intelligence': 'Intelligenza Emotiva',
-    'creativity': 'Creatività',
-    'critical_thinking': 'Pensiero Critico',
-    'empathy': 'Empatia',
-    'negotiation': 'Negoziazione',
-    'resilience': 'Resilienza'
-  };
-  return categoryMap[category] || category;
-}
+const categoryMap = {
+  communication:         'Comunicazione',
+  leadership:            'Leadership',
+  problem_solving:       'Problem Solving',
+  teamwork:              'Lavoro di Squadra',
+  time_management:       'Gestione del Tempo',
+  adaptability:          'Adattabilità',
+  emotional_intelligence:'Intelligenza Emotiva',
+  creativity:            'Creatività',
+  critical_thinking:     'Pensiero Critico',
+  empathy:               'Empatia',
+  negotiation:           'Negoziazione',
+  resilience:            'Resilienza',
+  decision_making:       'Decision Making',
+};
+const fmt = (cat) => categoryMap[cat] || cat;
 
-// POST /api/share/create - Crea condivisione profilo
+// ── POST /api/share/create ─────────────────────────────────────────────────
 router.post('/create', async (req, res) => {
   try {
-    const { userId, assessmentId } = req.body;
+    const { assessment_id } = req.body;
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ success: false, error: 'Non autenticato' });
 
-    if (!userId || !assessmentId) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'userId e assessmentId sono obbligatori' 
-      });
+    // Verifica assessment completato
+    const aRes = await db.query(
+      'SELECT id, user_id, status FROM assessments WHERE id = $1 AND status = $2',
+      [assessment_id, 'completed']
+    );
+    if (!aRes.rows.length) {
+      return res.status(404).json({ success: false, error: 'Assessment non trovato o non completato' });
     }
 
-    // Verifica che l'assessment esista e appartenga all'utente
-    const { data: assessment, error: assessmentError } = await supabase
-      .from('assessments')
-      .select('id, user_id, status')
-      .eq('id', assessmentId)
-      .eq('user_id', userId)
-      .eq('status', 'completed')
-      .single();
-
-    if (assessmentError || !assessment) {
-      return res.status(404).json({ 
-        success: false, 
-        error: 'Assessment non trovato o non completato' 
-      });
-    }
-
-    // Verifica se esiste già una condivisione per questo assessment
-    const { data: existingShare } = await supabase
-      .from('shared_profiles')
-      .select('*')
-      .eq('assessment_id', assessmentId)
-      .single();
-
-    if (existingShare) {
-      // Riattiva se era disattivata
-      if (!existingShare.is_active) {
-        const { data: updated, error: updateError } = await supabase
-          .from('shared_profiles')
-          .update({ is_active: true })
-          .eq('id', existingShare.id)
-          .select()
-          .single();
-
-        if (updateError) throw updateError;
-
-        return res.json({ 
-          success: true, 
-          share: updated,
-          message: 'Condivisione riattivata'
-        });
+    // Cerca condivisione esistente
+    const existing = await db.query(
+      'SELECT * FROM shared_profiles WHERE assessment_id = $1',
+      [assessment_id]
+    );
+    if (existing.rows.length) {
+      const share = existing.rows[0];
+      if (!share.is_active) {
+        const upd = await db.query(
+          'UPDATE shared_profiles SET is_active = true WHERE id = $1 RETURNING *',
+          [share.id]
+        );
+        return res.json({ success: true, ...upd.rows[0], message: 'Condivisione riattivata' });
       }
-
-      return res.json({ 
-        success: true, 
-        share: existingShare,
-        message: 'Condivisione già esistente'
-      });
+      return res.json({ success: true, ...share, message: 'Condivisione già esistente' });
     }
 
-    // Crea nuova condivisione
-    const { data: newShare, error: createError } = await supabase
-      .from('shared_profiles')
-      .insert({
-        user_id: userId,
-        assessment_id: assessmentId,
-        is_active: true
-      })
-      .select()
-      .single();
-
-    if (createError) throw createError;
-
-    res.json({ 
-      success: true, 
-      share: newShare,
-      message: 'Condivisione creata con successo'
-    });
-
-  } catch (error) {
-    console.error('Error creating share:', error);
-    res.status(500).json({ success: false, error: error.message });
+    // Crea nuova
+    const ins = await db.query(
+      `INSERT INTO shared_profiles (user_id, assessment_id, is_active)
+       VALUES ($1, $2, true) RETURNING *`,
+      [aRes.rows[0].user_id, assessment_id]
+    );
+    res.json({ success: true, ...ins.rows[0], message: 'Condivisione creata' });
+  } catch (err) {
+    console.error('share/create error:', err);
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
-// GET /api/share/:token - Ottieni profilo pubblico
+// ── GET /api/share/status/:assessmentId ───────────────────────────────────
+router.get('/status/:assessmentId', async (req, res) => {
+  try {
+    const { assessmentId } = req.params;
+    const r = await db.query(
+      'SELECT * FROM shared_profiles WHERE assessment_id = $1',
+      [assessmentId]
+    );
+    if (!r.rows.length) return res.json({ success: true, share: null });
+    res.json({ success: true, ...r.rows[0] });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ── GET /api/share/:token ──────────────────────────────────────────────────
 router.get('/:token', async (req, res) => {
   try {
     const { token } = req.params;
 
-    // Trova condivisione attiva
-    const { data: share, error: shareError } = await supabase
-      .from('shared_profiles')
-      .select(`
-        *,
-        assessments!inner(
-          id,
-          total_score,
-          completed_at,
-          user_id
-        )
-      `)
-      .eq('share_token', token)
-      .eq('is_active', true)
-      .single();
-
-    if (shareError || !share) {
-      return res.status(404).json({ 
-        success: false, 
-        error: 'Profilo non trovato o condivisione disattivata' 
-      });
+    const shareRes = await db.query(
+      `SELECT sp.*, a.total_score, a.completed_at, a.user_id
+       FROM shared_profiles sp
+       JOIN assessments a ON a.id = sp.assessment_id
+       WHERE sp.share_token = $1 AND sp.is_active = true`,
+      [token]
+    );
+    if (!shareRes.rows.length) {
+      return res.status(404).json({ success: false, error: 'Profilo non trovato o condivisione disattivata' });
     }
+    const share = shareRes.rows[0];
 
-    // Ottieni profilo utente
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('full_name')
-      .eq('id', share.assessments.user_id)
-      .single();
+    const profileRes = await db.query(
+      'SELECT full_name FROM users WHERE id = $1',
+      [share.user_id]
+    );
 
-    // Ottieni risultati assessment con colonne corrette
-    const { data: results } = await supabase
-      .from('combined_assessment_results')
-      .select('skill_category, final_score')
-      .eq('assessment_id', share.assessment_id);
+    const resultsRes = await db.query(
+      `SELECT skill_category, final_score
+       FROM combined_assessment_results
+       WHERE assessment_id = $1`,
+      [share.assessment_id]
+    );
 
-    // Mappa i risultati nel formato atteso dal frontend
-    const mappedResults = results ? results.map(r => ({
-      category: formatCategoryName(r.skill_category),
-      score: Math.round(parseFloat(r.final_score) * 20) // Converte da 0-5 a 0-100
-    })) : [];
+    const mappedResults = resultsRes.rows.map(r => ({
+      category: fmt(r.skill_category),
+      score: Math.round(parseFloat(r.final_score) * 20),
+    }));
 
     // Incrementa view count
-    await supabase
-      .from('shared_profiles')
-      .update({ 
-        view_count: share.view_count + 1,
-        last_viewed_at: new Date().toISOString()
-      })
-      .eq('id', share.id);
+    await db.query(
+      'UPDATE shared_profiles SET view_count = view_count + 1, last_viewed_at = NOW() WHERE id = $1',
+      [share.id]
+    );
 
     res.json({
       success: true,
       profile: {
-        name: profile?.full_name || 'Utente ValutoLab',
-        completedAt: share.assessments.completed_at,
-        totalScore: share.assessments.total_score,
-        results: mappedResults
-      }
+        name: profileRes.rows[0]?.full_name || 'Utente ValutoLab',
+        completedAt: share.completed_at,
+        totalScore: share.total_score,
+        results: mappedResults,
+      },
     });
-
-  } catch (error) {
-    console.error('Error fetching public profile:', error);
-    res.status(500).json({ success: false, error: error.message });
+  } catch (err) {
+    console.error('share/:token error:', err);
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
-// PUT /api/share/:token/toggle - Attiva/disattiva condivisione
-router.put('/:token/toggle', async (req, res) => {
+// ── PUT /api/share/toggle/:token ──────────────────────────────────────────
+router.put('/toggle/:token', async (req, res) => {
   try {
     const { token } = req.params;
-    const { userId } = req.body;
+    const { is_active } = req.body;
 
-    // Trova condivisione dell'utente
-    const { data: share, error: findError } = await supabase
-      .from('shared_profiles')
-      .select('*')
-      .eq('share_token', token)
-      .eq('user_id', userId)
-      .single();
-
-    if (findError || !share) {
-      return res.status(404).json({ 
-        success: false, 
-        error: 'Condivisione non trovata' 
-      });
-    }
-
-    // Toggle is_active
-    const { data: updated, error: updateError } = await supabase
-      .from('shared_profiles')
-      .update({ is_active: !share.is_active })
-      .eq('id', share.id)
-      .select()
-      .single();
-
-    if (updateError) throw updateError;
-
-    res.json({ 
-      success: true, 
-      share: updated,
-      message: updated.is_active ? 'Condivisione attivata' : 'Condivisione disattivata'
-    });
-
-  } catch (error) {
-    console.error('Error toggling share:', error);
-    res.status(500).json({ success: false, error: error.message });
+    const upd = await db.query(
+      'UPDATE shared_profiles SET is_active = $1 WHERE share_token = $2 RETURNING *',
+      [is_active, token]
+    );
+    if (!upd.rows.length) return res.status(404).json({ success: false, error: 'Condivisione non trovata' });
+    res.json({ success: true, ...upd.rows[0] });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
-// DELETE /api/share/:token - Elimina condivisione
+// ── DELETE /api/share/:token ──────────────────────────────────────────────
 router.delete('/:token', async (req, res) => {
   try {
     const { token } = req.params;
-    const { userId } = req.body;
-
-    const { error } = await supabase
-      .from('shared_profiles')
-      .delete()
-      .eq('share_token', token)
-      .eq('user_id', userId);
-
-    if (error) throw error;
-
-    res.json({ 
-      success: true, 
-      message: 'Condivisione eliminata con successo'
-    });
-
-  } catch (error) {
-    console.error('Error deleting share:', error);
-    res.status(500).json({ success: false, error: error.message });
+    await db.query('DELETE FROM shared_profiles WHERE share_token = $1', [token]);
+    res.json({ success: true, message: 'Condivisione eliminata' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 

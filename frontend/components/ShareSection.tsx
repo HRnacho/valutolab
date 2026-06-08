@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Link2, Copy, Eye, Trash2, X } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 import QRCodeGenerator from './QRCodeGenerator';
 
 interface ShareSectionProps {
@@ -9,289 +11,213 @@ interface ShareSectionProps {
 }
 
 export default function ShareSection({ assessmentId, userId }: ShareSectionProps) {
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading]     = useState(true);
   const [shareData, setShareData] = useState<any>(null);
-  const [isActive, setIsActive] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
-  const [showQRModal, setShowQRModal] = useState(false);
-  const [userName, setUserName] = useState('Utente');
+  const [isActive, setIsActive]   = useState(false);
+  const [toast, setToast]         = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [showQR, setShowQR]       = useState(false);
+  const [userName, setUserName]   = useState('Utente');
+  const [toggling, setToggling]   = useState(false);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+  const API = process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com';
+  const authHeader = () => ({ Authorization: `Bearer ${localStorage.getItem('jwt_access_token')}` });
 
+  useEffect(() => { fetchStatus(); fetchUserName(); }, [assessmentId]);
   useEffect(() => {
-    fetchShareStatus();
-    fetchUserName();
-  }, [assessmentId]);
+    if (toast) { const t = setTimeout(() => setToast(null), 3000); return () => clearTimeout(t); }
+  }, [toast]);
 
-  useEffect(() => {
-    if (message) {
-      const timer = setTimeout(() => setMessage(null), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [message]);
+  const showToast = (type: 'success' | 'error', text: string) => setToast({ type, text });
 
   const fetchUserName = async () => {
     try {
-      const response = await fetch(`${API_URL}/users/profile`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setUserName(data.full_name || 'Utente');
-      }
-    } catch (error) {
-      console.error('Errore recupero nome utente:', error);
-    }
+      const r = await fetch(`${API}/api/auth/me`, { headers: authHeader() });
+      if (r.ok) { const d = await r.json(); setUserName(d.user?.full_name || 'Utente'); }
+    } catch {}
   };
 
-  const fetchShareStatus = async () => {
+  const fetchStatus = async () => {
     try {
-      setIsLoading(true);
-      const response = await fetch(`${API_URL}/share/status/${assessmentId}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setShareData(data);
-        setIsActive(data?.is_active || false);
+      setLoading(true);
+      const r = await fetch(`${API}/api/share/status/${assessmentId}`, { headers: authHeader() });
+      if (r.ok) {
+        const d = await r.json();
+        if (d.share_token) { setShareData(d); setIsActive(d.is_active); }
       }
-    } catch (error) {
-      console.error('Errore recupero stato condivisione:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    } catch {} finally { setLoading(false); }
   };
 
   const toggleSharing = async () => {
+    setToggling(true);
     try {
       if (!shareData) {
-        const response = await fetch(`${API_URL}/share/create`, {
+        // Crea nuova condivisione
+        const r = await fetch(`${API}/api/share/create`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          },
-          body: JSON.stringify({ assessment_id: assessmentId })
+          headers: { 'Content-Type': 'application/json', ...authHeader() },
+          body: JSON.stringify({ assessment_id: assessmentId }),
         });
-
-        if (response.ok) {
-          const data = await response.json();
-          setShareData(data);
-          setIsActive(true);
-          setMessage({ type: 'success', text: '✅ Condivisione attivata!' });
-        }
+        const d = await r.json();
+        if (d.success) { setShareData(d); setIsActive(true); showToast('success', 'Condivisione attivata!'); }
+        else showToast('error', d.error || 'Errore');
       } else {
         const newStatus = !isActive;
-        const response = await fetch(`${API_URL}/share/toggle/${shareData.share_token}`, {
+        const r = await fetch(`${API}/api/share/toggle/${shareData.share_token}`, {
           method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          },
-          body: JSON.stringify({ is_active: newStatus })
+          headers: { 'Content-Type': 'application/json', ...authHeader() },
+          body: JSON.stringify({ is_active: newStatus }),
         });
-
-        if (response.ok) {
+        const d = await r.json();
+        if (d.success) {
           setIsActive(newStatus);
-          setMessage({ 
-            type: 'success', 
-            text: newStatus ? '✅ Condivisione attivata!' : '⏸️ Condivisione disattivata' 
-          });
+          setShareData(d);
+          showToast('success', newStatus ? 'Condivisione attivata!' : 'Condivisione disattivata');
         }
       }
-    } catch (error) {
-      console.error('Errore toggle condivisione:', error);
-      setMessage({ type: 'error', text: '❌ Errore durante l\'operazione' });
-    }
+    } catch { showToast('error', "Errore durante l'operazione"); }
+    finally { setToggling(false); }
   };
 
   const copyLink = () => {
-    if (shareData?.share_token) {
-      const link = `https://valutolab.com/profile/${shareData.share_token}`;
-      navigator.clipboard.writeText(link);
-      setMessage({ type: 'success', text: '📋 Link copiato!' });
-    }
+    const link = `https://valutolab.com/profile/${shareData.share_token}`;
+    navigator.clipboard.writeText(link);
+    showToast('success', 'Link copiato!');
   };
 
   const deleteSharing = async () => {
-    if (!confirm('Vuoi davvero eliminare la condivisione? Il link pubblico non funzionerà più.')) {
-      return;
-    }
-
+    if (!confirm('Eliminare la condivisione? Il link pubblico smetterà di funzionare.')) return;
     try {
-      const response = await fetch(`${API_URL}/share/${shareData.share_token}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
+      await fetch(`${API}/api/share/${shareData.share_token}`, {
+        method: 'DELETE', headers: authHeader()
       });
-
-      if (response.ok) {
-        setShareData(null);
-        setIsActive(false);
-        setMessage({ type: 'success', text: '🗑️ Condivisione eliminata' });
-      }
-    } catch (error) {
-      console.error('Errore eliminazione condivisione:', error);
-      setMessage({ type: 'error', text: '❌ Errore durante l\'eliminazione' });
-    }
+      setShareData(null); setIsActive(false);
+      showToast('success', 'Condivisione eliminata');
+    } catch { showToast('error', 'Errore durante l\'eliminazione'); }
   };
 
-  const getProfileUrl = () => {
-    if (shareData?.share_token) {
-      return `https://valutolab.com/profile/${shareData.share_token}`;
-    }
-    return '';
-  };
+  const profileUrl = shareData?.share_token
+    ? `https://valutolab.com/profile/${shareData.share_token}` : '';
 
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
-        <div className="animate-pulse">
-          <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
-          <div className="h-20 bg-gray-200 rounded"></div>
-        </div>
+      <div className="bg-paper-50 border border-paper-200 rounded-md shadow-sm-ink p-6 animate-pulse">
+        <div className="h-5 bg-paper-200 rounded w-1/3 mb-4" />
+        <div className="h-16 bg-paper-200 rounded" />
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
+    <div className="bg-paper-50 border border-paper-200 rounded-md shadow-sm-ink p-6 relative font-body">
+
+      {/* Toast */}
+      {toast && (
+        <div className={`absolute top-4 right-4 z-10 px-4 py-2 rounded-sm text-[13px] font-medium text-paper-50 shadow-md-ink ${
+          toast.type === 'success' ? 'bg-ink-900' : 'bg-sienna-600'
+        }`}>
+          {toast.text}
+        </div>
+      )}
+
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">
-          <div className="text-3xl">🔗</div>
+          <Link2 className="w-4 h-4 text-ink-500" />
           <div>
-            <h2 className="text-xl font-bold text-gray-800">Condivisione</h2>
-            <p className="text-sm text-gray-600">Condividi il tuo profilo pubblico</p>
+            <h3 className="font-display text-[16px] font-medium text-ink-900">Condivisione</h3>
+            <p className="text-[12px] text-ink-500">Profilo pubblico verificabile</p>
           </div>
         </div>
-        
-        {/* Toggle switch */}
-        <button
-          onClick={toggleSharing}
-          className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
-            isActive ? 'bg-gradient-to-r from-purple-600 to-blue-600' : 'bg-gray-300'
-          }`}
-        >
-          <span
-            className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-lg transition-transform ${
-              isActive ? 'translate-x-7' : 'translate-x-1'
-            }`}
-          />
+
+        {/* Toggle */}
+        <button onClick={toggleSharing} disabled={toggling}
+          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 focus:outline-none ${
+            isActive ? 'bg-ink-900' : 'bg-paper-300'
+          }`}>
+          <span className={`inline-block h-4 w-4 transform rounded-full bg-paper-50 shadow transition-transform ${
+            isActive ? 'translate-x-6' : 'translate-x-1'
+          }`} />
         </button>
       </div>
 
-      {/* Message notification */}
-      {message && (
-        <div className={`mb-4 p-3 rounded-lg ${
-          message.type === 'success' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
-        }`}>
-          <p className={`text-sm font-medium ${
-            message.type === 'success' ? 'text-green-800' : 'text-red-800'
-          }`}>
-            {message.text}
-          </p>
-        </div>
-      )}
-
-      {/* Content */}
-      {shareData && (
+      {/* Stato attivo */}
+      {shareData && isActive && (
         <div className="space-y-4">
-          {isActive ? (
-            <>
-              {/* Stats */}
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <span>👁️</span>
-                <span className="font-medium">{shareData.view_count || 0} visualizzazioni</span>
-              </div>
+          {/* View count */}
+          <div className="flex items-center gap-2 text-[12px] text-ink-500">
+            <Eye className="w-3.5 h-3.5" />
+            <span>{shareData.view_count || 0} visualizzazioni</span>
+          </div>
 
-              {/* Link copiabile */}
-              <div className="bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-200 rounded-lg p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-gray-600 mb-1">Link profilo pubblico:</p>
-                    <p className="text-sm font-mono text-gray-800 truncate">
-                      valutolab.com/profile/{shareData.share_token}
-                    </p>
-                  </div>
-                  <button
-                    onClick={copyLink}
-                    className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-semibold text-sm transition-colors duration-200 flex-shrink-0"
-                  >
-                    Copia
-                  </button>
-                </div>
-              </div>
-
-              {/* Action buttons */}
-              <div className="grid grid-cols-3 gap-3">
-                <button
-                  onClick={() => window.open(`/profile/${shareData.share_token}`, '_blank')}
-                  className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-4 py-3 rounded-lg font-semibold text-sm transition-all duration-200 transform hover:scale-105 flex items-center justify-center gap-2"
-                >
-                  <span>📱</span>
-                  Badge
-                </button>
-                
-                <button
-                  onClick={() => setShowQRModal(true)}
-                  className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-4 py-3 rounded-lg font-semibold text-sm transition-all duration-200 transform hover:scale-105 flex items-center justify-center gap-2"
-                >
-                  <span>📄</span>
-                  QR
-                </button>
-                
-                <button
-                  disabled
-                  className="bg-gray-300 text-gray-500 px-4 py-3 rounded-lg font-semibold text-sm cursor-not-allowed flex items-center justify-center gap-2 opacity-50"
-                  title="Coming soon"
-                >
-                  <span>📋</span>
-                  PDF
-                </button>
-              </div>
-
-              {/* Delete button */}
-              <div className="pt-4 border-t border-gray-200">
-                <button
-                  onClick={deleteSharing}
-                  className="text-red-600 hover:text-red-700 text-sm font-medium flex items-center gap-2 transition-colors"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                  Elimina Condivisione
-                </button>
-              </div>
-            </>
-          ) : (
-            <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-200 rounded-lg p-6 text-center">
-              <div className="text-4xl mb-3">⏸️</div>
-              <h3 className="text-lg font-bold text-gray-800 mb-2">
-                Condivisione Disattivata
-              </h3>
-              <p className="text-gray-600 mb-4">
-                Il tuo profilo non è più visibile pubblicamente. Attiva lo switch sopra per riabilitare la condivisione.
+          {/* Link */}
+          <div className="bg-paper-100 border border-paper-200 rounded-md p-4">
+            <p className="text-[10px] font-medium uppercase tracking-eyebrow text-ink-400 mb-2">Link profilo pubblico</p>
+            <div className="flex items-center justify-between gap-3">
+              <p className="font-mono text-[12px] text-ink-700 truncate">
+                valutolab.com/profile/{shareData.share_token}
               </p>
+              <button onClick={copyLink}
+                className="flex items-center gap-1.5 text-[12px] font-medium text-ink-900 hover:text-sienna-600 transition-colors flex-shrink-0">
+                <Copy className="w-3.5 h-3.5" /> Copia
+              </button>
             </div>
-          )}
+          </div>
+
+          {/* Azioni */}
+          <div className="grid grid-cols-2 gap-2">
+            <Button variant="secondary" className="justify-center text-[12px]"
+              onClick={() => window.open(profileUrl, '_blank')}>
+              Visualizza profilo
+            </Button>
+            <Button variant="secondary" className="justify-center text-[12px]"
+              onClick={() => setShowQR(true)}>
+              QR Code
+            </Button>
+          </div>
+
+          {/* Elimina */}
+          <button onClick={deleteSharing}
+            className="flex items-center gap-2 text-[12px] text-ink-400 hover:text-sienna-600 transition-colors mt-2">
+            <Trash2 className="w-3.5 h-3.5" /> Elimina condivisione
+          </button>
         </div>
       )}
 
-      {/* QR Code Modal */}
-      {showQRModal && shareData?.share_token && (
-        <QRCodeGenerator
-          profileUrl={getProfileUrl()}
-          userName={userName}
-          onClose={() => setShowQRModal(false)}
-        />
+      {/* Stato disattivato */}
+      {shareData && !isActive && (
+        <div className="bg-paper-100 border border-paper-200 rounded-md p-5 text-center">
+          <p className="text-[13px] font-medium text-ink-700 mb-1">Condivisione disattivata</p>
+          <p className="text-[12px] text-ink-500">Il tuo profilo non è visibile pubblicamente. Attiva lo switch per riabilitarlo.</p>
+        </div>
+      )}
+
+      {/* Stato vuoto */}
+      {!shareData && (
+        <div className="bg-paper-100 border border-paper-200 rounded-md p-5 text-center">
+          <p className="text-[13px] text-ink-600 mb-3">
+            Attiva la condivisione per ottenere un link pubblico verificabile del tuo profilo.
+          </p>
+          <Button variant="primary" className="justify-center" onClick={toggleSharing} disabled={toggling}>
+            {toggling ? 'Attivazione…' : 'Attiva condivisione'}
+          </Button>
+        </div>
+      )}
+
+      {/* QR Modal */}
+      {showQR && shareData?.share_token && (
+        <div className="fixed inset-0 bg-ink-950/60 flex items-center justify-center p-4 z-50">
+          <div className="bg-paper-50 border border-paper-200 rounded-md shadow-lg-ink p-6 max-w-sm w-full relative">
+            <button onClick={() => setShowQR(false)}
+              className="absolute top-4 right-4 text-ink-400 hover:text-ink-700">
+              <X className="w-5 h-5" />
+            </button>
+            <QRCodeGenerator
+              profileUrl={profileUrl}
+              userName={userName}
+              onClose={() => setShowQR(false)}
+            />
+          </div>
+        </div>
       )}
     </div>
   );

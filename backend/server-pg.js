@@ -10,6 +10,7 @@ import leadershipRoutes from './routes/leadership.js';
 import organizationsRoutes from './routes/organizations-pg.js';
 import trialRoutes from './routes/trial-pg.js';
 import trackingRouter from './routes/tracking.js';
+import linkedinRouter from './routes/linkedin.js';
 import { strictLimiter, generalLimiter } from './middleware/rateLimiter.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import authRouter from './routes/auth.js';
@@ -63,6 +64,7 @@ app.use('/api/leadership', leadershipRoutes);
 app.use('/api/organizations', organizationsRoutes);
 app.use('/', trackingRouter);
 app.use('/api/v1/trial', trialRoutes);
+app.use('/api/linkedin', linkedinRouter);
 
 // Error handler centralizzato — deve stare DOPO tutte le route
 app.use(errorHandler);
