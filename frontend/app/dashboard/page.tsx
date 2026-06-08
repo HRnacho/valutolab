@@ -184,9 +184,9 @@ export default function DashboardPage() {
       }
       const topSkills = (rRes.results?.slice(0, 3) || []).map((r: any) => ({
         name: categoryLabels[r.skill_category] || r.skill_category,
-        score: Math.round(parseFloat(r.final_score) * 20)
+        score: parseFloat(r.final_score)
       }))
-      setBadgeModal({ open: true, assessmentId, userName: pRes.profile?.full_name || 'Utente ValutoLab', score: aRes.assessment?.total_score || 0, topSkills, shareToken: shareData[assessmentId]?.share_token || '' })
+      setBadgeModal({ open: true, assessmentId, userName: pRes.profile?.full_name || 'Utente ValutoLab', score: parseFloat(aRes.assessment?.total_score) || 0, topSkills, shareToken: shareData[assessmentId]?.share_token || '' })
     } catch { showMessage('error', 'Errore nel caricamento dei dati') }
   }
 
@@ -561,7 +561,7 @@ export default function DashboardPage() {
               <h3 className="font-display text-[20px] font-medium text-ink-900">Badge LinkedIn</h3>
               <button onClick={() => setBadgeModal(null)} className="text-ink-400 hover:text-ink-700">✕</button>
             </div>
-            <BadgeGenerator userName={badgeModal.userName} score={badgeModal.score} topSkills={badgeModal.topSkills} shareToken={badgeModal.shareToken} />
+            <BadgeGenerator userName={badgeModal.userName} score={badgeModal.score} topSkills={badgeModal.topSkills} shareToken={badgeModal.shareToken} assessmentId={badgeModal.assessmentId ?? ''} />
           </div>
         </div>
       )}
