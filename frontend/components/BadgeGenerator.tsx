@@ -347,8 +347,6 @@ export default function BadgeGenerator({
 
   return (
     <div className="space-y-5">
-      <canvas ref={canvasRef} className="hidden" />
-
       {/* Preview del badge */}
       <div className="rounded-md overflow-hidden border border-paper-200 bg-paper-100">
         <canvas
