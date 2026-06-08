@@ -26,6 +26,8 @@ const ALLOWED_ORIGINS = [
   ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : [])
 ];
 
+app.set('trust proxy', 1); // Nginx / Cloudflare proxy
+
 app.use(cors({
   origin: (origin, callback) => {
     // allow requests with no origin (curl, mobile apps, same-origin)
