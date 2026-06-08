@@ -9,8 +9,11 @@ import shareRoutes from './routes/share.js';
 import leadershipRoutes from './routes/leadership.js';
 import organizationsRoutes from './routes/organizations-pg.js';
 import trialRoutes from './routes/trial.js';
+import trialB2cRoutes from './routes/trial-b2c.js';
 import trackingRouter from './routes/tracking.js';
 import linkedinRouter from './routes/linkedin.js';
+import dataRouter from './routes/data.js';
+import reportsRouter from './routes/reports.js';
 import { strictLimiter, generalLimiter } from './middleware/rateLimiter.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import authRouter from './routes/auth.js';
@@ -66,6 +69,9 @@ app.use('/api/leadership', leadershipRoutes);
 app.use('/api/organizations', organizationsRoutes);
 app.use('/', trackingRouter);
 app.use('/api/v1/trial', trialRoutes);
+app.use('/api/trial-b2c', trialB2cRoutes);
+app.use('/api/data', dataRouter);
+app.use('/api/reports', reportsRouter);
 app.use('/api/linkedin', linkedinRouter);
 
 // Error handler centralizzato — deve stare DOPO tutte le route
