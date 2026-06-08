@@ -475,19 +475,17 @@ export default function DashboardPage() {
                         <FileText className="w-4 h-4" />
                         <span className="text-[10px] font-medium">{generatingPDF === a.id ? '...' : 'PDF'}</span>
                       </button>
+                      <button onClick={() => handleOpenBadge(a.id)}
+                        className="flex flex-col items-center gap-1 p-2 border border-paper-200 rounded-md hover:bg-paper-100 transition-colors text-ink-600">
+                        <span className="text-[16px]">🏅</span>
+                        <span className="text-[10px] font-medium">Badge</span>
+                      </button>
                       {share && (
-                        <>
-                          <button onClick={() => handleOpenBadge(a.id)}
-                            className="flex flex-col items-center gap-1 p-2 border border-paper-200 rounded-md hover:bg-paper-100 transition-colors text-ink-600">
-                            <span className="text-[16px]">🏅</span>
-                            <span className="text-[10px] font-medium">Badge</span>
-                          </button>
-                          <button onClick={() => handleOpenQR(a.id)}
-                            className="flex flex-col items-center gap-1 p-2 border border-paper-200 rounded-md hover:bg-paper-100 transition-colors text-ink-600">
-                            <span className="text-[16px]">⬛</span>
-                            <span className="text-[10px] font-medium">QR</span>
-                          </button>
-                        </>
+                        <button onClick={() => handleOpenQR(a.id)}
+                          className="flex flex-col items-center gap-1 p-2 border border-paper-200 rounded-md hover:bg-paper-100 transition-colors text-ink-600">
+                          <span className="text-[16px]">⬛</span>
+                          <span className="text-[10px] font-medium">QR</span>
+                        </button>
                       )}
                       <button onClick={() => handleShareEmail(a.id)}
                         className="flex flex-col items-center gap-1 p-2 border border-paper-200 rounded-md hover:bg-paper-100 transition-colors text-ink-600">
