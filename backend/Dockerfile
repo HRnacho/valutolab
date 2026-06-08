@@ -31,4 +31,4 @@ COPY . .
 
 EXPOSE 3001
 
-CMD ["node", "server.js"]
+CMD ["node", "server-pg.js"]
