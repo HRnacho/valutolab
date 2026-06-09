@@ -26,6 +26,7 @@ const PORT = process.env.PORT || 3001;
 const ALLOWED_ORIGINS = [
   'https://valutolab.com',
   'https://www.valutolab.com',
+  'https://admin.valutolab.com',
   ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : [])
 ];
 
