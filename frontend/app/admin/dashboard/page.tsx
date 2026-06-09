@@ -96,7 +96,7 @@ const tdCls = 'px-4 py-3 text-[13px]'
 // ==================== MAIN ====================
 export default function AdminDashboard() {
   const router = useRouter()
-  const { user: authUser, logout, loading: authLoading } = useAuth()
+  const { user: authUser, logout, loading: authLoading, getAccessToken } = useAuth()
   const [loading, setLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
   const [currentAdminEmail, setCurrentAdminEmail] = useState('')
@@ -151,14 +151,26 @@ export default function AdminDashboard() {
     }
   }, [message])
 
+  const authFetch = (url: string, options: RequestInit = {}) => {
+    const token = getAccessToken()
+    return fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(options.headers || {}),
+      },
+    })
+  }
+
   const loadData = async () => {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'
     try {
       const [sR, uR, aR, tR] = await Promise.all([
-        fetch(`${apiUrl}/api/admin/stats`),
-        fetch(`${apiUrl}/api/admin/users`),
-        fetch(`${apiUrl}/api/admin/assessments`),
-        fetch(`${apiUrl}/api/v1/trial/list`),
+        authFetch(`${apiUrl}/api/admin/stats`),
+        authFetch(`${apiUrl}/api/admin/users`),
+        authFetch(`${apiUrl}/api/admin/assessments`),
+        authFetch(`${apiUrl}/api/admin/trials`),
       ])
       const [sD, uD, aD, tD] = await Promise.all([sR.json(), uR.json(), aR.json(), tR.json()])
       if (sD.success) setStats(sD.stats)
@@ -185,12 +197,12 @@ export default function AdminDashboard() {
     if (!showActivateModal) return
     setActivatingTrial(showActivateModal.id)
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'}/api/v1/trial/activate/${showActivateModal.id}`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ assessment_quota: activateForm.quota, days: activateForm.days })
-      })
+      const res = await authFetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'}/api/admin/trials/${showActivateModal.id}/activate`,
+        { method: 'POST', body: JSON.stringify({ assessment_quota: activateForm.quota, days: activateForm.days }) }
+      )
       const data = await res.json()
-      if (data.success) { showMsg('success', `Trial attivato! Magic link inviato a ${showActivateModal.contact_email}`); setShowActivateModal(null); await loadData() }
+      if (data.success) { showMsg('success', `Trial attivato per ${showActivateModal.contact_email}`); setShowActivateModal(null); await loadData() }
       else showMsg('error', data.error || 'Errore attivazione')
     } catch { showMsg('error', 'Errore attivazione trial') }
     finally { setActivatingTrial(null) }
@@ -198,7 +210,10 @@ export default function AdminDashboard() {
 
   const handleUpdateTrialStatus = async (trialId: string, status: string) => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/trial/update/${trialId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) })
+      const res = await authFetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'}/api/admin/trials/${trialId}/status`,
+        { method: 'PUT', body: JSON.stringify({ status }) }
+      )
       const data = await res.json()
       if (data.success) { showMsg('success', 'Status aggiornato!'); await loadData() } else showMsg('error', 'Errore aggiornamento')
     } catch { showMsg('error', 'Errore aggiornamento') }
@@ -206,7 +221,10 @@ export default function AdminDashboard() {
 
   const handleDeleteTrial = async (trialId: string) => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/trial/delete/${trialId}`, { method: 'DELETE' })
+      const res = await authFetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'}/api/admin/trials/${trialId}`,
+        { method: 'DELETE' }
+      )
       const data = await res.json()
       if (data.success) { showMsg('success', 'Trial eliminato!'); await loadData() } else showMsg('error', 'Errore eliminazione')
     } catch { showMsg('error', 'Errore eliminazione') }
@@ -216,10 +234,10 @@ export default function AdminDashboard() {
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault(); setCreatingUser(true)
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/create`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: newUserForm.email, fullName: newUserForm.fullName, password: newUserForm.password })
-      })
+      const res = await authFetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'}/api/admin/users/create`,
+        { method: 'POST', body: JSON.stringify({ email: newUserForm.email, fullName: newUserForm.fullName, password: newUserForm.password }) }
+      )
       const data = await res.json()
       if (data.success) { showMsg('success', 'Utente creato!'); setShowCreateUserModal(false); setNewUserForm({ email: '', fullName: '', password: '' }); await loadData() }
       else showMsg('error', data.message || 'Errore creazione utente')
@@ -230,9 +248,10 @@ export default function AdminDashboard() {
   const handleBlockUser = async (userId: string, blocked: boolean) => {
     setBlockingUser(userId)
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${userId}/block`, {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ blocked: !blocked })
-      })
+      const res = await authFetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'}/api/admin/users/${userId}/block`,
+        { method: 'PUT', body: JSON.stringify({ blocked: !blocked }) }
+      )
       const data = await res.json()
       if (data.success) { showMsg('success', blocked ? 'Utente sbloccato!' : 'Utente bloccato!'); await loadData() }
       else showMsg('error', "Errore nell'operazione")
@@ -242,7 +261,10 @@ export default function AdminDashboard() {
 
   const handleDeleteUser = async (userId: string) => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${userId}`, { method: 'DELETE' })
+      const res = await authFetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'}/api/admin/users/${userId}`,
+        { method: 'DELETE' }
+      )
       const data = await res.json()
       if (data.success) { showMsg('success', 'Utente eliminato'); setShowDeleteConfirm(null); await loadData() }
       else showMsg('error', "Errore nell'eliminazione")
@@ -252,7 +274,10 @@ export default function AdminDashboard() {
   const handleDeleteAssessment = async (id: string) => {
     if (!confirm('Eliminare questo assessment?')) return
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/assessments/${id}`, { method: 'DELETE' })
+      const res = await authFetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'}/api/admin/assessments/${id}`,
+        { method: 'DELETE' }
+      )
       const data = await res.json()
       if (data.success) { showMsg('success', 'Assessment eliminato'); await loadData() }
       else showMsg('error', "Errore nell'eliminazione")
@@ -268,10 +293,10 @@ export default function AdminDashboard() {
       else if (emailForm.recipients === 'incomplete') recipients = users.filter(u => u.assessmentCount === 0).map(u => u.email)
       else if (emailForm.recipients === 'selected') recipients = users.filter(u => selectedUsers.includes(u.id)).map(u => u.email)
       else if (emailForm.recipients === 'custom') recipients = emailForm.customEmails.split(',').map(e => e.trim()).filter(Boolean)
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/emails/send`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ recipients, subject: emailForm.subject, body: emailForm.body })
-      })
+      const res = await authFetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'}/api/admin/emails/send`,
+        { method: 'POST', body: JSON.stringify({ recipients, subject: emailForm.subject, body: emailForm.body }) }
+      )
       const data = await res.json()
       if (data.success) { showMsg('success', `Email inviata a ${recipients.length} destinatari!`); setShowEmailModal(false); setEmailForm({ recipients: 'all', customEmails: '', template: 'custom', subject: '', body: '' }) }
       else showMsg('error', "Errore nell'invio email")
