@@ -1,7 +1,7 @@
 import express from 'express';
 import db from '../config/database.js';
 import { verifyAdmin } from '../middleware/verifyToken.js';
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt';
 
 const router = express.Router();
 router.use(verifyAdmin);
