@@ -60,15 +60,15 @@ interface Trial {
 // ==================== CONSTANTS ====================
 const categoryLabels: Record<string, string> = {
   communication: 'Comunicazione', leadership: 'Leadership', problem_solving: 'Problem Solving',
-  teamwork: 'Lavoro di Squadra', time_management: 'Gestione del Tempo', adaptability: 'AdattabilitÃ ',
-  creativity: 'CreativitÃ ', critical_thinking: 'Pensiero Critico', empathy: 'Empatia',
+  teamwork: 'Lavoro di Squadra', time_management: 'Gestione del Tempo', adaptability: 'Adattabilità',
+  creativity: 'Creatività', critical_thinking: 'Pensiero Critico', empathy: 'Empatia',
   resilience: 'Resilienza', negotiation: 'Negoziazione', decision_making: 'Decision Making'
 }
 
 const emailTemplates = {
-  welcome: { subject: 'Benvenuto su ValutoLab! ðŸš€', body: `Ciao {name},\n\nBenvenuto su ValutoLab, la piattaforma per valutare le tue soft skills professionali.\n\nIniziasubito il tuo primo assessment!\n\nðŸ”— https://valutolab.com/dashboard\n\nIl Team ValutoLab` },
-  reminder: { subject: 'Completa il tuo Assessment su ValutoLab â°', body: `Ciao {name},\n\nHai iniziato un assessment ma non l'hai ancora completato.\n\nBastano solo 10-15 minuti!\n\nðŸ”— https://valutolab.com/dashboard\n\nIl Team ValutoLab` },
-  congrats: { subject: 'Ottimi risultati! ðŸŽ‰', body: `Ciao {name},\n\nComplimenti per l'eccellente punteggio!\n\nðŸ”— https://valutolab.com/dashboard\n\nIl Team ValutoLab` },
+  welcome: { subject: 'Benvenuto su ValutoLab! 🚀', body: `Ciao {name},\n\nBenvenuto su ValutoLab, la piattaforma per valutare le tue soft skills professionali.\n\nIniziasubito il tuo primo assessment!\n\n🔗 https://valutolab.com/dashboard\n\nIl Team ValutoLab` },
+  reminder: { subject: 'Completa il tuo Assessment su ValutoLab ⏰', body: `Ciao {name},\n\nHai iniziato un assessment ma non l'hai ancora completato.\n\nBastano solo 10-15 minuti!\n\n🔗 https://valutolab.com/dashboard\n\nIl Team ValutoLab` },
+  congrats: { subject: 'Ottimi risultati! 🎉', body: `Ciao {name},\n\nComplimenti per l'eccellente punteggio!\n\n🔗 https://valutolab.com/dashboard\n\nIl Team ValutoLab` },
   custom: { subject: '', body: '' }
 }
 
@@ -192,7 +192,7 @@ export default function AdminDashboard() {
     a.click()
   }
 
-  // â”€â”€ Trial handlers â”€â”€
+  // ── Trial handlers ──
   const handleActivateTrial = async () => {
     if (!showActivateModal) return
     setActivatingTrial(showActivateModal.id)
@@ -230,7 +230,7 @@ export default function AdminDashboard() {
     } catch { showMsg('error', 'Errore eliminazione') }
   }
 
-  // â”€â”€ User handlers â”€â”€
+  // ── User handlers ──
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault(); setCreatingUser(true)
     try {
@@ -329,7 +329,7 @@ export default function AdminDashboard() {
     <div className="min-h-screen flex items-center justify-center bg-paper-100">
       <div className="text-center">
         <div className="w-8 h-8 border-2 border-ink-900 border-t-transparent rounded-full animate-spin mx-auto" />
-        <p className="mt-4 font-body text-[14px] text-ink-500">Caricamento dashboard adminâ€¦</p>
+        <p className="mt-4 font-body text-[14px] text-ink-500">Caricamento dashboard admin…</p>
       </div>
     </div>
   )
@@ -357,7 +357,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* â”€â”€ HEADER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── HEADER ─────────────────────────────────────────────────── */}
       <header className="bg-paper-50 border-b border-paper-200 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
@@ -378,13 +378,13 @@ export default function AdminDashboard() {
 
       <main className="max-w-7xl mx-auto px-6 lg:px-8 py-8 space-y-6">
 
-        {/* â”€â”€ TITLE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ── TITLE ──────────────────────────────────────────────────── */}
         <div>
           <p className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400 mb-1">Pannello di controllo</p>
           <h1 className="font-display text-display-3 text-ink-900">Admin Dashboard</h1>
         </div>
 
-        {/* â”€â”€ TABS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ── TABS ───────────────────────────────────────────────────── */}
         <div className="bg-paper-50 border border-paper-200 rounded-md shadow-sm-ink">
           <div className="flex border-b border-paper-200 overflow-x-auto">
             {tabs.map(tab => (
@@ -400,7 +400,7 @@ export default function AdminDashboard() {
             ))}
           </div>
 
-          {/* â•â•â•â•â•â•â•â•â•â• OVERVIEW â•â•â•â•â•â•â•â•â•â• */}
+          {/* ══════════ OVERVIEW ══════════ */}
           {activeTab === 'overview' && stats && (
             <div className="p-6 space-y-6">
               {/* Stats */}
@@ -409,7 +409,7 @@ export default function AdminDashboard() {
                   { icon: Users,       label: 'Utenti Totali',    value: stats.totalUsers,            sub: `+${stats.newUsersLast7Days} ultimi 7gg` },
                   { icon: FileText,    label: 'Assessment Totali', value: stats.totalAssessments,      sub: `+${stats.completedLast7Days} completati/7gg` },
                   { icon: CheckCircle, label: 'Completati',        value: stats.completedAssessments,  sub: `${stats.inProgressAssessments} in corso` },
-                  { icon: Building2,   label: 'Trial Aziende',     value: trials.length,               sub: `${pendingTrials} in attesa Â· ${activeTrials} attivi` },
+                  { icon: Building2,   label: 'Trial Aziende',     value: trials.length,               sub: `${pendingTrials} in attesa · ${activeTrials} attivi` },
                 ].map(({ icon: Icon, label, value, sub }) => (
                   <div key={label} className="bg-paper-100 border border-paper-200 rounded-md p-5">
                     <div className="flex items-center justify-between mb-3">
@@ -465,13 +465,13 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {/* â•â•â•â•â•â•â•â•â•â• USERS â•â•â•â•â•â•â•â•â•â• */}
+          {/* ══════════ USERS ══════════ */}
           {activeTab === 'users' && (
             <div className="p-6 space-y-4">
               {/* Toolbar */}
               <div className="flex flex-col md:flex-row gap-3 items-start md:items-center justify-between">
                 <div className="flex gap-2 flex-1">
-                  <input type="text" placeholder="Cerca per email o nomeâ€¦" value={userSearchTerm}
+                  <input type="text" placeholder="Cerca per email o nome…" value={userSearchTerm}
                     onChange={e => setUserSearchTerm(e.target.value)}
                     className={`${inputCls} flex-1`} />
                   <select value={userFilter} onChange={e => setUserFilter(e.target.value as any)}
@@ -525,7 +525,7 @@ export default function AdminDashboard() {
                           <td className={tdCls}>
                             <span className="text-[10px] font-semibold uppercase tracking-eyebrow px-2 py-0.5 rounded-sm border border-paper-300 bg-paper-100 text-ink-600">{user.assessmentCount}</span>
                           </td>
-                          <td className={tdCls + ' text-ink-500'}>{user.last_assessment_date ? new Date(user.last_assessment_date).toLocaleDateString('it-IT') : 'â€”'}</td>
+                          <td className={tdCls + ' text-ink-500'}>{user.last_assessment_date ? new Date(user.last_assessment_date).toLocaleDateString('it-IT') : '—'}</td>
                           <td className={tdCls + ' text-ink-500'}>{new Date(user.created_at).toLocaleDateString('it-IT')}</td>
                           <td className={tdCls}>
                             <span className={`text-[10px] font-semibold uppercase tracking-eyebrow px-2 py-0.5 rounded-sm border ${user.is_blocked ? 'text-sienna-700 bg-sienna-50 border-sienna-300' : 'text-level-avanzato bg-green-50 border-green-200'}`}>
@@ -536,7 +536,7 @@ export default function AdminDashboard() {
                             <div className="flex gap-1.5">
                               <button onClick={() => handleBlockUser(user.id, user.is_blocked)} disabled={blockingUser === user.id}
                                 className={`text-[11px] font-medium px-2.5 py-1 rounded-sm border transition-colors disabled:opacity-40 ${user.is_blocked ? 'border-green-200 text-level-avanzato hover:bg-green-50' : 'border-amber-200 text-level-intermedio hover:bg-amber-50'}`}>
-                                {blockingUser === user.id ? 'â€¦' : (user.is_blocked ? 'Sblocca' : 'Blocca')}
+                                {blockingUser === user.id ? '…' : (user.is_blocked ? 'Sblocca' : 'Blocca')}
                               </button>
                               <button onClick={() => setShowDeleteConfirm(user.id)}
                                 className="text-[11px] font-medium px-2.5 py-1 rounded-sm border border-sienna-300 text-sienna-700 hover:bg-sienna-50 transition-colors">
@@ -554,12 +554,12 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {/* â•â•â•â•â•â•â•â•â•â• ASSESSMENTS â•â•â•â•â•â•â•â•â•â• */}
+          {/* ══════════ ASSESSMENTS ══════════ */}
           {activeTab === 'assessments' && (
             <div className="p-6 space-y-4">
               <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
                 <div className="flex gap-2 flex-1">
-                  <input type="text" placeholder="Cerca per utente o emailâ€¦" value={assessmentSearchTerm}
+                  <input type="text" placeholder="Cerca per utente o email…" value={assessmentSearchTerm}
                     onChange={e => setAssessmentSearchTerm(e.target.value)} className={`${inputCls} flex-1`} />
                   <select value={assessmentFilter} onChange={e => setAssessmentFilter(e.target.value as any)} className={`${inputCls} w-auto`}>
                     <option value="all">Tutti</option>
@@ -590,9 +590,9 @@ export default function AdminDashboard() {
                               {a.status === 'completed' ? 'Completato' : 'In corso'}
                             </span>
                           </td>
-                          <td className={tdCls + ' font-medium text-ink-900'}>{a.total_score != null ? `${Number(a.total_score).toFixed(1)}/5,0` : 'â€”'}</td>
+                          <td className={tdCls + ' font-medium text-ink-900'}>{a.total_score != null ? `${Number(a.total_score).toFixed(1)}/5,0` : '—'}</td>
                           <td className={tdCls + ' text-ink-500'}>{new Date(a.created_at).toLocaleDateString('it-IT')}</td>
-                          <td className={tdCls + ' text-ink-500'}>{a.completed_at ? new Date(a.completed_at).toLocaleDateString('it-IT') : 'â€”'}</td>
+                          <td className={tdCls + ' text-ink-500'}>{a.completed_at ? new Date(a.completed_at).toLocaleDateString('it-IT') : '—'}</td>
                           <td className={tdCls}>
                             <div className="flex gap-1.5">
                               {a.status === 'completed' && (
@@ -617,7 +617,7 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {/* â•â•â•â•â•â•â•â•â•â• TRIALS â•â•â•â•â•â•â•â•â•â• */}
+          {/* ══════════ TRIALS ══════════ */}
           {activeTab === 'trials' && (
             <div className="p-6 space-y-4">
               {/* Mini stats */}
@@ -659,14 +659,14 @@ export default function AdminDashboard() {
                         <tr key={trial.id} className={`hover:bg-paper-100 transition-colors ${trial.status === 'pending' ? 'bg-amber-50/40' : ''}`}>
                           <td className={tdCls}>
                             <p className="font-medium text-ink-900">{trial.company_name}</p>
-                            <p className="text-[11px] text-ink-400">{trial.sector || 'â€”'}</p>
+                            <p className="text-[11px] text-ink-400">{trial.sector || '—'}</p>
                           </td>
                           <td className={tdCls}>
                             <p className="font-medium text-ink-900">{trial.contact_name}</p>
                             <p className="text-[11px] text-ink-400">{trial.contact_email}</p>
                             {trial.phone && <p className="text-[11px] text-ink-400">{trial.phone}</p>}
                           </td>
-                          <td className={tdCls + ' text-ink-600'}>{trial.employees || 'â€”'}</td>
+                          <td className={tdCls + ' text-ink-600'}>{trial.employees || '—'}</td>
                           <td className={tdCls}>
                             <p className="font-medium text-ink-900">{trial.used_assessments}/{trial.assessment_quota}</p>
                             <div className="w-16 bg-paper-200 rounded-sm h-1 mt-1">
@@ -706,7 +706,7 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {/* â•â•â•â•â•â•â•â•â•â• EMAIL â•â•â•â•â•â•â•â•â•â• */}
+          {/* ══════════ EMAIL ══════════ */}
           {activeTab === 'email' && (
             <div className="p-6 space-y-6">
               <div className="flex items-center justify-between">
@@ -738,7 +738,7 @@ export default function AdminDashboard() {
                       <p className="text-[11px] text-ink-500 line-clamp-2">{tmpl.body}</p>
                       <button onClick={() => { handleTemplateChange(key as keyof typeof emailTemplates); setShowEmailModal(true) }}
                         className="mt-3 text-[12px] font-medium text-ink-900 hover:text-sienna-600 transition-colors">
-                        Usa Template â†’
+                        Usa Template →
                       </button>
                     </div>
                   ))}
@@ -749,7 +749,7 @@ export default function AdminDashboard() {
         </div>
       </main>
 
-      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• MODAL OVERLAY â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+      {/* ═══════════════ MODAL OVERLAY ═══════════════ */}
       {/* Activate Trial */}
       {showActivateModal && (
         <div className="fixed inset-0 bg-ink-950/60 flex items-center justify-center p-4 z-50">
@@ -760,7 +760,7 @@ export default function AdminDashboard() {
             </div>
             <div className="bg-paper-100 border border-paper-200 rounded-md p-4 mb-5">
               <p className="font-medium text-ink-900">{showActivateModal.company_name}</p>
-              <p className="text-[13px] text-ink-500">{showActivateModal.contact_name} â€” {showActivateModal.contact_email}</p>
+              <p className="text-[13px] text-ink-500">{showActivateModal.contact_name} — {showActivateModal.contact_email}</p>
             </div>
             <div className="space-y-4 mb-5">
               <div>
@@ -775,12 +775,12 @@ export default function AdminDashboard() {
               </div>
             </div>
             <div className="bg-paper-100 border border-paper-200 rounded-md px-4 py-3 mb-5 text-[12px] text-ink-600">
-              VerrÃ  inviato un magic link a <strong>{showActivateModal.contact_email}</strong>
+              Verrà inviato un magic link a <strong>{showActivateModal.contact_email}</strong>
             </div>
             <div className="flex gap-3">
               <Button variant="secondary" className="flex-1 justify-center" onClick={() => setShowActivateModal(null)}>Annulla</Button>
               <Button variant="primary" className="flex-1 justify-center" onClick={handleActivateTrial} disabled={activatingTrial === showActivateModal.id}>
-                {activatingTrial === showActivateModal.id ? 'Attivazioneâ€¦' : 'Attiva e Invia Link'}
+                {activatingTrial === showActivateModal.id ? 'Attivazione…' : 'Attiva e Invia Link'}
               </Button>
             </div>
           </div>
@@ -802,13 +802,13 @@ export default function AdminDashboard() {
               <div>
                 <label className={labelCls}>Password Temporanea *</label>
                 <input type="password" required value={newUserForm.password} onChange={e => setNewUserForm({ ...newUserForm, password: e.target.value })} className={inputCls} placeholder="Min 6 caratteri" minLength={6} />
-                <p className="text-[10px] text-ink-400 mt-1">L'utente potrÃ  cambiarla al primo accesso</p>
+                <p className="text-[10px] text-ink-400 mt-1">L'utente potrà cambiarla al primo accesso</p>
               </div>
               <div className="flex gap-3 pt-2">
                 <Button type="button" variant="secondary" className="flex-1 justify-center"
                   onClick={() => { setShowCreateUserModal(false); setNewUserForm({ email: '', fullName: '', password: '' }) }}>Annulla</Button>
                 <Button type="submit" variant="primary" className="flex-1 justify-center" disabled={creatingUser}>
-                  {creatingUser ? 'Creazioneâ€¦' : 'Crea Utente'}
+                  {creatingUser ? 'Creazione…' : 'Crea Utente'}
                 </Button>
               </div>
             </form>
@@ -824,7 +824,7 @@ export default function AdminDashboard() {
               <AlertTriangle className="w-6 h-6 text-sienna-600" />
             </div>
             <h3 className="font-display text-[20px] font-medium text-ink-900 mb-2">Conferma Eliminazione</h3>
-            <p className="text-[13px] text-ink-500 mb-6">Sei sicuro di voler eliminare questo utente?<br /><strong className="text-ink-900">Questa azione Ã¨ irreversibile.</strong></p>
+            <p className="text-[13px] text-ink-500 mb-6">Sei sicuro di voler eliminare questo utente?<br /><strong className="text-ink-900">Questa azione è irreversibile.</strong></p>
             <div className="flex gap-3">
               <Button variant="secondary" className="flex-1 justify-center" onClick={() => setShowDeleteConfirm(null)}>Annulla</Button>
               <button onClick={() => handleDeleteUser(showDeleteConfirm)}
@@ -877,14 +877,14 @@ export default function AdminDashboard() {
               </div>
               <div>
                 <label className={labelCls}>Messaggio *</label>
-                <textarea required value={emailForm.body} onChange={e => setEmailForm({ ...emailForm, body: e.target.value })} className={`${inputCls} resize-none`} rows={8} placeholder="Corpo dell'emailâ€¦" />
+                <textarea required value={emailForm.body} onChange={e => setEmailForm({ ...emailForm, body: e.target.value })} className={`${inputCls} resize-none`} rows={8} placeholder="Corpo dell'email…" />
                 <p className="text-[10px] text-ink-400 mt-1">Puoi usare {'{name}'} per il nome utente</p>
               </div>
               <div className="flex gap-3 pt-2">
                 <Button type="button" variant="secondary" className="flex-1 justify-center"
                   onClick={() => { setShowEmailModal(false); setEmailForm({ recipients: 'all', customEmails: '', template: 'custom', subject: '', body: '' }) }}>Annulla</Button>
                 <Button type="submit" variant="primary" className="flex-1 justify-center flex items-center gap-2" disabled={sendingEmail}>
-                  {sendingEmail ? 'Invioâ€¦' : <><Mail className="w-4 h-4" /> Invia Email</>}
+                  {sendingEmail ? 'Invio…' : <><Mail className="w-4 h-4" /> Invia Email</>}
                 </Button>
               </div>
             </form>
@@ -894,4 +894,3 @@ export default function AdminDashboard() {
     </div>
   )
 }
-
