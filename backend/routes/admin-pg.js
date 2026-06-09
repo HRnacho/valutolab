@@ -276,26 +276,28 @@ router.delete('/assessments/:id', async (req, res) => {
 router.get('/trials', async (req, res) => {
   try {
     const result = await db.query(`
-      SELECT id, organization_name, contact_name, contact_email,
-             company_size, status, trial_end_date, created_at, notes
+      SELECT id, company_name, contact_name, contact_email,
+             contact_phone, employees, sector, assessment_quota,
+             used_assessments, expires_at, status, notes,
+             created_at, activated_at
       FROM public.trial_organizations
       ORDER BY created_at DESC
     `);
 
     const trials = result.rows.map(t => ({
       id:                t.id,
-      company_name:      t.organization_name,
+      company_name:      t.company_name,
       contact_name:      t.contact_name,
       contact_email:     t.contact_email,
-      phone:             null,
-      employees:         t.company_size || null,
-      sector:            null,
-      assessment_quota:  20,
-      used_assessments:  0,
-      expires_at:        t.trial_end_date || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      phone:             t.contact_phone || null,
+      employees:         t.employees || null,
+      sector:            t.sector || null,
+      assessment_quota:  t.assessment_quota || 20,
+      used_assessments:  t.used_assessments || 0,
+      expires_at:        t.expires_at,
       status:            t.status,
       created_at:        t.created_at,
-      activated_at:      null,
+      activated_at:      t.activated_at || null,
       notes:             t.notes,
     }));
 
@@ -334,7 +336,7 @@ router.post('/trials/:id/activate', async (req, res) => {
       `UPDATE public.trial_organizations
        SET status = 'active', trial_end_date = $1, updated_at = now()
        WHERE id = $2
-       RETURNING id, organization_name, contact_email, status`,
+       RETURNING id, company_name, contact_email, status`,
       [expiresAt, id]
     );
     if (result.rows.length === 0) {
