@@ -14,12 +14,12 @@ export const strictLimiter = rateLimit({
 
 /**
  * Limite standard per endpoint autenticati generici.
- * Max 300 richieste per IP ogni 15 minuti — sufficiente per un assessment
- * completo (48 Likert + profiling + situazionali) con ampio margine.
+ * Max 1000 richieste per IP ogni 15 minuti — include assessment completo,
+ * generazione report AI e navigazione risultati senza mai andare in 429.
  */
 export const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 300,
+  max: 1000,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: 'Troppe richieste. Riprova tra qualche minuto.' }
