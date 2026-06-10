@@ -191,17 +191,65 @@ router.put('/assessments/:id/user-context', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-/** PUT /api/data/assessments/:id/complete — segna come completato */
+/** PUT /api/data/assessments/:id/complete — segna come completato e calcola combined results */
 router.put('/assessments/:id/complete', async (req, res, next) => {
   try {
     const { total_score } = req.body;
+    const assessmentId = req.params.id;
+
+    // 1. Aggiorna lo stato dell'assessment
     const { rows } = await db.query(
       `UPDATE assessments
        SET status = 'completed', total_score = $1, completed_at = NOW(), updated_at = NOW()
        WHERE id = $2 AND user_id = $3
        RETURNING *`,
-      [total_score, req.params.id, userId(req)]
+      [total_score, assessmentId, userId(req)]
     );
+
+    // 2. Calcola e inserisce combined_assessment_results (Likert 70% + SJT 30%)
+    try {
+      const [likertRes, sjtRes] = await Promise.all([
+        db.query('SELECT skill_category, score FROM assessment_results WHERE assessment_id = $1', [assessmentId]),
+        db.query('SELECT skill_weights FROM situational_responses WHERE assessment_id = $1', [assessmentId]),
+      ]);
+
+      // Somma i pesi SJT per skill
+      const sjtTotals = {};
+      const sjtCounts = {};
+      for (const row of sjtRes.rows) {
+        const weights = row.skill_weights || {};
+        for (const [skill, weight] of Object.entries(weights)) {
+          sjtTotals[skill] = (sjtTotals[skill] ?? 0) + Number(weight);
+          sjtCounts[skill] = (sjtCounts[skill] ?? 0) + 1;
+        }
+      }
+      const numSjtQuestions = sjtRes.rows.length;
+
+      for (const { skill_category, score } of likertRes.rows) {
+        const likertScore = parseFloat(score);
+        // SJT normalizzato su scala 0-5 (peso massimo 3 per domanda)
+        const sjtRaw = sjtTotals[skill_category] ?? 0;
+        const sjtScore = numSjtQuestions > 0
+          ? Math.min((sjtRaw / (3 * numSjtQuestions)) * 5, 5)
+          : 0;
+        const finalScore = parseFloat((likertScore * 0.7 + sjtScore * 0.3).toFixed(2));
+
+        await db.query(
+          `INSERT INTO combined_assessment_results
+             (assessment_id, skill_category, likert_score, sjt_score, final_score)
+           VALUES ($1, $2, $3, $4, $5)
+           ON CONFLICT (assessment_id, skill_category)
+           DO UPDATE SET likert_score = EXCLUDED.likert_score,
+                         sjt_score    = EXCLUDED.sjt_score,
+                         final_score  = EXCLUDED.final_score`,
+          [assessmentId, skill_category, likertScore, parseFloat(sjtScore.toFixed(2)), finalScore]
+        );
+      }
+    } catch (calcErr) {
+      // Non blocca la risposta se il calcolo fallisce — l'assessment è già completato
+      console.error('combined_assessment_results calc error:', calcErr);
+    }
+
     res.json({ success: true, assessment: rows[0] });
   } catch (err) { next(err); }
 });
