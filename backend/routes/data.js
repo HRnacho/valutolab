@@ -74,14 +74,30 @@ router.get('/assessments', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-/** POST /api/data/assessments — crea nuovo assessment */
+/** POST /api/data/assessments — crea nuovo assessment con set randomizzato */
 router.post('/assessments', async (req, res, next) => {
   try {
+    const uid = userId(req);
+
+    // Trova l'ultimo set usato da questo utente (assessment completato più recente)
+    const lastResult = await db.query(
+      `SELECT question_set FROM assessments
+       WHERE user_id = $1 AND status = 'completed'
+       ORDER BY completed_at DESC LIMIT 1`,
+      [uid]
+    );
+    const lastSet = lastResult.rows[0]?.question_set ?? null;
+
+    // Seleziona casualmente tra i set disponibili escludendo l'ultimo usato
+    const allSets = ['A', 'B', 'C'];
+    const available = lastSet ? allSets.filter(s => s !== lastSet) : allSets;
+    const questionSet = available[Math.floor(Math.random() * available.length)];
+
     const { rows } = await db.query(
-      `INSERT INTO assessments (user_id, status)
-       VALUES ($1, 'in_progress')
-       RETURNING id, status, created_at`,
-      [userId(req)]
+      `INSERT INTO assessments (user_id, status, question_set)
+       VALUES ($1, 'in_progress', $2)
+       RETURNING id, status, question_set, created_at`,
+      [uid, questionSet]
     );
     res.status(201).json({ success: true, assessment: rows[0] });
   } catch (err) { next(err); }

@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { useAuth } from '@/lib/AuthContext'
 import { api } from '@/lib/api'
-import { questions, Question } from '@/data/questions'
+import { getQuestionsForSet, Question } from '@/data/questions'
 import SituationalQuestion from '@/components/SituationalQuestion'
 import { Wordmark } from '@/components/ui/Wordmark'
 import { Button } from '@/components/ui/Button'
@@ -39,6 +39,7 @@ export default function AssessmentPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
+  const [questionSet, setQuestionSet] = useState<'A' | 'B' | 'C'>('A')
 
   const [answers, setAnswers] = useState<Record<string, number>>({})
   const [profilingAnswers, setProfilingAnswers] = useState<Record<string, string>>({})
@@ -51,11 +52,11 @@ export default function AssessmentPage() {
   const [loadingSituational, setLoadingSituational] = useState(false)
 
   const filteredQuestions = useMemo<Question[]>(() => {
-    return questions.filter(q => {
+    return getQuestionsForSet(questionSet).filter(q => {
       if (!q.conditionalKey) return true
       return profilingAnswers[q.conditionalKey] === q.conditionalValue
     })
-  }, [profilingAnswers])
+  }, [profilingAnswers, questionSet])
 
   const likertQuestions = useMemo(() => {
     return filteredQuestions.filter(q => q.category !== 'profiling')
@@ -68,6 +69,9 @@ export default function AssessmentPage() {
       const assessment = assessmentRes.assessment
       if (!assessment) { router.push('/dashboard'); return }
       if (assessment.status === 'completed') { router.push(`/dashboard/results/${assessmentId}`); return }
+      if (assessment.question_set && ['A', 'B', 'C'].includes(assessment.question_set)) {
+        setQuestionSet(assessment.question_set as 'A' | 'B' | 'C')
+      }
       const responsesRes = await api.assessments.responses.list(assessmentId)
       const existingAnswers = responsesRes.responses || []
       if (existingAnswers.length > 0) {
@@ -149,7 +153,7 @@ export default function AssessmentPage() {
     setLoadingSituational(true)
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'
-      const response = await fetch(`${apiUrl}/api/situational-questions`)
+      const response = await fetch(`${apiUrl}/api/situational-questions?set=${questionSet}`)
       if (response.ok) {
         const data = await response.json()
         if (data.success && data.questions) setSituationalQuestions(data.questions)
@@ -189,8 +193,13 @@ export default function AssessmentPage() {
       const responsesPayload = situationalQuestions.map(q => ({
         questionId: q.id, selectedOption: situationalAnswers[q.id],
       }))
+      const token = typeof window !== 'undefined' ? localStorage.getItem('jwt_access_token') : null
       const responseSituational = await fetch(`${apiUrl}/api/situational-responses`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ assessmentId, userId: user.id, responses: responsesPayload }),
       })
       if (!responseSituational.ok) throw new Error('Failed to save situational responses')
