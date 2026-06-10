@@ -206,6 +206,37 @@ router.post('/invite/:token/complete', async (req, res) => {
   }
 });
 
+// GET /api/organizations/:orgId/candidates-with-scores
+router.get('/:orgId/candidates-with-scores', async (req, res) => {
+  try {
+    const { orgId } = req.params;
+    const { rows } = await db.query(
+      `SELECT
+         ci.id            AS invite_id,
+         ci.candidate_name,
+         ci.candidate_email,
+         ci.completed_at,
+         ci.created_at    AS invite_date,
+         a.id             AS assessment_id,
+         a.total_score,
+         a.question_set,
+         json_object_agg(car.skill_category, car.final_score) AS scores
+       FROM candidate_invites ci
+       JOIN assessments a              ON ci.assessment_id = a.id
+       JOIN combined_assessment_results car ON a.id = car.assessment_id
+       WHERE ci.organization_id = $1 AND ci.status = 'completed'
+       GROUP BY ci.id, ci.candidate_name, ci.candidate_email,
+                ci.completed_at, ci.created_at,
+                a.id, a.total_score, a.question_set
+       ORDER BY ci.candidate_name`,
+      [orgId]
+    );
+    res.json({ success: true, candidates: rows });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // GET /api/organizations/:orgId/members
 router.get('/:orgId/members', async (req, res) => {
   try {

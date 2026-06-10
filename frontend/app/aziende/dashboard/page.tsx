@@ -1,25 +1,64 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/AuthContext'
 import { Wordmark } from '@/components/ui/Wordmark'
 import { Button } from '@/components/ui/Button'
-import { ArrowLeft, Mail, BarChart3, Users, Clock, CheckCircle, Plus } from 'lucide-react'
+import {
+  ArrowLeft, Mail, BarChart3, Users, Clock, CheckCircle,
+  Plus, Download, GitCompareArrows, TrendingUp,
+} from 'lucide-react'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || ''
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'
+
+const SKILLS = [
+  'communication','leadership','problem_solving','teamwork',
+  'time_management','adaptability','creativity','critical_thinking',
+  'empathy','resilience','negotiation','decision_making',
+]
+const SKILL_LABELS: Record<string, string> = {
+  communication:    'Comunicazione',
+  leadership:       'Leadership',
+  problem_solving:  'Problem Solving',
+  teamwork:         'Lavoro di Squadra',
+  time_management:  'Gestione del Tempo',
+  adaptability:     'Adattabilità',
+  creativity:       'Creatività',
+  critical_thinking:'Pensiero Critico',
+  empathy:          'Empatia',
+  resilience:       'Resilienza',
+  negotiation:      'Negoziazione',
+  decision_making:  'Decision Making',
+}
+
+type Tab = 'overview' | 'candidates' | 'compare' | 'new-invite'
+
+interface Candidate {
+  invite_id: string
+  candidate_name: string
+  candidate_email: string
+  completed_at: string
+  invite_date: string
+  assessment_id: string
+  total_score: number
+  question_set: string
+  scores: Record<string, number>
+}
 
 export default function AziendeDashboardPage() {
   const router = useRouter()
   const { user: authUser, loading: authLoading } = useAuth()
-  const [loading, setLoading] = useState(true)
-  const [user, setUser] = useState<any>(null)
+
+  const [loading, setLoading]           = useState(true)
   const [organization, setOrganization] = useState<any>(null)
-  const [activeTab, setActiveTab] = useState<'overview' | 'invites' | 'new-invite'>('overview')
-  const [invites, setInvites] = useState<any[]>([])
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-  const [sendingPasswordEmail, setSendingPasswordEmail] = useState(false)
-  const [inviteForm, setInviteForm] = useState({ candidateEmail: '', candidateName: '', notes: '' })
+  const [activeTab, setActiveTab]       = useState<Tab>('overview')
+  const [invites, setInvites]           = useState<any[]>([])
+  const [candidates, setCandidates]     = useState<Candidate[]>([])
+  const [selected, setSelected]         = useState<Set<string>>(new Set())
+  const [message, setMessage]           = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [inviteForm, setInviteForm]     = useState({ candidateEmail: '', candidateName: '', notes: '' })
+  const [sendingInvite, setSendingInvite] = useState(false)
 
   useEffect(() => {
     if (message) {
@@ -31,26 +70,18 @@ export default function AziendeDashboardPage() {
   useEffect(() => {
     if (authLoading) return
     if (!authUser) { router.push('/login'); return }
-    checkUserAndLoadOrg()
+    init()
   }, [authUser, authLoading])
 
-  const checkUserAndLoadOrg = async () => {
+  const init = async () => {
     try {
-      const user = authUser
-      if (!user) { router.push('/login'); return }
-      setUser(user)
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'
-      const response = await fetch(`${apiUrl}/api/organizations/user/${user.id}`)
-      const data = await response.json()
-      if (data.success && data.organizations.length > 0) {
-        const org = data.organizations[0]
-        setOrganization(org)
-        loadInvites(org.id)
-      } else {
-        router.push('/')
-      }
-    } catch (error) {
-      console.error('Error loading organization:', error)
+      const res  = await fetch(`${API_URL}/api/organizations/user/${authUser!.id}`)
+      const data = await res.json()
+      if (!data.success || data.organizations.length === 0) { router.push('/'); return }
+      const org = data.organizations[0]
+      setOrganization(org)
+      await Promise.all([loadInvites(org.id), loadCandidates(org.id)])
+    } catch {
       setMessage({ type: 'error', text: 'Errore nel caricamento dei dati' })
     } finally {
       setLoading(false)
@@ -58,54 +89,90 @@ export default function AziendeDashboardPage() {
   }
 
   const loadInvites = async (orgId: string) => {
-    try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'
-      const response = await fetch(`${apiUrl}/api/organizations/${orgId}/invites`)
-      const data = await response.json()
-      if (data.success) setInvites(data.invites)
-    } catch (error) {
-      console.error('Error loading invites:', error)
-    }
+    const res  = await fetch(`${API_URL}/api/organizations/${orgId}/invites`)
+    const data = await res.json()
+    if (data.success) setInvites(data.invites)
   }
 
-  const handleSendPasswordSetup = async () => {
-    setSendingPasswordEmail(true)
-    try {
-      const res = await fetch(`${API_URL}/api/auth/forgot-password`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: user?.email })
-      })
-      if (!res.ok) throw new Error()
-      setMessage({ type: 'success', text: 'Email inviata! Controlla la casella per impostare la password.' })
-    } catch {
-      setMessage({ type: 'error', text: "Errore nell'invio email" })
-    } finally {
-      setSendingPasswordEmail(false)
-    }
+  const loadCandidates = async (orgId: string) => {
+    const res  = await fetch(`${API_URL}/api/organizations/${orgId}/candidates-with-scores`)
+    const data = await res.json()
+    if (data.success) setCandidates(data.candidates)
   }
 
   const handleSendInvite = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true); setMessage(null)
+    setSendingInvite(true); setMessage(null)
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'
-      const response = await fetch(`${apiUrl}/api/organizations/${organization.id}/invite`, {
+      const res  = await fetch(`${API_URL}/api/organizations/${organization.id}/invite`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id, candidateEmail: inviteForm.candidateEmail, candidateName: inviteForm.candidateName, notes: inviteForm.notes })
+        body: JSON.stringify({
+          userId: authUser!.id,
+          candidateEmail: inviteForm.candidateEmail,
+          candidateName:  inviteForm.candidateName,
+          notes:          inviteForm.notes,
+        }),
       })
-      const data = await response.json()
+      const data = await res.json()
       if (data.success) {
         setMessage({ type: 'success', text: 'Invito inviato con successo!' })
         setInviteForm({ candidateEmail: '', candidateName: '', notes: '' })
         loadInvites(organization.id)
-        setTimeout(() => setActiveTab('invites'), 1500)
+        setTimeout(() => setActiveTab('candidates'), 1500)
       } else throw new Error(data.message)
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || "Errore nell'invio dell'invito" })
+    } catch (err: any) {
+      setMessage({ type: 'error', text: err.message || "Errore nell'invio dell'invito" })
     } finally {
-      setLoading(false)
+      setSendingInvite(false)
     }
   }
+
+  // ── Selezione candidati ───────────────────────────────────────────────────
+
+  const allSelected = candidates.length > 0 && selected.size === candidates.length
+  const toggleAll   = () => setSelected(allSelected ? new Set() : new Set(candidates.map(c => c.invite_id)))
+  const toggleOne   = (id: string) => setSelected(prev => {
+    const s = new Set(prev)
+    s.has(id) ? s.delete(id) : s.add(id)
+    return s
+  })
+
+  const selectedCandidates = useMemo(
+    () => candidates.filter(c => selected.has(c.invite_id)),
+    [candidates, selected]
+  )
+
+  const goCompare = () => {
+    if (selected.size < 2) return
+    setActiveTab('compare')
+  }
+
+  // ── CSV export ────────────────────────────────────────────────────────────
+
+  const exportCSV = () => {
+    const headers = [
+      'Nome','Email','Data Completamento','Set','Punteggio Generale',
+      ...SKILLS.map(s => SKILL_LABELS[s]),
+    ]
+    const rows = candidates.map(c => [
+      c.candidate_name,
+      c.candidate_email,
+      c.completed_at ? new Date(c.completed_at).toLocaleDateString('it-IT') : '',
+      c.question_set || '',
+      Number(c.total_score).toFixed(2),
+      ...SKILLS.map(s => Number(c.scores?.[s] ?? 0).toFixed(2)),
+    ])
+    const csv  = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n')
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
+    a.href     = url
+    a.download = `candidati_${(organization?.name || 'export').replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  // ── Guards ────────────────────────────────────────────────────────────────
 
   if (loading && !organization) {
     return (
@@ -118,16 +185,17 @@ export default function AziendeDashboardPage() {
     )
   }
 
-  const statsData = {
-    quota_used: organization?.used_assessments || 0,
-    quota_total: organization?.assessment_quota || 20,
-    invites_pending: invites.filter(i => i.status === 'pending').length,
+  const stats = {
+    quota_used:        organization?.used_assessments   || 0,
+    quota_total:       organization?.assessment_quota   || 20,
+    invites_pending:   invites.filter(i => i.status === 'pending').length,
     invites_completed: invites.filter(i => i.status === 'completed').length,
   }
 
-  const tabs: { key: 'overview' | 'invites' | 'new-invite'; label: string }[] = [
+  const tabs: { key: Tab; label: string; hidden?: boolean }[] = [
     { key: 'overview',    label: 'Overview' },
-    { key: 'invites',     label: `Inviti (${invites.length})` },
+    { key: 'candidates',  label: `Candidati (${candidates.length})` },
+    { key: 'compare',     label: `Confronto${selected.size >= 2 ? ` (${selected.size})` : ''}`, hidden: selected.size < 2 },
     { key: 'new-invite',  label: 'Nuovo Invito' },
   ]
 
@@ -144,7 +212,7 @@ export default function AziendeDashboardPage() {
         </div>
       )}
 
-      {/* ── HEADER ─────────────────────────────────────────────────── */}
+      {/* ── HEADER ─────────────────────────────────────────────────────── */}
       <header className="bg-paper-50 border-b border-paper-200 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
@@ -171,20 +239,19 @@ export default function AziendeDashboardPage() {
 
       <main className="max-w-7xl mx-auto px-6 lg:px-8 py-8 space-y-6">
 
-        {/* Title */}
         <div>
           <p className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400 mb-1">Area Azienda</p>
           <h1 className="font-display text-display-3 text-ink-900">Dashboard HR</h1>
         </div>
 
-        {/* ── TABS ────────────────────────────────────────────────── */}
+        {/* ── TABS ──────────────────────────────────────────────────────── */}
         <div className="bg-paper-50 border border-paper-200 rounded-md shadow-sm-ink">
-          <div className="flex border-b border-paper-200">
-            {tabs.map(tab => (
+          <div className="flex border-b border-paper-200 overflow-x-auto">
+            {tabs.filter(t => !t.hidden).map(tab => (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`px-6 py-3.5 text-[13px] font-medium transition-colors border-b-2 -mb-px ${
+                className={`flex-shrink-0 px-6 py-3.5 text-[13px] font-medium transition-colors border-b-2 -mb-px ${
                   activeTab === tab.key
                     ? 'border-ink-900 text-ink-900'
                     : 'border-transparent text-ink-500 hover:text-ink-800'
@@ -198,13 +265,12 @@ export default function AziendeDashboardPage() {
           {/* ── OVERVIEW ──── */}
           {activeTab === 'overview' && (
             <div className="p-6 space-y-6">
-              {/* Stats grid */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {[
-                  { icon: BarChart3, label: 'Quota usata', value: `${statsData.quota_used}/${statsData.quota_total}`, sub: `${statsData.quota_total - statsData.quota_used} disponibili` },
-                  { icon: Mail,      label: 'Inviti totali', value: invites.length, sub: 'Inviati finora' },
-                  { icon: Clock,     label: 'In attesa',     value: statsData.invites_pending,   sub: 'Da completare' },
-                  { icon: CheckCircle, label: 'Completati',  value: statsData.invites_completed, sub: 'Assessment finiti' },
+                  { icon: BarChart3,    label: 'Quota usata',   value: `${stats.quota_used}/${stats.quota_total}`, sub: `${stats.quota_total - stats.quota_used} disponibili` },
+                  { icon: Mail,         label: 'Inviti totali', value: invites.length,             sub: 'Inviati finora' },
+                  { icon: Clock,        label: 'In attesa',     value: stats.invites_pending,      sub: 'Da completare' },
+                  { icon: CheckCircle,  label: 'Completati',    value: stats.invites_completed,    sub: 'Assessment finiti' },
                 ].map(({ icon: Icon, label, value, sub }) => (
                   <div key={label} className="bg-paper-100 border border-paper-200 rounded-md p-5">
                     <div className="flex items-center justify-between mb-3">
@@ -217,7 +283,6 @@ export default function AziendeDashboardPage() {
                 ))}
               </div>
 
-              {/* Org info */}
               <div>
                 <p className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400 mb-3">Informazioni Organizzazione</p>
                 <div className="grid md:grid-cols-3 gap-3">
@@ -229,7 +294,7 @@ export default function AziendeDashboardPage() {
                     ['Email Contatto', organization?.contact_email],
                     ['Piano Attivo', organization?.subscription_tier],
                   ].map(([label, val]) => (
-                    <div key={label} className="bg-paper-100 border border-paper-200 rounded-md px-4 py-3">
+                    <div key={label as string} className="bg-paper-100 border border-paper-200 rounded-md px-4 py-3">
                       <p className="text-[11px] text-ink-400 mb-0.5">{label}</p>
                       <p className="text-[14px] font-medium text-ink-900 capitalize">{val || '—'}</p>
                     </div>
@@ -237,7 +302,6 @@ export default function AziendeDashboardPage() {
                 </div>
               </div>
 
-              {/* Quick actions */}
               <div>
                 <p className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400 mb-3">Azioni Rapide</p>
                 <div className="grid md:grid-cols-3 gap-3">
@@ -247,37 +311,61 @@ export default function AziendeDashboardPage() {
                     <p className="text-[14px] font-medium text-ink-900 mb-0.5">Invia Nuovo Invito</p>
                     <p className="text-[12px] text-ink-500">Aggiungi un candidato</p>
                   </button>
-                  <button onClick={() => setActiveTab('invites')}
+                  <button onClick={() => setActiveTab('candidates')}
                     className="bg-paper-100 border border-paper-200 rounded-md p-5 text-left hover:bg-paper-200 transition-colors">
                     <Users className="w-5 h-5 text-ink-600 mb-3" />
-                    <p className="text-[14px] font-medium text-ink-900 mb-0.5">Visualizza Inviti</p>
-                    <p className="text-[12px] text-ink-500">Controlla lo stato</p>
+                    <p className="text-[14px] font-medium text-ink-900 mb-0.5">Visualizza Candidati</p>
+                    <p className="text-[12px] text-ink-500">Confronta e scarica report</p>
                   </button>
-                  <div className="bg-paper-100 border border-paper-200 rounded-md p-5 opacity-40 cursor-not-allowed">
-                    <BarChart3 className="w-5 h-5 text-ink-400 mb-3" />
-                    <p className="text-[14px] font-medium text-ink-700 mb-0.5">Report Completi</p>
-                    <p className="text-[12px] text-ink-400">Prossimamente</p>
-                  </div>
+                  <button onClick={candidates.length > 0 ? exportCSV : undefined}
+                    className={`bg-paper-100 border border-paper-200 rounded-md p-5 text-left transition-colors ${candidates.length > 0 ? 'hover:bg-paper-200' : 'opacity-40 cursor-not-allowed'}`}>
+                    <Download className="w-5 h-5 text-ink-600 mb-3" />
+                    <p className="text-[14px] font-medium text-ink-900 mb-0.5">Esporta Report</p>
+                    <p className="text-[12px] text-ink-500">{candidates.length > 0 ? 'Scarica CSV completo' : 'Nessun dato disponibile'}</p>
+                  </button>
                 </div>
               </div>
             </div>
           )}
 
-          {/* ── INVITI ──── */}
-          {activeTab === 'invites' && (
+          {/* ── CANDIDATI ──── */}
+          {activeTab === 'candidates' && (
             <div className="p-6">
-              <div className="flex items-center justify-between mb-5">
-                <h2 className="font-display text-[18px] font-medium text-ink-900">Lista Inviti</h2>
-                <Button variant="primary" className="flex items-center gap-2 text-[13px]" onClick={() => setActiveTab('new-invite')}>
-                  <Plus className="w-4 h-4" /> Nuovo Invito
-                </Button>
+              {/* Toolbar */}
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+                <h2 className="font-display text-[18px] font-medium text-ink-900">
+                  Candidati Completati
+                </h2>
+                <div className="flex items-center gap-2">
+                  {candidates.length > 0 && (
+                    <Button
+                      variant="secondary"
+                      className="flex items-center gap-2 text-[13px]"
+                      onClick={exportCSV}
+                    >
+                      <Download className="w-4 h-4" /> Esporta tutto
+                    </Button>
+                  )}
+                  <Button
+                    variant={selected.size >= 2 ? 'primary' : 'secondary'}
+                    disabled={selected.size < 2}
+                    className="flex items-center gap-2 text-[13px]"
+                    onClick={goCompare}
+                  >
+                    <GitCompareArrows className="w-4 h-4" />
+                    {selected.size >= 2 ? `Confronta (${selected.size})` : 'Confronta selezionati'}
+                  </Button>
+                  <Button variant="primary" className="flex items-center gap-2 text-[13px]" onClick={() => setActiveTab('new-invite')}>
+                    <Plus className="w-4 h-4" /> Nuovo Invito
+                  </Button>
+                </div>
               </div>
 
-              {invites.length === 0 ? (
+              {candidates.length === 0 ? (
                 <div className="text-center py-14 border border-dashed border-paper-300 rounded-md">
-                  <Mail className="w-8 h-8 text-ink-300 mx-auto mb-3" />
-                  <p className="text-[15px] font-medium text-ink-700 mb-1">Nessun invito inviato</p>
-                  <p className="text-[13px] text-ink-400 mb-5">Inizia invitando il tuo primo candidato</p>
+                  <Users className="w-8 h-8 text-ink-300 mx-auto mb-3" />
+                  <p className="text-[15px] font-medium text-ink-700 mb-1">Nessun assessment completato</p>
+                  <p className="text-[13px] text-ink-400 mb-5">I candidati appariranno qui dopo aver completato l&apos;assessment</p>
                   <Button variant="primary" onClick={() => setActiveTab('new-invite')}>Invia Primo Invito</Button>
                 </div>
               ) : (
@@ -285,38 +373,57 @@ export default function AziendeDashboardPage() {
                   <table className="w-full text-[13px]">
                     <thead>
                       <tr className="border-b border-paper-200">
-                        <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-eyebrow text-ink-400">Candidato</th>
-                        <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-eyebrow text-ink-400">Email</th>
-                        <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-eyebrow text-ink-400">Status</th>
-                        <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-eyebrow text-ink-400">Data Invio</th>
-                        <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-eyebrow text-ink-400">Azioni</th>
+                        <th className="py-3 px-3 w-10">
+                          <input
+                            type="checkbox"
+                            checked={allSelected}
+                            onChange={toggleAll}
+                            className="w-4 h-4 accent-ink-900 cursor-pointer"
+                          />
+                        </th>
+                        <th className="text-left py-3 px-3 text-[11px] font-semibold uppercase tracking-eyebrow text-ink-400">Candidato</th>
+                        <th className="text-left py-3 px-3 text-[11px] font-semibold uppercase tracking-eyebrow text-ink-400">Email</th>
+                        <th className="text-left py-3 px-3 text-[11px] font-semibold uppercase tracking-eyebrow text-ink-400">Set</th>
+                        <th className="text-left py-3 px-3 text-[11px] font-semibold uppercase tracking-eyebrow text-ink-400">Punteggio</th>
+                        <th className="text-left py-3 px-3 text-[11px] font-semibold uppercase tracking-eyebrow text-ink-400">Completato</th>
+                        <th className="text-left py-3 px-3 text-[11px] font-semibold uppercase tracking-eyebrow text-ink-400">Azioni</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {invites.map((invite) => (
-                        <tr key={invite.id} className="border-b border-paper-100 hover:bg-paper-100 transition-colors">
-                          <td className="py-3 px-4 font-medium text-ink-900">{invite.candidate_name || '—'}</td>
-                          <td className="py-3 px-4 text-ink-600">{invite.candidate_email}</td>
-                          <td className="py-3 px-4">
-                            <span className={`text-[10px] font-semibold uppercase tracking-eyebrow px-2 py-0.5 rounded-sm border ${
-                              invite.status === 'completed'
-                                ? 'text-level-avanzato bg-green-50 border-green-200'
-                                : invite.status === 'pending'
-                                ? 'text-level-intermedio bg-amber-50 border-amber-200'
-                                : 'text-ink-500 bg-paper-200 border-paper-300'
-                            }`}>
-                              {invite.status === 'completed' ? 'Completato' : invite.status === 'pending' ? 'In Attesa' : invite.status}
+                      {candidates.map(c => (
+                        <tr
+                          key={c.invite_id}
+                          className={`border-b border-paper-100 transition-colors ${selected.has(c.invite_id) ? 'bg-paper-200' : 'hover:bg-paper-100'}`}
+                        >
+                          <td className="py-3 px-3">
+                            <input
+                              type="checkbox"
+                              checked={selected.has(c.invite_id)}
+                              onChange={() => toggleOne(c.invite_id)}
+                              className="w-4 h-4 accent-ink-900 cursor-pointer"
+                            />
+                          </td>
+                          <td className="py-3 px-3 font-medium text-ink-900">{c.candidate_name || '—'}</td>
+                          <td className="py-3 px-3 text-ink-600">{c.candidate_email}</td>
+                          <td className="py-3 px-3">
+                            <span className="font-mono text-[11px] text-ink-500 bg-paper-200 px-2 py-0.5 rounded-sm">
+                              Set {c.question_set || '—'}
                             </span>
                           </td>
-                          <td className="py-3 px-4 text-ink-500">{new Date(invite.created_at).toLocaleDateString('it-IT')}</td>
-                          <td className="py-3 px-4">
-                            {invite.status === 'completed' ? (
-                              <button className="text-[12px] font-medium text-ink-900 hover:text-sienna-600 transition-colors">
-                                Visualizza Report
-                              </button>
-                            ) : (
-                              <span className="text-[12px] text-ink-400">In Attesa</span>
-                            )}
+                          <td className="py-3 px-3">
+                            <span className="font-semibold text-ink-900">{Number(c.total_score).toFixed(2)}</span>
+                            <span className="text-ink-400">/5,0</span>
+                          </td>
+                          <td className="py-3 px-3 text-ink-500">
+                            {c.completed_at ? new Date(c.completed_at).toLocaleDateString('it-IT') : '—'}
+                          </td>
+                          <td className="py-3 px-3">
+                            <button
+                              className="text-[12px] font-medium text-ink-900 hover:text-sienna-600 transition-colors"
+                              onClick={() => router.push(`/dashboard/results/${c.assessment_id}`)}
+                            >
+                              Visualizza Report
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -324,6 +431,123 @@ export default function AziendeDashboardPage() {
                   </table>
                 </div>
               )}
+
+              {/* Inviti in attesa */}
+              {invites.filter(i => i.status === 'pending').length > 0 && (
+                <div className="mt-8">
+                  <p className="text-[11px] font-semibold uppercase tracking-eyebrow text-ink-400 mb-3">
+                    Inviti in Attesa ({invites.filter(i => i.status === 'pending').length})
+                  </p>
+                  <div className="space-y-2">
+                    {invites.filter(i => i.status === 'pending').map(inv => (
+                      <div key={inv.id} className="flex items-center justify-between bg-paper-100 border border-paper-200 rounded-md px-4 py-3">
+                        <div>
+                          <span className="font-medium text-ink-800 text-[13px]">{inv.candidate_name || inv.candidate_email}</span>
+                          <span className="text-ink-500 text-[12px] ml-2">{inv.candidate_email}</span>
+                        </div>
+                        <span className="text-[10px] font-semibold uppercase tracking-eyebrow px-2 py-0.5 rounded-sm border text-level-intermedio bg-amber-50 border-amber-200">
+                          In Attesa
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── CONFRONTO ──── */}
+          {activeTab === 'compare' && selected.size >= 2 && (
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="font-display text-[18px] font-medium text-ink-900">
+                    Comparazione Candidati
+                  </h2>
+                  <p className="text-[12px] text-ink-500 mt-0.5">
+                    {selectedCandidates.length} candidati selezionati · Punteggio più alto per competenza evidenziato
+                  </p>
+                </div>
+                <Button variant="secondary" className="text-[13px]" onClick={() => setActiveTab('candidates')}>
+                  ← Modifica selezione
+                </Button>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-[13px] border-collapse">
+                  <thead>
+                    <tr className="border-b-2 border-paper-200">
+                      <th className="text-left py-3 px-4 text-[11px] font-semibold uppercase tracking-eyebrow text-ink-400 bg-paper-100 sticky left-0 min-w-[180px]">
+                        Competenza
+                      </th>
+                      {selectedCandidates.map(c => (
+                        <th key={c.invite_id} className="py-3 px-4 text-center min-w-[130px]">
+                          <p className="font-semibold text-ink-900 text-[13px] leading-tight">{c.candidate_name}</p>
+                          <p className="font-mono text-[10px] text-ink-400 mt-0.5">Set {c.question_set}</p>
+                        </th>
+                      ))}
+                      <th className="py-3 px-4 text-center min-w-[100px] bg-paper-100">
+                        <p className="text-[11px] font-semibold uppercase tracking-eyebrow text-ink-400">Media</p>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {SKILLS.map((skill, idx) => {
+                      const values = selectedCandidates.map(c => Number(c.scores?.[skill] ?? 0))
+                      const max    = Math.max(...values)
+                      const avg    = values.reduce((a, b) => a + b, 0) / values.length
+                      return (
+                        <tr key={skill} className={`border-b border-paper-100 ${idx % 2 === 0 ? '' : 'bg-paper-50'}`}>
+                          <td className="py-3 px-4 font-medium text-ink-800 bg-paper-100 sticky left-0">
+                            {SKILL_LABELS[skill]}
+                          </td>
+                          {values.map((v, i) => (
+                            <td key={i} className="py-3 px-4 text-center">
+                              <span className={`font-mono text-[14px] ${v === max && max > 0 ? 'text-sienna-600 font-bold' : 'text-ink-700'}`}>
+                                {v.toFixed(2)}
+                              </span>
+                            </td>
+                          ))}
+                          <td className="py-3 px-4 text-center bg-paper-100">
+                            <span className="font-mono text-[14px] text-ink-500">{avg.toFixed(2)}</span>
+                          </td>
+                        </tr>
+                      )
+                    })}
+
+                    {/* Riga punteggio generale */}
+                    <tr className="border-t-2 border-paper-200 bg-paper-100">
+                      <td className="py-4 px-4 font-semibold text-ink-900 sticky left-0 bg-paper-100">
+                        Punteggio Generale
+                      </td>
+                      {selectedCandidates.map(c => {
+                        const allScores = selectedCandidates.map(x => Number(x.total_score))
+                        const isTop = Number(c.total_score) === Math.max(...allScores)
+                        return (
+                          <td key={c.invite_id} className="py-4 px-4 text-center">
+                            <span className={`font-mono text-[15px] font-bold ${isTop ? 'text-sienna-600' : 'text-ink-800'}`}>
+                              {Number(c.total_score).toFixed(2)}
+                            </span>
+                            <span className="text-ink-400 text-[12px]">/5,0</span>
+                          </td>
+                        )
+                      })}
+                      <td className="py-4 px-4 text-center bg-paper-100">
+                        <span className="font-mono text-[15px] text-ink-500">
+                          {(selectedCandidates.reduce((s, c) => s + Number(c.total_score), 0) / selectedCandidates.length).toFixed(2)}
+                        </span>
+                        <span className="text-ink-400 text-[12px]">/5,0</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Legenda */}
+              <div className="flex items-center gap-2 mt-4">
+                <TrendingUp className="w-3.5 h-3.5 text-sienna-600" />
+                <p className="text-[11px] text-ink-500">Il punteggio più alto per ogni competenza è evidenziato in arancione</p>
+              </div>
             </div>
           )}
 
@@ -353,19 +577,18 @@ export default function AziendeDashboardPage() {
                     className={`${inputCls} resize-none`} rows={3}
                     placeholder="Es. Posizione: Full Stack Developer…" />
                 </div>
-
                 <div className="bg-paper-100 border border-paper-200 rounded-md p-4">
                   <p className="text-[12px] text-ink-600 leading-relaxed">
-                    <strong>Cosa succede dopo:</strong> Il candidato riceverà un link unico via email per completare l&apos;assessment. Una volta terminato potrai visualizzare il report nella sezione Inviti.
+                    <strong>Cosa succede dopo:</strong> Il candidato riceverà un link unico via email per completare l&apos;assessment. Una volta terminato potrai visualizzare il report nella sezione Candidati.
                   </p>
                 </div>
-
-                <Button type="submit" variant="primary" disabled={loading} className="w-full justify-center">
-                  {loading ? 'Invio in corso…' : 'Invia Invito'}
+                <Button type="submit" variant="primary" disabled={sendingInvite} className="w-full justify-center">
+                  {sendingInvite ? 'Invio in corso…' : 'Invia Invito'}
                 </Button>
               </form>
             </div>
           )}
+
         </div>
       </main>
     </div>
