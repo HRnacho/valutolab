@@ -1,202 +1,137 @@
 import express from 'express';
-import { supabase } from '../config/supabase.js';
+import db from '../config/database.js';
+import { verifyToken } from '../middleware/verifyToken.js';
 
 const router = express.Router();
 
 /**
- * GET /api/situational-questions
- * Recupera tutte le domande situazionali attive
+ * GET /api/situational-questions?set=A
+ * Recupera le domande situazionali attive per un dato set (A, B o C).
+ * Se il parametro ?set è omesso restituisce tutte le domande attive.
  */
 router.get('/situational-questions', async (req, res) => {
   try {
-    const { data: questions, error } = await supabase
-      .from('situational_questions')
-      .select('*')
-      .eq('is_active', true)
-      .order('display_order', { ascending: true });
-
-    if (error) {
-      console.error('Error fetching situational questions:', error);
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to fetch situational questions'
-      });
+    const { set } = req.query;
+    const params = [];
+    let where = 'WHERE is_active = true';
+    if (set) {
+      params.push(set);
+      where += ` AND question_set = $${params.length}`;
     }
 
-    res.json({
-      success: true,
-      questions
-    });
+    const { rows } = await db.query(
+      `SELECT * FROM situational_questions ${where} ORDER BY display_order ASC`,
+      params
+    );
+
+    res.json({ success: true, questions: rows });
   } catch (error) {
-    console.error('Error in situational-questions endpoint:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
+    console.error('Error fetching situational questions:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
 /**
  * POST /api/situational-responses
- * Salva le risposte dell'utente alle domande situazionali
- * 
+ * Salva le risposte dell'utente alle domande situazionali.
+ *
  * Body: {
  *   assessmentId: UUID,
  *   userId: UUID,
- *   responses: [
- *     {
- *       questionId: UUID,
- *       selectedOption: 'A' | 'B' | 'C' | 'D'
- *     }
- *   ]
+ *   responses: [{ questionId: UUID, selectedOption: 'A'|'B'|'C'|'D' }]
  * }
  */
-router.post('/situational-responses', async (req, res) => {
+router.post('/situational-responses', verifyToken, async (req, res) => {
   try {
     const { assessmentId, userId, responses } = req.body;
 
-    if (!assessmentId || !userId || !responses || !Array.isArray(responses)) {
+    if (!assessmentId || !userId || !Array.isArray(responses)) {
       return res.status(400).json({
         success: false,
-        error: 'Missing required fields: assessmentId, userId, responses'
+        error: 'Missing required fields: assessmentId, userId, responses',
       });
     }
 
-    // Per ogni risposta, dobbiamo recuperare i pesi dalla domanda
-    const responsesToInsert = [];
+    let saved = 0;
 
-    for (const response of responses) {
-      const { questionId, selectedOption } = response;
+    for (const { questionId, selectedOption } of responses) {
+      // Recupera i pesi dell'opzione selezionata dalla domanda
+      const { rows } = await db.query(
+        'SELECT options FROM situational_questions WHERE id = $1',
+        [questionId]
+      );
 
-      // Recupera la domanda per ottenere i pesi dell'opzione selezionata
-      const { data: question, error: questionError } = await supabase
-        .from('situational_questions')
-        .select('options')
-        .eq('id', questionId)
-        .single();
+      if (!rows[0]) continue;
 
-      if (questionError || !question) {
-        console.error(`Error fetching question ${questionId}:`, questionError);
-        continue;
-      }
+      const option = rows[0].options.find(o => o.label === selectedOption);
+      if (!option) continue;
 
-      // Trova l'opzione selezionata e i suoi pesi
-      const selectedOptionData = question.options.find(opt => opt.label === selectedOption);
-
-      if (!selectedOptionData) {
-        console.error(`Option ${selectedOption} not found for question ${questionId}`);
-        continue;
-      }
-
-      responsesToInsert.push({
-        assessment_id: assessmentId,
-        user_id: userId,
-        question_id: questionId,
-        selected_option: selectedOption,
-        skill_weights: selectedOptionData.skill_weights
-      });
+      await db.query(
+        `INSERT INTO situational_responses
+           (assessment_id, user_id, question_id, selected_option, skill_weights)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (assessment_id, question_id)
+         DO UPDATE SET selected_option = EXCLUDED.selected_option,
+                       skill_weights   = EXCLUDED.skill_weights`,
+        [assessmentId, userId, questionId, selectedOption, JSON.stringify(option.skill_weights)]
+      );
+      saved++;
     }
 
-    // Inserisci tutte le risposte (upsert per gestire aggiornamenti)
-    const { data: savedResponses, error: insertError } = await supabase
-      .from('situational_responses')
-      .upsert(responsesToInsert, {
-        onConflict: 'assessment_id,question_id'
-      })
-      .select();
-
-    if (insertError) {
-      console.error('Error saving situational responses:', insertError);
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to save responses'
-      });
-    }
-
-    res.json({
-      success: true,
-      saved: savedResponses.length
-    });
+    res.json({ success: true, saved });
   } catch (error) {
-    console.error('Error in situational-responses endpoint:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
+    console.error('Error saving situational responses:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
 /**
  * GET /api/assessments/:assessmentId/results-combined
- * Recupera i risultati combinati (Likert + SJT) con weighted blend
+ * Recupera i risultati combinati (Likert + SJT) con weighted blend.
  */
 router.get('/assessments/:assessmentId/results-combined', async (req, res) => {
   try {
     const { assessmentId } = req.params;
 
-    // Usa la vista combined_assessment_results
-    const { data: results, error } = await supabase
-      .from('combined_assessment_results')
-      .select('*')
-      .eq('assessment_id', assessmentId)
-      .order('final_score', { ascending: false });
+    const { rows } = await db.query(
+      `SELECT * FROM combined_assessment_results
+       WHERE assessment_id = $1
+       ORDER BY final_score DESC`,
+      [assessmentId]
+    );
 
-    if (error) {
-      console.error('Error fetching combined results:', error);
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to fetch combined results'
-      });
-    }
-
-    // Calcola il punteggio generale (media dei final_score)
-    const totalScore = results.reduce((sum, r) => sum + parseFloat(r.final_score), 0) / results.length;
+    const totalScore = rows.length
+      ? rows.reduce((sum, r) => sum + parseFloat(r.final_score), 0) / rows.length
+      : 0;
 
     res.json({
       success: true,
-      results,
-      totalScore: parseFloat(totalScore.toFixed(2))
+      results: rows,
+      totalScore: parseFloat(totalScore.toFixed(2)),
     });
   } catch (error) {
-    console.error('Error in results-combined endpoint:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
+    console.error('Error fetching combined results:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
 /**
  * GET /api/assessments/:assessmentId/situational-responses
- * Recupera le risposte situazionali per un assessment
+ * Recupera le risposte situazionali per un assessment.
  */
 router.get('/assessments/:assessmentId/situational-responses', async (req, res) => {
   try {
     const { assessmentId } = req.params;
 
-    const { data: responses, error } = await supabase
-      .from('situational_responses')
-      .select('*')
-      .eq('assessment_id', assessmentId);
+    const { rows } = await db.query(
+      'SELECT * FROM situational_responses WHERE assessment_id = $1',
+      [assessmentId]
+    );
 
-    if (error) {
-      console.error('Error fetching situational responses:', error);
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to fetch responses'
-      });
-    }
-
-    res.json({
-      success: true,
-      responses
-    });
+    res.json({ success: true, responses: rows });
   } catch (error) {
-    console.error('Error in situational-responses GET endpoint:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
+    console.error('Error fetching situational responses:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
