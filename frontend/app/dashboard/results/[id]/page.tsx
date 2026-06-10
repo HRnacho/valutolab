@@ -196,7 +196,24 @@ export default function ResultsPage() {
         {/* ── HERO SCORES ──────────────────────────────────────────────── */}
         <div className="bg-paper-50 border border-paper-200 rounded-md shadow-sm-ink p-8">
           <p className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400 mb-1">Assessment Soft Skills</p>
-          <h1 className="font-display text-display-2 text-ink-900 mb-8">Risultati</h1>
+          <h1 className="font-display text-display-2 text-ink-900 mb-2">Risultati</h1>
+
+          {/* Dati testata — visibili anche in stampa */}
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-1 mb-8">
+            {authUser?.full_name && (
+              <span className="font-body text-[14px] text-ink-700 font-medium">{authUser.full_name}</span>
+            )}
+            {assessment?.completed_at && (
+              <span className="font-body text-[13px] text-ink-500">
+                {new Date(assessment.completed_at).toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric' })}
+              </span>
+            )}
+            {assessment?.question_set && (
+              <span className="font-mono text-[11px] text-ink-400 uppercase tracking-eyebrow">
+                Set {assessment.question_set}
+              </span>
+            )}
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Punteggio generale */}
