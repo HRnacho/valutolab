@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/lib/AuthContext'
 import { Wordmark } from '@/components/ui/Wordmark'
@@ -46,7 +46,7 @@ interface Candidate {
   scores: Record<string, number>
 }
 
-export default function AziendeDashboardPage() {
+function AziendeDashboardContent() {
   const router       = useRouter()
   const searchParams = useSearchParams()
   const { user: authUser, loading: authLoading } = useAuth()
@@ -625,5 +625,17 @@ export default function AziendeDashboardPage() {
         </div>
       </main>
     </div>
+  )
+}
+
+export default function AziendeDashboardPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-paper-100">
+        <div className="w-8 h-8 border-2 border-ink-900 border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <AziendeDashboardContent />
+    </Suspense>
   )
 }
