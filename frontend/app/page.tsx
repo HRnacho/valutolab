@@ -8,8 +8,9 @@ import { Button } from '@/components/ui/Button'
 import { EscoChip } from '@/components/ui/EscoChip'
 import { LevelTrack } from '@/components/ui/LevelTrack'
 import {
-  BarChart3, FileText, Users, Building2, Award,
-  Check, ChevronRight, ArrowRight
+  BarChart3, FileText, Users, Award,
+  Check, ChevronRight, ArrowRight,
+  LayoutGrid, UserPlus, Download, Lock
 } from 'lucide-react'
 
 export default function HomePage() {
@@ -83,8 +84,7 @@ export default function HomePage() {
                 Uno standard <em>europeo</em>.
               </h1>
               <p className="font-body text-lede text-ink-600 max-w-lg mb-10">
-                Un assessment delle tue competenze trasversali mappato sullo standard ESCO v1.2
-                della Commissione Europea. Quaranta minuti, una lettura che resta.
+                Scopri il tuo profilo professionale in quaranta minuti. Dodici competenze misurate, un&apos;analisi che parla di te.
               </p>
               <div className="flex flex-wrap items-center gap-4">
                 <Button variant="accent" className="text-[16px] px-8 py-4" onClick={() => router.push('/servizi')}>
@@ -190,7 +190,7 @@ export default function HomePage() {
               {
                 icon: <FileText className="w-5 h-5" strokeWidth={1.5} />,
                 title: 'Lettura personalizzata',
-                body: "Il report non è un template. L'analisi qualitativa è generata da Claude su misura per il tuo profilo specifico di risposte.",
+                body: "L'analisi non è un template. Ogni lettura è costruita sul tuo profilo specifico di risposte.",
                 art: '/graphics/doppia-evidenza.svg',
               },
               {
@@ -241,7 +241,7 @@ export default function HomePage() {
                 48 item Likert + 12 situational judgement. 12 competenze misurate, mappate ESCO.
               </p>
               <ul className="space-y-3 mb-10 flex-1">
-                {['Valutazione 12 soft skills', 'Report qualitativo AI', 'Profilo ESCO con URI verificabili', 'Badge LinkedIn + QR code', 'Certificato PDF'].map(item => (
+                {['Valutazione 12 soft skills', 'Analisi qualitativa personalizzata', 'Profilo ESCO con URI verificabili', 'Badge LinkedIn + QR code', 'Certificato PDF'].map(item => (
                   <li key={item} className="flex items-start gap-3">
                     <Check className="w-4 h-4 text-sienna-600 mt-1 flex-shrink-0" strokeWidth={1.5} />
                     <span className="font-body text-body text-ink-700">{item}</span>
@@ -249,7 +249,8 @@ export default function HomePage() {
                 ))}
               </ul>
               <div className="mt-auto">
-                <LevelTrack score={3.2} className="mb-6 opacity-40" />
+                <LevelTrack score={3.2} className="mb-2 opacity-40" />
+                <p className="font-mono text-[10px] tracking-wider text-ink-400 uppercase mb-6">Livello di competenza secondo il framework ESCO v1.2</p>
                 <Button variant="primary" className="w-full justify-center" onClick={() => router.push('/servizi')}>
                   Scopri di più <ChevronRight className="inline ml-1 w-4 h-4" strokeWidth={1.5} />
                 </Button>
@@ -266,7 +267,7 @@ export default function HomePage() {
                 30 scenari situazionali avanzati. 6 dimensioni di leadership. Piano d&apos;azione 3–6 mesi.
               </p>
               <ul className="space-y-3 mb-10 flex-1">
-                {["Stile di leadership personalizzato", "Analisi 6 dimensioni manageriali", "Piano d'azione con timeline", "Risorse consigliate", "Report premium scaricabile"].map(item => (
+                {["Stile di leadership personalizzato", "Analisi 6 dimensioni manageriali", "Piano d'azione con timeline", "Risorse consigliate", "Certificato PDF con piano d'azione"].map(item => (
                   <li key={item} className="flex items-start gap-3">
                     <Check className="w-4 h-4 text-sienna-500 mt-1 flex-shrink-0" strokeWidth={1.5} />
                     <span className="font-body text-body text-ink-200">{item}</span>
@@ -287,7 +288,7 @@ export default function HomePage() {
               <Users className="w-5 h-5 text-ink-400" strokeWidth={1.5} />
               <div>
                 <p className="font-display text-[18px] font-medium text-ink-700">Dinamiche di Gruppo</p>
-                <p className="font-body text-caption text-ink-500">Team assessment — valutazione relazioni interpersonali e ruoli</p>
+                <p className="font-body text-caption text-ink-500">Mappa le competenze del tuo team e scopri come lavorano insieme.</p>
               </div>
             </div>
             <span className="font-mono text-[11px] tracking-wider text-ink-400 uppercase border border-paper-300 px-3 py-1.5">In sviluppo</span>
@@ -318,16 +319,16 @@ export default function HomePage() {
             </div>
             <ul className="space-y-5">
               {[
-                ['Dashboard HR centralizzata', 'Tutti i profili in un posto, con filtri e comparazione.'],
-                ['Inviti illimitati', 'Invita candidati e dipendenti con link tracciato.'],
-                ['Export per recruiting', 'Scarica i report del team in batch.'],
-                ['Gestione permessi', 'Ruoli differenziati per HR, manager, candidato.'],
-              ].map(([title, desc]) => (
-                <li key={title} className="flex items-start gap-4 border-b border-paper-200 pb-5 last:border-0">
-                  <Building2 className="w-4 h-4 text-sienna-600 mt-1 flex-shrink-0" strokeWidth={1.5} />
+                ['Dashboard HR centralizzata', 'Tutti i profili in un posto, con filtri e comparazione.', <LayoutGrid key="lg" className="w-4 h-4 text-sienna-600 mt-1 flex-shrink-0" strokeWidth={1.5} />],
+                ['Inviti illimitati', 'Invita candidati e dipendenti con link tracciato.', <UserPlus key="up" className="w-4 h-4 text-sienna-600 mt-1 flex-shrink-0" strokeWidth={1.5} />],
+                ['Export per recruiting', 'Scarica i report del team in batch.', <Download key="dl" className="w-4 h-4 text-sienna-600 mt-1 flex-shrink-0" strokeWidth={1.5} />],
+                ['Gestione permessi', 'Ruoli differenziati per HR, manager, candidato.', <Lock key="lk" className="w-4 h-4 text-sienna-600 mt-1 flex-shrink-0" strokeWidth={1.5} />],
+              ].map(([title, desc, icon]) => (
+                <li key={title as string} className="flex items-start gap-4 border-b border-paper-200 pb-5 last:border-0">
+                  {icon}
                   <div>
-                    <p className="font-display text-[16px] font-medium text-ink-900">{title}</p>
-                    <p className="font-body text-caption text-ink-500 mt-0.5">{desc}</p>
+                    <p className="font-display text-[16px] font-medium text-ink-900">{title as string}</p>
+                    <p className="font-body text-caption text-ink-500 mt-0.5">{desc as string}</p>
                   </div>
                 </li>
               ))}
