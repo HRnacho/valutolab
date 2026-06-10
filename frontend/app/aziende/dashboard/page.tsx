@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/lib/AuthContext'
 import { Wordmark } from '@/components/ui/Wordmark'
 import { Button } from '@/components/ui/Button'
@@ -47,17 +47,19 @@ interface Candidate {
 }
 
 export default function AziendeDashboardPage() {
-  const router = useRouter()
+  const router       = useRouter()
+  const searchParams = useSearchParams()
   const { user: authUser, loading: authLoading } = useAuth()
 
-  const [loading, setLoading]           = useState(true)
-  const [organization, setOrganization] = useState<any>(null)
-  const [activeTab, setActiveTab]       = useState<Tab>('overview')
-  const [invites, setInvites]           = useState<any[]>([])
-  const [candidates, setCandidates]     = useState<Candidate[]>([])
-  const [selected, setSelected]         = useState<Set<string>>(new Set())
-  const [message, setMessage]           = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-  const [inviteForm, setInviteForm]     = useState({ candidateEmail: '', candidateName: '', notes: '' })
+  const [loading, setLoading]             = useState(true)
+  const [organizations, setOrganizations] = useState<any[]>([])
+  const [organization, setOrganization]   = useState<any>(null)
+  const [activeTab, setActiveTab]         = useState<Tab>('overview')
+  const [invites, setInvites]             = useState<any[]>([])
+  const [candidates, setCandidates]       = useState<Candidate[]>([])
+  const [selected, setSelected]           = useState<Set<string>>(new Set())
+  const [message, setMessage]             = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [inviteForm, setInviteForm]       = useState({ candidateEmail: '', candidateName: '', notes: '' })
   const [sendingInvite, setSendingInvite] = useState(false)
 
   useEffect(() => {
@@ -78,7 +80,11 @@ export default function AziendeDashboardPage() {
       const res  = await fetch(`${API_URL}/api/organizations/user/${authUser!.id}`)
       const data = await res.json()
       if (!data.success || data.organizations.length === 0) { router.push('/'); return }
-      const org = data.organizations[0]
+      setOrganizations(data.organizations)
+      // Pre-seleziona org da ?org= se presente e l'utente ne è membro, altrimenti la prima
+      const paramId = searchParams.get('org')
+      const org = (paramId && data.organizations.find((o: any) => o.id === paramId))
+        || data.organizations[0]
       setOrganization(org)
       await Promise.all([loadInvites(org.id), loadCandidates(org.id)])
     } catch {
@@ -86,6 +92,19 @@ export default function AziendeDashboardPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleOrgChange = async (orgId: string) => {
+    const org = organizations.find(o => o.id === orgId)
+    if (!org || org.id === organization?.id) return
+    setOrganization(org)
+    setSelected(new Set())
+    setActiveTab('overview')
+    setLoading(true)
+    await Promise.all([loadInvites(org.id), loadCandidates(org.id)])
+    setLoading(false)
+    // Aggiorna URL senza reload
+    router.replace(`/aziende/dashboard?org=${org.id}`)
   }
 
   const loadInvites = async (orgId: string) => {
@@ -218,10 +237,24 @@ export default function AziendeDashboardPage() {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-4">
               <Wordmark size={20} />
-              {organization?.name && (
+              {organizations.length === 1 && organization?.name && (
                 <>
                   <span className="text-paper-300">|</span>
                   <span className="text-[13px] font-medium text-ink-600">{organization.name}</span>
+                </>
+              )}
+              {organizations.length > 1 && (
+                <>
+                  <span className="text-paper-300">|</span>
+                  <select
+                    value={organization?.id ?? ''}
+                    onChange={e => handleOrgChange(e.target.value)}
+                    className="text-[13px] font-medium text-ink-700 bg-transparent border border-paper-300 rounded-sm px-2 py-1 focus:outline-none focus:border-ink-600 cursor-pointer hover:border-ink-400 transition-colors"
+                  >
+                    {organizations.map(o => (
+                      <option key={o.id} value={o.id}>{o.name}</option>
+                    ))}
+                  </select>
                 </>
               )}
             </div>
