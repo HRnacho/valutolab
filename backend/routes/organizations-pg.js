@@ -1,6 +1,10 @@
 import express from 'express';
 import db from '../config/database.js';
 import { verifyToken } from '../middleware/verifyToken.js';
+import { Resend } from 'resend';
+import { categoryLabels } from '../data/questions.js';
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const router = express.Router();
 
@@ -133,6 +137,9 @@ router.post('/:orgId/invite', async (req, res) => {
       return res.status(403).json({ success: false, message: 'Non hai i permessi per invitare candidati' });
     }
 
+    const orgNameRes = await db.query('SELECT name FROM organizations WHERE id = $1', [orgId]);
+    const orgName = orgNameRes.rows[0]?.name || '';
+
     const result = await db.query(
       `INSERT INTO candidate_invites
        (organization_id, invited_by, candidate_email, candidate_name, assessment_type, notes, status, focus_config_id)
@@ -141,7 +148,75 @@ router.post('/:orgId/invite', async (req, res) => {
       [orgId, userId, candidateEmail, candidateName, assessmentType || 'internal', notes, focus_config_id || null]
     );
 
-    res.json({ success: true, invite: result.rows[0], message: 'Invito creato con successo' });
+    const invite = result.rows[0];
+    const assessmentUrl = `${process.env.FRONTEND_URL}/invito/${invite.invite_token}`;
+
+    // Blocco Focus: recupera skill in italiano se presente
+    let focusBlock = '';
+    if (focus_config_id) {
+      try {
+        const cfgRes = await db.query('SELECT skills FROM focus_configs WHERE id = $1', [focus_config_id]);
+        const skills = cfgRes.rows[0]?.skills ?? [];
+        if (skills.length > 0) {
+          const skillNames = skills.map(s => categoryLabels[s] || s).join(', ');
+          focusBlock = `
+            <div style="background: #EEF2FF; border-left: 4px solid #4F46E5; border-radius: 4px; padding: 16px; margin: 16px 0;">
+              <p style="margin: 0; color: #3730A3; font-weight: bold;">🎯 Assessment focalizzato su:</p>
+              <p style="margin: 6px 0 0; color: #1F2937;">${skillNames}</p>
+            </div>`;
+        }
+      } catch (err) {
+        console.error('Focus config fetch error:', err);
+      }
+    }
+
+    try {
+      await resend.emails.send({
+        from: 'ValutoLab <info@valutolab.com>',
+        to: candidateEmail,
+        subject: 'Sei stato invitato a completare un assessment ValutoLab',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="text-align: center; margin-bottom: 32px;">
+              <h1 style="color: #4F46E5;">ValutoLab</h1>
+            </div>
+
+            <h2>Ciao ${candidateName || candidateEmail}! 👋</h2>
+
+            <p><strong>${orgName}</strong> ti ha invitato a completare un assessment professionale delle soft skills.</p>
+
+            ${focusBlock}
+
+            <div style="background: #F3F4F6; border-radius: 8px; padding: 24px; margin: 24px 0;">
+              <h3 style="margin-top: 0; color: #1F2937;">📋 Cosa ti aspetta</h3>
+              <p>✅ <strong>Domande</strong> di autovalutazione</p>
+              <p>✅ <strong>15 minuti</strong> per completarlo</p>
+              <p>✅ <strong>Report personalizzato</strong> delle tue competenze</p>
+            </div>
+
+            <div style="text-align: center; margin: 32px 0;">
+              <a href="${assessmentUrl}"
+                 style="background: #4F46E5; color: white; padding: 16px 40px; border-radius: 8px; text-decoration: none; font-size: 18px; font-weight: bold;">
+                Inizia l'Assessment →
+              </a>
+            </div>
+
+            <p style="color: #6B7280; font-size: 14px;">
+              Se il bottone non funziona, copia questo link nel browser:<br/>
+              <a href="${assessmentUrl}">${assessmentUrl}</a>
+            </p>
+
+            <p style="color: #9CA3AF; font-size: 12px; margin-top: 32px;">
+              Hai ricevuto questa email perché ${orgName} ti ha invitato tramite ValutoLab.
+            </p>
+          </div>
+        `
+      });
+    } catch (emailError) {
+      console.error('Email send failed:', emailError);
+    }
+
+    res.json({ success: true, invite, message: 'Invito creato e email inviata al candidato' });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Errore nella creazione', error: error.message });
   }

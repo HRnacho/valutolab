@@ -2,6 +2,9 @@ import express from 'express';
 import db from '../config/database.js';
 import { verifyAdmin } from '../middleware/verifyToken.js';
 import bcrypt from 'bcrypt';
+import { Resend } from 'resend';
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const router = express.Router();
 router.use(verifyAdmin);
@@ -370,9 +373,24 @@ router.post('/emails/send', async (req, res) => {
     if (!recipients?.length || !subject || !body) {
       return res.status(400).json({ success: false, message: 'recipients, subject e body obbligatori' });
     }
-    // TODO: integrate nodemailer / SendGrid / Resend
-    console.log(`[Admin Email] A: ${recipients.join(', ')} | Oggetto: ${subject}`);
-    res.json({ success: true, sent: recipients.length });
+    const results = await Promise.allSettled(
+      recipients.map(to =>
+        resend.emails.send({
+          from: 'ValutoLab <info@valutolab.com>',
+          to,
+          subject,
+          html: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h1 style="color: #4F46E5;">ValutoLab</h1>
+            <div style="white-space: pre-wrap; color: #1F2937;">${body}</div>
+            <p style="color: #9CA3AF; font-size: 12px; margin-top: 32px;">Messaggio inviato da ValutoLab Admin.</p>
+          </div>`
+        })
+      )
+    );
+    const sent = results.filter(r => r.status === 'fulfilled').length;
+    const failed = results.filter(r => r.status === 'rejected').length;
+    if (failed > 0) console.error(`[Admin Email] ${failed} invii falliti su ${recipients.length}`);
+    res.json({ success: true, sent, failed });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
