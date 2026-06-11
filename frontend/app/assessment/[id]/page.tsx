@@ -51,12 +51,19 @@ export default function AssessmentPage() {
   const [situationalAnswers, setSituationalAnswers] = useState<Record<string, string>>({})
   const [loadingSituational, setLoadingSituational] = useState(false)
 
+  const [assessmentType, setAssessmentType] = useState<'base' | 'focus'>('base')
+  const [targetSkills, setTargetSkills] = useState<string[]>([])
+
   const filteredQuestions = useMemo<Question[]>(() => {
+    if (assessmentType === 'focus' && targetSkills.length > 0) {
+      const all = [...getQuestionsForSet('A'), ...getQuestionsForSet('B'), ...getQuestionsForSet('C')]
+      return all.filter(q => q.category !== 'profiling' && targetSkills.includes(q.category))
+    }
     return getQuestionsForSet(questionSet).filter(q => {
       if (!q.conditionalKey) return true
       return profilingAnswers[q.conditionalKey] === q.conditionalValue
     })
-  }, [profilingAnswers, questionSet])
+  }, [profilingAnswers, questionSet, assessmentType, targetSkills])
 
   const likertQuestions = useMemo(() => {
     return filteredQuestions.filter(q => q.category !== 'profiling')
@@ -71,6 +78,10 @@ export default function AssessmentPage() {
       if (assessment.status === 'completed') { router.push(`/dashboard/results/${assessmentId}`); return }
       if (assessment.question_set && ['A', 'B', 'C'].includes(assessment.question_set)) {
         setQuestionSet(assessment.question_set as 'A' | 'B' | 'C')
+      }
+      if (assessment.assessment_type === 'focus' && Array.isArray(assessment.target_skills)) {
+        setAssessmentType('focus')
+        setTargetSkills(assessment.target_skills)
       }
       const responsesRes = await api.assessments.responses.list(assessmentId)
       const existingAnswers = responsesRes.responses || []
@@ -153,10 +164,21 @@ export default function AssessmentPage() {
     setLoadingSituational(true)
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'
-      const response = await fetch(`${apiUrl}/api/situational-questions?set=${questionSet}`)
-      if (response.ok) {
-        const data = await response.json()
-        if (data.success && data.questions) setSituationalQuestions(data.questions)
+      if (assessmentType === 'focus' && targetSkills.length > 0) {
+        const [resA, resB, resC] = await Promise.all([
+          fetch(`${apiUrl}/api/situational-questions?set=A`).then(r => r.json()),
+          fetch(`${apiUrl}/api/situational-questions?set=B`).then(r => r.json()),
+          fetch(`${apiUrl}/api/situational-questions?set=C`).then(r => r.json()),
+        ])
+        const all = [...(resA.questions || []), ...(resB.questions || []), ...(resC.questions || [])]
+          .filter((q: SituationalQuestionData) => targetSkills.includes(q.primary_skill))
+        setSituationalQuestions(all)
+      } else {
+        const response = await fetch(`${apiUrl}/api/situational-questions?set=${questionSet}`)
+        if (response.ok) {
+          const data = await response.json()
+          if (data.success && data.questions) setSituationalQuestions(data.questions)
+        }
       }
     } catch (error) {
       console.error('Error loading situational questions:', error)
@@ -341,7 +363,9 @@ export default function AssessmentPage() {
         <div className="max-w-3xl mx-auto px-6 h-14 flex items-center justify-between">
           <Wordmark size={18} />
           <span className="text-[12px] text-ink-500 font-medium">
-            {isProfiling ? 'Profilazione' : `Domanda ${likertIndex + 1} / ${likertQuestions.length}`}
+            {assessmentType === 'focus'
+              ? `Focus — Domanda ${likertIndex + 1} / ${likertQuestions.length}`
+              : isProfiling ? 'Profilazione' : `Domanda ${likertIndex + 1} / ${likertQuestions.length}`}
           </span>
         </div>
       </header>
