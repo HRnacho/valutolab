@@ -37,7 +37,7 @@ export default function AgenziaTrialLanding() {
   const labelCls = 'block text-[12px] font-medium text-ink-600 mb-1.5'
 
   const faqs = [
-    ['Il trial è davvero gratuito?', 'Sì, assolutamente. Non ti chiediamo nessuna carta di credito. Ricevi fino a 20 assessment gratuiti per 30 giorni. Dopo il trial, se ti interessa continuare, parliamo insieme di un piano su misura.'],
+    ['Il trial è davvero gratuito?', 'Sì, assolutamente. Ricevi fino a 20 assessment gratuiti per 30 giorni. Dopo il trial, se ti interessa continuare, parliamo insieme di un piano su misura.'],
     ['Quanto tempo ci vuole per attivare il trial?', 'Massimo 2 ore lavorative. Compili il form, noi creiamo il tuo account e ti inviamo le credenziali via email.'],
     ['Come funziona l\'assessment per i candidati?', 'Tu inserisci l\'email del candidato nella dashboard. Lui riceve un link univoco, risponde a 60 domande (15-20 min) e tu vedi i risultati immediatamente.'],
     ['Cosa succede dopo i 30 giorni?', 'Nulla in automatico. Non addebitiamo nulla. Ti contattiamo per sapere come è andato il trial e se vuoi continuare.'],
@@ -117,7 +117,7 @@ export default function AgenziaTrialLanding() {
               {[
                 'fino a 20 assessment gratuiti per 30 giorni di trial',
                 'Report dettagliati per ogni candidato in tempo reale',
-                'Zero costi, zero carte di credito — provi completamente gratis',
+                'Zero costi — provi completamente gratis',
                 'Supporto dedicato e call di onboarding inclusa',
               ].map((text, i) => (
                 <div key={i} className="flex items-start gap-3">
@@ -252,15 +252,15 @@ export default function AgenziaTrialLanding() {
       {/* ── FINAL CTA ────────────────────────────────────────────────── */}
       <section className="bg-ink-900 py-16">
         <div className="max-w-3xl mx-auto px-6 lg:px-8 text-center">
-          <h2 className="font-display text-display-3 text-paper-50 mb-4">Pronto a Trovare i Candidati Perfetti?</h2>
-          <p className="text-[15px] text-ink-400 mb-8">Inizia oggi con 20 assessment gratuiti. Nessuna carta di credito richiesta.</p>
+          <h2 className="font-display text-display-3 text-paper-50 mb-4">Inizia il trial gratuito.</h2>
+          <p className="text-[15px] text-ink-400 mb-8">30 giorni per valutare il tuo team.</p>
           <button
             onClick={() => document.querySelector('form')?.scrollIntoView({ behavior: 'smooth' })}
             className="inline-flex items-center gap-2 bg-paper-50 text-ink-900 font-semibold px-8 py-3 rounded-sm hover:bg-paper-100 transition-colors"
           >
             Attiva Trial Gratuito <ArrowRight className="w-4 h-4" />
           </button>
-          <p className="text-[12px] text-ink-500 mt-4">Attivazione in 2 ore · 30 giorni gratis · 20 assessment inclusi</p>
+          <p className="text-[12px] text-ink-500 mt-4">30 giorni · 20 assessment inclusi</p>
         </div>
       </section>
 
