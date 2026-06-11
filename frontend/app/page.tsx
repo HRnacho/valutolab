@@ -16,14 +16,17 @@ import {
 export default function HomePage() {
   const router = useRouter()
   const { user, loading } = useAuth()
-  const [isAziendaReferente, setIsAziendaReferente] = useState(false)
+  const [ownerOrgId, setOwnerOrgId] = useState<string | null>(null)
 
   useEffect(() => {
     if (loading || !user) return
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'
-    fetch(`${apiUrl}/api/v1/trial/check-referente/${user.id}`)
+    const token = localStorage.getItem('jwt_access_token')
+    fetch(`${apiUrl}/api/organizations/my`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
       .then(r => r.ok ? r.json() : null)
-      .then(data => { if (data) setIsAziendaReferente(data.isReferente === true) })
+      .then(data => { if (data?.organizations?.length > 0) setOwnerOrgId(data.organizations[0].id) })
       .catch(() => {})
   }, [user, loading])
 
@@ -47,8 +50,8 @@ export default function HomePage() {
               {user ? (
                 <>
                   <Button variant="primary" onClick={() => router.push('/dashboard')}>Dashboard</Button>
-                  {isAziendaReferente && (
-                    <Button variant="secondary" onClick={() => router.push('/aziende/dashboard')}>Dashboard Azienda</Button>
+                  {ownerOrgId && (
+                    <Button variant="secondary" onClick={() => router.push(`/aziende/dashboard?org=${ownerOrgId}`)}>Dashboard HR</Button>
                   )}
                 </>
               ) : (

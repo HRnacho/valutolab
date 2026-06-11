@@ -1,5 +1,6 @@
 import express from 'express';
 import db from '../config/database.js';
+import { verifyToken } from '../middleware/verifyToken.js';
 
 const router = express.Router();
 
@@ -63,6 +64,23 @@ router.get('/user/:userId', async (req, res) => {
     res.status(500).json({ success: false, message: 'Errore nel recupero', error: error.message });
   }
 });
+
+// GET /api/organizations/my — orgs dove l'utente è owner
+router.get('/my', verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.id
+    const { rows } = await db.query(
+      `SELECT o.id, o.name FROM organizations o
+       JOIN organization_members om ON o.id = om.organization_id
+       WHERE om.user_id = $1 AND om.role = 'owner'
+       ORDER BY o.created_at ASC`,
+      [userId]
+    )
+    res.json({ success: true, organizations: rows })
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message })
+  }
+})
 
 // GET /api/organizations/:orgId
 router.get('/:orgId', async (req, res) => {

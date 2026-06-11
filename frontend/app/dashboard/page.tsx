@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/Button'
 import { ScoreRing } from '@/components/ui/ScoreRing'
 import BadgeGenerator from '@/components/BadgeGenerator'
 import QRCodeGenerator from '@/components/QRCodeGenerator'
-import { FileText, Share2, Mail, Trash2, Play, ChevronRight, BarChart3 } from 'lucide-react'
+import { FileText, Share2, Mail, Trash2, Play, ChevronRight, BarChart3, Building2 } from 'lucide-react'
 
 interface Assessment {
   id: string
@@ -52,6 +52,7 @@ export default function DashboardPage() {
     score: number; topSkills: Array<{ name: string; score: number }>; shareToken: string
   } | null>(null)
   const [qrModal, setQrModal] = useState<{ open: boolean; profileUrl: string; userName: string } | null>(null)
+  const [ownerOrg, setOwnerOrg] = useState<{ id: string; name: string } | null>(null)
 
   useEffect(() => {
     if (message) {
@@ -68,6 +69,13 @@ export default function DashboardPage() {
       if (!authUser) { router.push('/login'); return }
 
       setUser(authUser)
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'
+      const token = localStorage.getItem('jwt_access_token')
+      const orgRes = await fetch(`${apiUrl}/api/organizations/my`, {
+        headers: { Authorization: `Bearer ${token}` }
+      }).then(r => r.ok ? r.json() : null).catch(() => null)
+      if (orgRes?.organizations?.length > 0) setOwnerOrg(orgRes.organizations[0])
 
       const [assessmentsRes, leadershipRes] = await Promise.all([
         api.assessments.list(),
@@ -281,6 +289,14 @@ export default function DashboardPage() {
             <Wordmark size={20} />
             <div className="flex items-center gap-6">
               <span className="text-[13px] text-ink-500">{user?.email}</span>
+              {ownerOrg && (
+                <button
+                  onClick={() => router.push(`/aziende/dashboard?org=${ownerOrg.id}`)}
+                  className="flex items-center gap-1.5 text-[13px] text-ink-600 hover:text-sienna-600 transition-colors"
+                >
+                  <Building2 className="w-4 h-4" /> Dashboard HR
+                </button>
+              )}
               <button
                 onClick={async () => { await logout(); router.push('/login') }}
                 className="text-[13px] text-ink-600 hover:text-sienna-600 transition-colors"
@@ -304,6 +320,24 @@ export default function DashboardPage() {
             {isTrial ? 'Inizia assessment' : '+ Vai ai servizi'}
           </Button>
         </div>
+
+        {/* ── AREA AZIENDA ───────────────────────────────────────────── */}
+        {ownerOrg && (
+          <div className="bg-paper-50 border border-paper-200 rounded-md shadow-sm-ink p-6 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 bg-sienna-50 border border-sienna-200 rounded-md flex items-center justify-center">
+                <Building2 className="w-5 h-5 text-sienna-600" />
+              </div>
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400 mb-0.5">Area Azienda</p>
+                <p className="font-display text-[16px] font-medium text-ink-900">{ownerOrg.name}</p>
+              </div>
+            </div>
+            <Button variant="secondary" onClick={() => router.push(`/aziende/dashboard?org=${ownerOrg.id}`)}>
+              Dashboard HR
+            </Button>
+          </div>
+        )}
 
         {/* ── EMPTY STATE ────────────────────────────────────────────── */}
         {isEmpty && (
