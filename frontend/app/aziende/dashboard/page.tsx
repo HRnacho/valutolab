@@ -7,7 +7,7 @@ import { Wordmark } from '@/components/ui/Wordmark'
 import { Button } from '@/components/ui/Button'
 import {
   ArrowLeft, Mail, BarChart3, Users, Clock, CheckCircle,
-  Plus, Download, GitCompareArrows, TrendingUp,
+  Plus, Download, GitCompareArrows,
 } from 'lucide-react'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'
@@ -30,6 +30,13 @@ const SKILL_LABELS: Record<string, string> = {
   resilience:       'Resilienza',
   negotiation:      'Negoziazione',
   decision_making:  'Decision Making',
+}
+
+const escoColor = (v: number): { bg: string; fg: string } => {
+  if (v >= 4.1) return { bg: '#1B4332', fg: '#ffffff' }
+  if (v >= 3.1) return { bg: '#2D6A4F', fg: '#ffffff' }
+  if (v >= 2.1) return { bg: '#D4A017', fg: '#ffffff' }
+  return { bg: '#C0392B', fg: '#ffffff' }
 }
 
 type Tab = 'overview' | 'candidates' | 'compare' | 'new-invite'
@@ -498,7 +505,7 @@ function AziendeDashboardContent() {
                     Comparazione Candidati
                   </h2>
                   <p className="text-[12px] text-ink-500 mt-0.5">
-                    {selectedCandidates.length} candidati selezionati · Punteggio più alto per competenza evidenziato
+                    {selectedCandidates.length} candidati selezionati · Colore per livello ESCO · Bordo arancione = punteggio più alto
                   </p>
                 </div>
                 <Button variant="secondary" className="text-[13px]" onClick={() => setActiveTab('candidates')}>
@@ -534,15 +541,36 @@ function AziendeDashboardContent() {
                           <td className="py-3 px-4 font-medium text-ink-800 bg-paper-100 sticky left-0">
                             {SKILL_LABELS[skill]}
                           </td>
-                          {values.map((v, i) => (
-                            <td key={i} className="py-3 px-4 text-center">
-                              <span className={`font-mono text-[14px] ${v === max && max > 0 ? 'text-sienna-600 font-bold' : 'text-ink-700'}`}>
-                                {v.toFixed(2)}
-                              </span>
-                            </td>
-                          ))}
-                          <td className="py-3 px-4 text-center bg-paper-100">
-                            <span className="font-mono text-[14px] text-ink-500">{avg.toFixed(2)}</span>
+                          {values.map((v, i) => {
+                            const { bg, fg } = escoColor(v)
+                            const isTop = v === max && max > 0
+                            return (
+                              <td key={i} className="py-2 px-3 text-center">
+                                <span
+                                  className="inline-flex items-center justify-center font-mono text-[13px] font-semibold rounded-sm px-3 py-1.5 min-w-[56px]"
+                                  style={{
+                                    backgroundColor: bg,
+                                    color: fg,
+                                    border: isTop ? '2px solid #B0473A' : '2px solid transparent',
+                                  }}
+                                >
+                                  {v.toFixed(2)}
+                                </span>
+                              </td>
+                            )
+                          })}
+                          <td className="py-2 px-3 text-center bg-paper-100">
+                            {(() => {
+                              const { bg, fg } = escoColor(avg)
+                              return (
+                                <span
+                                  className="inline-flex items-center justify-center font-mono text-[13px] font-semibold rounded-sm px-3 py-1.5 min-w-[56px]"
+                                  style={{ backgroundColor: bg, color: fg, border: '2px solid transparent' }}
+                                >
+                                  {avg.toFixed(2)}
+                                </span>
+                              )
+                            })()}
                           </td>
                         </tr>
                       )
@@ -577,9 +605,23 @@ function AziendeDashboardContent() {
               </div>
 
               {/* Legenda */}
-              <div className="flex items-center gap-2 mt-4">
-                <TrendingUp className="w-3.5 h-3.5 text-sienna-600" />
-                <p className="text-[11px] text-ink-500">Il punteggio più alto per ogni competenza è evidenziato in arancione</p>
+              <div className="flex flex-wrap items-center gap-4 mt-4">
+                {[
+                  { label: 'Esperto',    range: '4.1–5.0', bg: '#1B4332' },
+                  { label: 'Avanzato',   range: '3.1–4.0', bg: '#2D6A4F' },
+                  { label: 'Intermedio', range: '2.1–3.0', bg: '#D4A017' },
+                  { label: 'Base',       range: '1.0–2.0', bg: '#C0392B' },
+                ].map(({ label, range, bg }) => (
+                  <div key={label} className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded-sm flex-shrink-0" style={{ backgroundColor: bg }} />
+                    <span className="text-[11px] text-ink-600 font-medium">{label}</span>
+                    <span className="text-[11px] text-ink-400">{range}</span>
+                  </div>
+                ))}
+                <div className="flex items-center gap-1.5 ml-2 pl-4 border-l border-paper-300">
+                  <span className="w-3 h-3 rounded-sm border-2 flex-shrink-0" style={{ borderColor: '#B0473A' }} />
+                  <span className="text-[11px] text-ink-500">Punteggio più alto per competenza</span>
+                </div>
               </div>
             </div>
           )}
