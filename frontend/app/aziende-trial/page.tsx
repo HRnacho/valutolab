@@ -107,10 +107,10 @@ export default function AgenziaTrialLanding() {
               Offerta Esclusiva per Aziende
             </span>
             <h1 className="font-display text-display-1 text-ink-900 mb-5 leading-tight">
-              Trova i Candidati Perfetti con Assessment <span className="text-sienna-600">Scientifici</span>
+              Valuta il tuo team. <span className="text-sienna-600">Parti oggi.</span>
             </h1>
             <p className="text-[16px] text-ink-600 mb-8 leading-relaxed">
-              Valuta le soft skills dei tuoi candidati in 15 minuti con tecnologia AI e framework scientifico. Riduci il turnover, aumenta la retention.
+              Attiva il trial gratuito per la tua organizzazione. Invita il team, raccogli i profili, decidi con dati reali.
             </p>
 
             <div className="space-y-3 mb-10">
@@ -128,7 +128,7 @@ export default function AgenziaTrialLanding() {
             </div>
 
             <div className="flex flex-wrap gap-4 text-[12px] text-ink-500">
-              {[[Users, 'Usato da 50+ aziende'], [Clock, 'Attivazione entro 2 ore'], [Building2, 'GDPR Compliant']].map(([Icon, label]: any) => (
+              {[[Clock, 'Attivazione entro 2 ore'], [Building2, 'GDPR Compliant']].map(([Icon, label]: any) => (
                 <div key={label} className="flex items-center gap-1.5"><Icon className="w-4 h-4" />{label}</div>
               ))}
             </div>
@@ -160,27 +160,6 @@ export default function AgenziaTrialLanding() {
                 <input type="text" name="company" required value={formData.company} onChange={handleChange}
                   className={inputCls} placeholder="Ragione Sociale" />
               </div>
-              <div>
-                <label className={labelCls}>Telefono</label>
-                <input type="tel" name="phone" value={formData.phone} onChange={handleChange}
-                  className={inputCls} placeholder="+39 333 123 4567" />
-              </div>
-              <div>
-                <label className={labelCls}>Numero Dipendenti</label>
-                <select name="employees" value={formData.employees} onChange={handleChange} className={inputCls}>
-                  <option value="">Seleziona…</option>
-                  <option value="1-10">1-10 dipendenti</option>
-                  <option value="10-50">10-50 dipendenti</option>
-                  <option value="50-200">50-200 dipendenti</option>
-                  <option value="200+">200+ dipendenti</option>
-                </select>
-              </div>
-              <div>
-                <label className={labelCls}>Settore</label>
-                <input type="text" name="sector" value={formData.sector} onChange={handleChange}
-                  className={inputCls} placeholder="Es: Tecnologia, Retail, Manifatturiero…" />
-              </div>
-
               <Button type="submit" variant="primary" disabled={loading} className="w-full justify-center mt-2">
                 {loading ? (
                   <span className="flex items-center gap-2">
