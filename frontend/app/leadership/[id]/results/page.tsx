@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation'
 import { useAuth } from '@/lib/AuthContext'
 import { Wordmark } from '@/components/ui/Wordmark'
 import { Button } from '@/components/ui/Button'
-import { ArrowLeft, Printer, RefreshCw, Zap, Users, Target, MessageSquare, Trophy } from 'lucide-react'
+import { ArrowLeft, Printer, RefreshCw, Zap, Users, Target, MessageSquare, Trophy, Award } from 'lucide-react'
 
 interface DimensionResult {
   dimension: string
@@ -110,8 +110,8 @@ export default function LeadershipResultsPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-ink-900 rounded-md p-6 flex items-center gap-5">
-              <div className="w-16 h-16 rounded-md bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-[30px]">
-                👑
+              <div className="w-16 h-16 rounded-md bg-amber-500/20 border border-amber-500/30 flex items-center justify-center">
+                <Award className="w-8 h-8 text-sienna-600" />
               </div>
               <div>
                 <p className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400 mb-1">Punteggio</p>
