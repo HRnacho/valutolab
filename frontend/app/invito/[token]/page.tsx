@@ -24,6 +24,11 @@ export default function InvitoPublicPage() {
 
       if (data.success && data.invite.valid) {
         setInvite(data.invite)
+        if (data.invite.focus_config_id) {
+          localStorage.setItem('invite_focus_config_id', data.invite.focus_config_id)
+        } else {
+          localStorage.removeItem('invite_focus_config_id')
+        }
       } else if (data.invite.expired) {
         setError('Questo invito è scaduto')
       } else if (data.invite.completed) {

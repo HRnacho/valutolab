@@ -24,7 +24,9 @@ export default function AssessmentInfoPage() {
         return
       }
 
-      const newRes = await api.assessments.create()
+      const focusConfigId = localStorage.getItem('invite_focus_config_id') || undefined
+      const newRes = await api.assessments.create(focusConfigId ? { focus_config_id: focusConfigId } : undefined)
+      if (focusConfigId) localStorage.removeItem('invite_focus_config_id')
       router.push(`/assessment/${newRes.assessment.id}`)
     } catch (error) {
       console.error('Error starting assessment:', error)

@@ -75,7 +75,7 @@ export const api = {
   // Assessment base
   assessments: {
     list:          ()          => request<any>('/api/data/assessments'),
-    create:        ()          => request<any>('/api/data/assessments', { method: 'POST', body: '{}' }),
+    create:        (body?: Record<string, any>) => request<any>('/api/data/assessments', { method: 'POST', body: JSON.stringify(body || {}) }),
     get:           (id: string)=> request<any>(`/api/data/assessments/${id}`),
     delete:        (id: string)=> request<any>(`/api/data/assessments/${id}`, { method: 'DELETE' }),
     inProgress:    ()          => request<any>('/api/data/assessments/in-progress'),

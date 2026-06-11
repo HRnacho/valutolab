@@ -115,7 +115,7 @@ router.get('/:orgId', async (req, res) => {
 router.post('/:orgId/invite', async (req, res) => {
   try {
     const { orgId } = req.params;
-    const { userId, candidateEmail, candidateName, assessmentType, notes } = req.body;
+    const { userId, candidateEmail, candidateName, assessmentType, notes, focus_config_id } = req.body;
 
     if (!candidateEmail) return res.status(400).json({ success: false, message: 'Email candidato obbligatoria' });
 
@@ -134,11 +134,11 @@ router.post('/:orgId/invite', async (req, res) => {
     }
 
     const result = await db.query(
-      `INSERT INTO candidate_invites 
-       (organization_id, invited_by, candidate_email, candidate_name, assessment_type, notes, status)
-       VALUES ($1, $2, $3, $4, $5, $6, 'pending')
+      `INSERT INTO candidate_invites
+       (organization_id, invited_by, candidate_email, candidate_name, assessment_type, notes, status, focus_config_id)
+       VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7)
        RETURNING *`,
-      [orgId, userId, candidateEmail, candidateName, assessmentType || 'internal', notes]
+      [orgId, userId, candidateEmail, candidateName, assessmentType || 'internal', notes, focus_config_id || null]
     );
 
     res.json({ success: true, invite: result.rows[0], message: 'Invito creato con successo' });
@@ -196,7 +196,8 @@ router.get('/invite/:token/validate', async (req, res) => {
         completed: isCompleted,
         candidate_name: invite.candidate_name,
         organization_name: invite.organization_name,
-        assessment_type: invite.assessment_type
+        assessment_type: invite.assessment_type,
+        focus_config_id: invite.focus_config_id || null
       }
     });
   } catch (error) {
@@ -237,6 +238,7 @@ router.get('/:orgId/candidates-with-scores', async (req, res) => {
          ci.candidate_email,
          ci.completed_at,
          ci.created_at    AS invite_date,
+         ci.focus_config_id,
          a.id             AS assessment_id,
          a.total_score,
          a.question_set,

@@ -7,7 +7,7 @@ import { Wordmark } from '@/components/ui/Wordmark'
 import { Button } from '@/components/ui/Button'
 import {
   ArrowLeft, Mail, BarChart3, Users, Clock, CheckCircle,
-  Plus, Download, GitCompareArrows,
+  Plus, Download, GitCompareArrows, Target, X, Trash2,
 } from 'lucide-react'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'
@@ -39,7 +39,17 @@ const escoColor = (v: number): { bg: string; fg: string } => {
   return { bg: '#C0392B', fg: '#ffffff' }
 }
 
-type Tab = 'overview' | 'candidates' | 'compare' | 'new-invite'
+type Tab = 'overview' | 'candidates' | 'compare' | 'new-invite' | 'focus'
+
+interface FocusConfig {
+  id: string
+  name: string
+  description: string | null
+  skills: string[]
+  completed_count: number
+  total_invites: number
+  created_at: string
+}
 
 interface Candidate {
   invite_id: string
@@ -68,6 +78,13 @@ function AziendeDashboardContent() {
   const [message, setMessage]             = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [inviteForm, setInviteForm]       = useState({ candidateEmail: '', candidateName: '', notes: '' })
   const [sendingInvite, setSendingInvite] = useState(false)
+  const [focusConfigs, setFocusConfigs]   = useState<FocusConfig[]>([])
+  const [showFocusModal, setShowFocusModal] = useState(false)
+  const [focusForm, setFocusForm]         = useState({ name: '', description: '', skills: [] as string[] })
+  const [creatingFocus, setCreatingFocus] = useState(false)
+  const [focusInviteModal, setFocusInviteModal] = useState<{ open: boolean; configId: string; configName: string } | null>(null)
+  const [focusInviteForm, setFocusInviteForm] = useState({ candidateEmail: '', candidateName: '' })
+  const [sendingFocusInvite, setSendingFocusInvite] = useState(false)
 
   useEffect(() => {
     if (message) {
@@ -93,7 +110,7 @@ function AziendeDashboardContent() {
       const org = (paramId && data.organizations.find((o: any) => o.id === paramId))
         || data.organizations[0]
       setOrganization(org)
-      await Promise.all([loadInvites(org.id), loadCandidates(org.id)])
+      await Promise.all([loadInvites(org.id), loadCandidates(org.id), loadFocusConfigs(org.id)])
     } catch {
       setMessage({ type: 'error', text: 'Errore nel caricamento dei dati' })
     } finally {
@@ -108,7 +125,7 @@ function AziendeDashboardContent() {
     setSelected(new Set())
     setActiveTab('overview')
     setLoading(true)
-    await Promise.all([loadInvites(org.id), loadCandidates(org.id)])
+    await Promise.all([loadInvites(org.id), loadCandidates(org.id), loadFocusConfigs(org.id)])
     setLoading(false)
     // Aggiorna URL senza reload
     router.replace(`/aziende/dashboard?org=${org.id}`)
@@ -124,6 +141,111 @@ function AziendeDashboardContent() {
     const res  = await fetch(`${API_URL}/api/organizations/${orgId}/candidates-with-scores`)
     const data = await res.json()
     if (data.success) setCandidates(data.candidates)
+  }
+
+  const loadFocusConfigs = async (orgId: string) => {
+    const token = localStorage.getItem('jwt_access_token')
+    const res = await fetch(`${API_URL}/api/focus/configs?org=${orgId}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    const data = await res.json()
+    if (data.success) setFocusConfigs(data.configs)
+  }
+
+  const handleCreateFocus = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setCreatingFocus(true)
+    try {
+      const token = localStorage.getItem('jwt_access_token')
+      const res = await fetch(`${API_URL}/api/focus/configs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ ...focusForm, organization_id: organization.id }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setMessage({ type: 'success', text: 'Focus creato!' })
+        setShowFocusModal(false)
+        setFocusForm({ name: '', description: '', skills: [] })
+        loadFocusConfigs(organization.id)
+      } else throw new Error(data.message)
+    } catch (err: any) {
+      setMessage({ type: 'error', text: err.message || 'Errore nella creazione' })
+    } finally {
+      setCreatingFocus(false)
+    }
+  }
+
+  const handleDeleteFocus = async (configId: string) => {
+    if (!window.confirm('Eliminare questo Focus config?')) return
+    const token = localStorage.getItem('jwt_access_token')
+    const res = await fetch(`${API_URL}/api/focus/configs/${configId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    const data = await res.json()
+    if (data.success) {
+      setMessage({ type: 'success', text: 'Focus eliminato' })
+      loadFocusConfigs(organization.id)
+    } else {
+      setMessage({ type: 'error', text: data.message })
+    }
+  }
+
+  const handleSendFocusInvite = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!focusInviteModal) return
+    setSendingFocusInvite(true)
+    try {
+      const res = await fetch(`${API_URL}/api/organizations/${organization.id}/invite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: authUser!.id,
+          candidateEmail: focusInviteForm.candidateEmail,
+          candidateName: focusInviteForm.candidateName,
+          focus_config_id: focusInviteModal.configId,
+        }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setMessage({ type: 'success', text: 'Invito Focus inviato!' })
+        setFocusInviteModal(null)
+        setFocusInviteForm({ candidateEmail: '', candidateName: '' })
+        await Promise.all([loadInvites(organization.id), loadFocusConfigs(organization.id)])
+      } else throw new Error(data.message)
+    } catch (err: any) {
+      setMessage({ type: 'error', text: err.message || "Errore nell'invio" })
+    } finally {
+      setSendingFocusInvite(false)
+    }
+  }
+
+  const toggleFocusSkill = (skill: string) => {
+    setFocusForm(prev => {
+      if (prev.skills.includes(skill)) return { ...prev, skills: prev.skills.filter(s => s !== skill) }
+      if (prev.skills.length >= 3) return prev
+      return { ...prev, skills: [...prev.skills, skill] }
+    })
+  }
+
+  const exportFocusCSV = (config: FocusConfig) => {
+    const focusCandidates = candidates.filter((c: any) => c.focus_config_id === config.id)
+    const headers = ['Nome', 'Email', 'Data Completamento', ...config.skills.map(s => SKILL_LABELS[s])]
+    const rows = focusCandidates.map((c: any) => [
+      c.candidate_name,
+      c.candidate_email,
+      c.completed_at ? new Date(c.completed_at).toLocaleDateString('it-IT') : '',
+      ...config.skills.map(s => Number(c.scores?.[s] ?? 0).toFixed(2)),
+    ])
+    const csv = [headers, ...rows].map(r => r.map((v: any) => `"${v}"`).join(',')).join('\n')
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `focus_${config.name.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   const handleSendInvite = async (e: React.FormEvent) => {
@@ -222,6 +344,7 @@ function AziendeDashboardContent() {
     { key: 'overview',    label: 'Overview' },
     { key: 'candidates',  label: `Candidati (${candidates.length})` },
     { key: 'compare',     label: `Confronto${selected.size >= 2 ? ` (${selected.size})` : ''}`, hidden: selected.size < 2 },
+    { key: 'focus',       label: `Focus${focusConfigs.length > 0 ? ` (${focusConfigs.length})` : ''}` },
     { key: 'new-invite',  label: 'Nuovo Invito' },
   ]
 
@@ -626,6 +749,163 @@ function AziendeDashboardContent() {
             </div>
           )}
 
+          {/* ── FOCUS ──── */}
+          {activeTab === 'focus' && (
+            <div className="p-6 space-y-6">
+              {/* Header */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="font-display text-[18px] font-medium text-ink-900">Focus Assessment</h2>
+                  <p className="text-[12px] text-ink-500 mt-0.5">Valuta 1-3 competenze specifiche per ogni team o ruolo</p>
+                </div>
+                <Button variant="primary" className="flex items-center gap-2 text-[13px]" onClick={() => setShowFocusModal(true)}>
+                  <Plus className="w-4 h-4" /> Nuovo Focus
+                </Button>
+              </div>
+
+              {/* Lista configs */}
+              {focusConfigs.length === 0 ? (
+                <div className="text-center py-14 border border-dashed border-paper-300 rounded-md">
+                  <Target className="w-8 h-8 text-ink-300 mx-auto mb-3" />
+                  <p className="text-[15px] font-medium text-ink-700 mb-1">Nessun Focus configurato</p>
+                  <p className="text-[13px] text-ink-400 mb-5">Crea un Focus per valutare competenze specifiche del tuo team</p>
+                  <Button variant="primary" onClick={() => setShowFocusModal(true)}>Crea primo Focus</Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {focusConfigs.map(cfg => (
+                    <div key={cfg.id} className="bg-paper-100 border border-paper-200 rounded-md p-5">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <Target className="w-4 h-4 text-sienna-600 flex-shrink-0" />
+                            <p className="font-medium text-[15px] text-ink-900">{cfg.name}</p>
+                            <span className="font-mono text-[11px] text-ink-400 bg-paper-200 px-2 py-0.5 rounded-sm">
+                              {cfg.completed_count}/{cfg.total_invites} completati
+                            </span>
+                          </div>
+                          {cfg.description && (
+                            <p className="text-[13px] text-ink-500 mb-3 ml-7">{cfg.description}</p>
+                          )}
+                          <div className="flex flex-wrap gap-1.5 ml-7">
+                            {cfg.skills.map(s => (
+                              <span key={s} className="text-[11px] font-medium text-sienna-700 bg-sienna-50 border border-sienna-200 px-2.5 py-0.5 rounded-sm">
+                                {SKILL_LABELS[s]}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <Button
+                            variant="primary"
+                            className="text-[12px] flex items-center gap-1.5"
+                            onClick={() => { setFocusInviteModal({ open: true, configId: cfg.id, configName: cfg.name }); setFocusInviteForm({ candidateEmail: '', candidateName: '' }) }}
+                          >
+                            <Mail className="w-3.5 h-3.5" /> Invita
+                          </Button>
+                          {Number(cfg.total_invites) === 0 && (
+                            <button
+                              onClick={() => handleDeleteFocus(cfg.id)}
+                              className="p-2 text-ink-400 hover:text-sienna-600 transition-colors"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Risultati per questo config */}
+                      {Number(cfg.completed_count) > 0 && (() => {
+                        const focusCandidates = candidates.filter((c: any) => c.focus_config_id === cfg.id)
+                        if (focusCandidates.length === 0) return null
+                        return (
+                          <div className="mt-5 pt-5 border-t border-paper-200">
+                            <div className="flex items-center justify-between mb-4">
+                              <p className="text-[11px] font-semibold uppercase tracking-eyebrow text-ink-400">
+                                Risultati — {focusCandidates.length} {focusCandidates.length === 1 ? 'candidato' : 'candidati'}
+                              </p>
+                              <button
+                                onClick={() => exportFocusCSV(cfg)}
+                                className="flex items-center gap-1.5 text-[12px] text-ink-600 hover:text-ink-900 transition-colors"
+                              >
+                                <Download className="w-3.5 h-3.5" /> Esporta CSV
+                              </button>
+                            </div>
+
+                            {/* Tabella punteggi */}
+                            <div className="overflow-x-auto mb-4">
+                              <table className="w-full text-[13px]">
+                                <thead>
+                                  <tr className="border-b border-paper-200">
+                                    <th className="text-left py-2 px-3 text-[11px] font-semibold uppercase tracking-eyebrow text-ink-400">Candidato</th>
+                                    {cfg.skills.map(s => (
+                                      <th key={s} className="text-center py-2 px-3 text-[11px] font-semibold uppercase tracking-eyebrow text-ink-400">
+                                        {SKILL_LABELS[s]}
+                                      </th>
+                                    ))}
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {focusCandidates.map((c: any) => (
+                                    <tr key={c.invite_id} className="border-b border-paper-100">
+                                      <td className="py-2 px-3 font-medium text-ink-800">{c.candidate_name || c.candidate_email}</td>
+                                      {cfg.skills.map(s => {
+                                        const v = Number(c.scores?.[s] ?? 0)
+                                        const { bg, fg } = escoColor(v)
+                                        return (
+                                          <td key={s} className="py-2 px-3 text-center">
+                                            <span
+                                              className="inline-flex items-center justify-center font-mono text-[12px] font-semibold rounded-sm px-2.5 py-1 min-w-[48px]"
+                                              style={{ backgroundColor: bg, color: fg }}
+                                            >
+                                              {v.toFixed(2)}
+                                            </span>
+                                          </td>
+                                        )
+                                      })}
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+
+                            {/* Bar chart */}
+                            <div className="space-y-4">
+                              {cfg.skills.map(skill => (
+                                <div key={skill}>
+                                  <p className="text-[11px] font-medium text-ink-500 mb-2">{SKILL_LABELS[skill]}</p>
+                                  <div className="space-y-1.5">
+                                    {focusCandidates.map((c: any) => {
+                                      const v = Number(c.scores?.[skill] ?? 0)
+                                      const pct = (v / 5) * 100
+                                      const { bg } = escoColor(v)
+                                      return (
+                                        <div key={c.invite_id} className="flex items-center gap-3">
+                                          <span className="text-[12px] text-ink-600 w-32 truncate flex-shrink-0">{c.candidate_name || c.candidate_email}</span>
+                                          <div className="flex-1 bg-paper-200 rounded-sm h-5 relative">
+                                            <div
+                                              className="h-5 rounded-sm transition-all"
+                                              style={{ width: `${pct}%`, backgroundColor: bg }}
+                                            />
+                                          </div>
+                                          <span className="font-mono text-[12px] text-ink-700 w-10 text-right flex-shrink-0">{v.toFixed(2)}</span>
+                                        </div>
+                                      )
+                                    })}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )
+                      })()}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* ── NUOVO INVITO ──── */}
           {activeTab === 'new-invite' && (
             <div className="p-6 max-w-lg">
@@ -666,6 +946,116 @@ function AziendeDashboardContent() {
 
         </div>
       </main>
+
+      {/* ── MODAL NUOVO FOCUS ──────────────────────────────────────────── */}
+      {showFocusModal && (
+        <div className="fixed inset-0 bg-ink-950/60 flex items-center justify-center p-4 z-50">
+          <div className="bg-paper-50 rounded-md shadow-lg-ink p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="font-display text-[20px] font-medium text-ink-900">Nuovo Focus</h3>
+              <button onClick={() => setShowFocusModal(false)} className="text-ink-400 hover:text-ink-700">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleCreateFocus} className="space-y-5">
+              <div>
+                <label className={labelCls}>Nome Focus *</label>
+                <input
+                  type="text" required value={focusForm.name}
+                  onChange={e => setFocusForm({ ...focusForm, name: e.target.value })}
+                  className={inputCls} placeholder="Es. Focus Comunicazione Team Sales Q3 2026"
+                />
+              </div>
+              <div>
+                <label className={labelCls}>Descrizione (opzionale)</label>
+                <textarea
+                  value={focusForm.description}
+                  onChange={e => setFocusForm({ ...focusForm, description: e.target.value })}
+                  className={`${inputCls} resize-none`} rows={2}
+                  placeholder="Contesto del ruolo o dell'obiettivo di valutazione…"
+                />
+              </div>
+              <div>
+                <label className={labelCls}>
+                  Competenze * — seleziona da 1 a 3
+                  {focusForm.skills.length > 0 && (
+                    <span className="ml-2 text-sienna-600">{focusForm.skills.length}/3</span>
+                  )}
+                </label>
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  {SKILLS.map(s => {
+                    const selected = focusForm.skills.includes(s)
+                    const disabled = !selected && focusForm.skills.length >= 3
+                    return (
+                      <button
+                        key={s} type="button"
+                        disabled={disabled}
+                        onClick={() => toggleFocusSkill(s)}
+                        className={`px-3 py-2 rounded-sm border text-[13px] text-left transition-all ${
+                          selected
+                            ? 'border-sienna-600 bg-sienna-50 text-sienna-900 font-medium'
+                            : disabled
+                            ? 'border-paper-200 bg-paper-100 text-ink-300 cursor-not-allowed'
+                            : 'border-paper-200 bg-paper-50 text-ink-700 hover:border-ink-400'
+                        }`}
+                      >
+                        {SKILL_LABELS[s]}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+              <Button
+                type="submit"
+                variant="primary"
+                disabled={creatingFocus || focusForm.skills.length === 0}
+                className="w-full justify-center"
+              >
+                {creatingFocus ? 'Creazione…' : 'Crea Focus'}
+              </Button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL INVITA FOCUS ─────────────────────────────────────────── */}
+      {focusInviteModal?.open && (
+        <div className="fixed inset-0 bg-ink-950/60 flex items-center justify-center p-4 z-50">
+          <div className="bg-paper-50 rounded-md shadow-lg-ink p-8 max-w-md w-full">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-display text-[20px] font-medium text-ink-900">Invita per Focus</h3>
+              <button onClick={() => setFocusInviteModal(null)} className="text-ink-400 hover:text-ink-700">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-[12px] text-ink-500 mb-6">
+              Focus: <span className="font-medium text-ink-800">{focusInviteModal.configName}</span>
+            </p>
+            <form onSubmit={handleSendFocusInvite} className="space-y-4">
+              <div>
+                <label className={labelCls}>Email Candidato *</label>
+                <input
+                  type="email" required value={focusInviteForm.candidateEmail}
+                  onChange={e => setFocusInviteForm({ ...focusInviteForm, candidateEmail: e.target.value })}
+                  className={inputCls} placeholder="candidato@email.it"
+                />
+              </div>
+              <div>
+                <label className={labelCls}>Nome Candidato *</label>
+                <input
+                  type="text" required value={focusInviteForm.candidateName}
+                  onChange={e => setFocusInviteForm({ ...focusInviteForm, candidateName: e.target.value })}
+                  className={inputCls} placeholder="Mario Rossi"
+                />
+              </div>
+              <Button type="submit" variant="primary" disabled={sendingFocusInvite} className="w-full justify-center">
+                {sendingFocusInvite ? 'Invio…' : 'Invia Invito Focus'}
+              </Button>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
