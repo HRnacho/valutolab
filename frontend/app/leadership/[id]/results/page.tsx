@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { useAuth } from '@/lib/AuthContext'
 import { Wordmark } from '@/components/ui/Wordmark'
 import { Button } from '@/components/ui/Button'
-import { ArrowLeft, Printer } from 'lucide-react'
+import { ArrowLeft, Printer, RefreshCw, Zap, Users, Target, MessageSquare, Trophy } from 'lucide-react'
 
 interface DimensionResult {
   dimension: string
@@ -25,14 +25,17 @@ interface AIReport {
   }
 }
 
-const dimensionIcons: Record<string, string> = {
-  visione_strategica:     '🎯',
-  people_management:      '👥',
-  decisionalita:          '⚡',
-  change_management:      '🔄',
-  influenza_persuasione:  '💬',
-  orientamento_risultati: '🏆'
+const dimensionIcons: Record<string, React.ReactNode> = {
+  visione_strategica:     <Target      className="w-5 h-5 text-sienna-600" />,
+  people_management:      <Users       className="w-5 h-5 text-sienna-600" />,
+  decisionalita:          <Zap         className="w-5 h-5 text-sienna-600" />,
+  change_management:      <RefreshCw   className="w-5 h-5 text-sienna-600" />,
+  influenza_persuasione:  <MessageSquare className="w-5 h-5 text-sienna-600" />,
+  orientamento_risultati: <Trophy      className="w-5 h-5 text-sienna-600" />,
 }
+
+const parseMd = (text: string) =>
+  text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
 
 export default function LeadershipResultsPage() {
   const router = useRouter()
@@ -161,7 +164,7 @@ export default function LeadershipResultsPage() {
                 <div key={result.dimension}>
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <span className="text-[18px]">{dimensionIcons[result.dimension]}</span>
+                      <span className="flex-shrink-0">{dimensionIcons[result.dimension]}</span>
                       <span className="font-medium text-[14px] text-ink-900">{result.dimension_name}</span>
                     </div>
                     <div className="flex items-baseline gap-1">
@@ -185,14 +188,14 @@ export default function LeadershipResultsPage() {
               <p className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400 mb-1">Analisi AI</p>
               <h3 className="font-display text-[20px] text-ink-900 mb-4">Punti di Forza</h3>
               <div className="bg-paper-100 border border-paper-200 rounded-md p-5">
-                <p className="font-body text-[14px] text-ink-700 leading-relaxed whitespace-pre-line">{aiReport.key_strengths}</p>
+                <p className="font-body text-[14px] text-ink-700 leading-relaxed whitespace-pre-line" dangerouslySetInnerHTML={{ __html: parseMd(aiReport.key_strengths) }} />
               </div>
             </div>
             <div className="bg-paper-50 border border-paper-200 rounded-md shadow-sm-ink p-6">
               <p className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400 mb-1">Analisi AI</p>
               <h3 className="font-display text-[20px] text-ink-900 mb-4">Aree di Sviluppo</h3>
               <div className="bg-paper-100 border border-paper-200 rounded-md p-5">
-                <p className="font-body text-[14px] text-ink-700 leading-relaxed whitespace-pre-line">{aiReport.development_areas}</p>
+                <p className="font-body text-[14px] text-ink-700 leading-relaxed whitespace-pre-line" dangerouslySetInnerHTML={{ __html: parseMd(aiReport.development_areas) }} />
               </div>
             </div>
           </div>
