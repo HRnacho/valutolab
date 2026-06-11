@@ -271,6 +271,118 @@ REGOLE IMPORTANTI:
 }
 
 /**
+ * Costruisce il prompt Focus: analisi approfondita sulle sole target_skills.
+ */
+function buildFocusPrompt(assessmentData, situationalData, userProfile, targetSkills, focusConfig) {
+  const scoresFormatted = targetSkills
+    .filter(skill => assessmentData.categoryScores[skill])
+    .map(skill => {
+      const scores = assessmentData.categoryScores[skill];
+      const esco = ESCO_MAPPING[skill];
+      const escoLevel = getEscoLevel(scores.final);
+      const label = categoryLabels[skill] || skill;
+      return `  - ${label}:
+      • Likert (autovalutazione): ${scores.likert.toFixed(1)}/5.0
+      • Situazionale (comportamentale): ${scores.sjt.toFixed(1)}/3.0
+      • Punteggio finale (70% Likert + 30% SJT): ${scores.final.toFixed(1)}/5.0
+      • ESCO: "${esco?.escoGroup}" → Livello ${escoLevel} | EQF ${esco?.eqfRange}`;
+    })
+    .join('\n');
+
+  const relevantSituational = situationalData
+    .filter(c => targetSkills.includes(c.skill))
+    .map(c => `\n[${c.skill}] Situazione: ${c.situation}
+Scelta: Opzione ${c.selected} - ${c.selectedText}
+Pesi skill: ${JSON.stringify(c.skillWeights)}`)
+    .join('\n');
+
+  const roleContext = focusConfig?.description
+    ? `\nCONTESTO RUOLO/POSIZIONE:\n"${focusConfig.description}"\n`
+    : '';
+
+  const fitnessSection = focusConfig?.description
+    ? `
+  "fitness_for_role": {
+    "role_context": "Riformula brevemente il contesto del ruolo",
+    "recommendation": "Consigliato / Da valutare / Non adatto",
+    "fit_rationale": "2-3 frasi: come i punteggi si traducono in idoneità al ruolo specifico",
+    "gaps": ["gap 1 rispetto al ruolo", "gap 2 rispetto al ruolo"]
+  },`
+    : '';
+
+  const fitnessRule = focusConfig?.description
+    ? '\n7. Includi "fitness_for_role" con valutazione idoneità al ruolo — campo riservato all\'HR.'
+    : '';
+
+  const categoryStructure = targetSkills.map(skill => {
+    const label = categoryLabels[skill] || skill;
+    return `    "${skill}": {
+      "score": 0.0,
+      "level": "Base/Intermedio/Avanzato/Esperto",
+      "description": "3-4 frasi approfondite: livello raggiunto, pattern osservato, coerenza autopercezione/comportamento, implicazioni pratiche.",
+      "strengths": ["punto forza 1 (max 15 parole)", "punto forza 2", "punto forza 3"],
+      "improvements": ["area miglioramento 1 (max 15 parole)", "area miglioramento 2", "area miglioramento 3"],
+      "behavioral_evidence": "2-3 frasi: come le scelte situazionali confermano o contraddicono l'autovalutazione per ${label}.",
+      "priority_action": "1 azione concreta e immediata che l'HR può suggerire o monitorare. Es: 'Assegnare un progetto cross-funzionale per sviluppare la gestione dei conflitti in contesti reali.'",
+      "esco_mapping": {
+        "esco_level": "...",
+        "esco_skills_demonstrated": ["skill 1", "skill 2"],
+        "esco_skills_to_develop": ["skill da sviluppare"]
+      }
+    }`;
+  }).join(',\n');
+
+  return `Sei un esperto consulente HR specializzato nello sviluppo delle competenze professionali, certificato nel framework europeo ESCO v1.2.
+
+Stai generando un FOCUS ASSESSMENT REPORT — un'analisi approfondita e mirata su ${targetSkills.length} competenze specifiche selezionate dall'azienda per questo candidato.
+
+CONTESTO UTENTE:
+- Ruolo (profilo): ${userProfile.role || 'Professionista'}
+- Settore (profilo): ${userProfile.industry || 'Generale'}
+${roleContext}
+COMPETENZE ANALIZZATE (${targetSkills.length}): ${targetSkills.map(s => categoryLabels[s] || s).join(', ')}
+
+PUNTEGGI FOCUS WEIGHTED BLEND (70% Autovalutazione + 30% Comportamentale):
+${scoresFormatted}
+
+ANALISI SCELTE SITUAZIONALI RILEVANTI:
+${relevantSituational || 'Nessuna risposta situazionale disponibile per queste competenze.'}
+
+SCALA ESCO:
+- 1.0-2.0 → Base | 2.1-3.0 → Intermedio | 3.1-4.0 → Avanzato | 4.1-5.0 → Esperto
+
+COMPITO:
+Genera un Focus Report in formato JSON con questa struttura ESATTA:
+
+{
+  "category_interpretations": {
+${categoryStructure}
+  },
+
+  "focus_summary": {
+    "assessed_skills": ${JSON.stringify(targetSkills)},
+    "strongest_skill": "nome_skill",
+    "priority_development": "nome_skill_con_gap_maggiore",
+    "overall_pattern": "2-3 frasi: pattern trasversale emergente tra le competenze valutate e implicazioni per il profilo professionale."
+  },${fitnessSection}
+
+  "hr_notes": {
+    "hiring_recommendation": "Consigliato/Da valutare/Non adatto + 1 frase motivazione",
+    "fit_for_role": "1 frase sul fit comportamentale per il ruolo",
+    "risk_flags": ["max 2 aree di rischio"],
+    "development_priority_hr": "1 competenza prioritaria tra quelle valutate"
+  }
+}
+
+REGOLE:
+1. Rispondi SOLO con JSON valido — NESSUN testo prima o dopo
+2. Includi SOLO le ${targetSkills.length} competenze specificate in category_interpretations
+3. description: 3-4 frasi approfondite (più dettaglio rispetto a un report base)
+4. behavioral_evidence: analizza esplicitamente le scelte situazionali per quella competenza
+5. priority_action: azione concreta e HR-actionable, non generica${fitnessRule}`;
+}
+
+/**
  * Recupera dati assessment con weighted blend
  */
 async function getAssessmentData(assessmentId) {
@@ -396,18 +508,39 @@ export async function generateQualitativeReport(assessmentId) {
     const userProfile = await getUserProfile(assessmentData.userId);
     const benchmarkData = await getBenchmarkData(userProfile);
 
+    // Detect Focus assessment
+    const isFocus = assessmentData.assessment.assessment_type === 'focus';
+    const targetSkills = assessmentData.assessment.target_skills ?? [];
+
     // user_context (profilazione) e organization_id (B2B flag)
     const userContext = assessmentData.assessment.user_context ?? null;
-    const isB2B = !!assessmentData.assessment.organization_id;
+    const isB2B = isFocus || !!assessmentData.assessment.organization_id;
 
     console.log(`📊 Assessment data loaded for user: ${assessmentData.userId}`);
     console.log(`🎯 Situational responses: ${situationalData.length} scenarios`);
     console.log(`👤 User profile: ${userProfile.role || 'N/A'} - ${userProfile.industry || 'N/A'}`);
-    console.log(`🏢 B2B mode: ${isB2B} | User context: ${userContext ? 'present' : 'empty'}`);
-    console.log(`🇪🇺 ESCO v1.2 mapping: active (12 competenze)`);
+    console.log(`🏢 B2B mode: ${isB2B} | Focus: ${isFocus} | Skills: ${targetSkills.join(', ') || 'all'}`);
+    console.log(`🇪🇺 ESCO v1.2 mapping: active`);
+
+    // Recupera focus config (per description/nome se presente)
+    let focusConfig = null;
+    if (isFocus && assessmentData.assessment.focus_config_id) {
+      try {
+        const { rows: cfgRows } = await db.query(
+          'SELECT id, name, description FROM focus_configs WHERE id = $1',
+          [assessmentData.assessment.focus_config_id]
+        );
+        focusConfig = cfgRows[0] ?? null;
+        if (focusConfig) console.log(`🔍 Focus config: "${focusConfig.name}"`);
+      } catch (err) {
+        console.warn('Could not fetch focus config:', err.message);
+      }
+    }
 
     // 2. Costruisci prompt
-    const prompt = buildAIPrompt(assessmentData, situationalData, userProfile, benchmarkData, userContext, isB2B);
+    const prompt = isFocus && targetSkills.length > 0
+      ? buildFocusPrompt(assessmentData, situationalData, userProfile, targetSkills, focusConfig)
+      : buildAIPrompt(assessmentData, situationalData, userProfile, benchmarkData, userContext, isB2B);
 
     // 3. Chiama Claude API
     console.log('🔮 Calling Claude API with ESCO v1.2 integration...');
@@ -438,6 +571,12 @@ export async function generateQualitativeReport(assessmentId) {
     // 5. Arricchisci con dati ESCO ufficiali statici
     const enrichedInterpretations = enrichWithEscoData(reportData.category_interpretations);
 
+    // Per Focus: profile_insights contiene focus_summary + fitness_for_role; development_plan è null
+    const profileInsights = isFocus
+      ? { focus_summary: reportData.focus_summary, fitness_for_role: reportData.fitness_for_role ?? null }
+      : reportData.profile_insights;
+    const developmentPlan = isFocus ? null : reportData.development_plan;
+
     // 6. Salva in database (hr_notes salvato separatamente, mai esposto al candidato via /api/data)
     const { rows: insertRows } = await db.query(
       `INSERT INTO qualitative_reports
@@ -450,8 +589,8 @@ export async function generateQualitativeReport(assessmentId) {
         assessmentId,
         assessmentData.userId,
         JSON.stringify(enrichedInterpretations),
-        JSON.stringify(reportData.development_plan),
-        JSON.stringify(reportData.profile_insights),
+        developmentPlan ? JSON.stringify(developmentPlan) : null,
+        JSON.stringify(profileInsights),
         reportData.hr_notes ? JSON.stringify(reportData.hr_notes) : null,
         'claude-sonnet-4-6',
         response.usage.output_tokens
@@ -460,7 +599,11 @@ export async function generateQualitativeReport(assessmentId) {
     const savedReport = insertRows[0];
 
     console.log(`💾 Report saved successfully: ${savedReport.id}`);
-    console.log(`🇪🇺 ESCO v1.2 data included in all 12 categories`);
+    if (isFocus) {
+      console.log(`🔍 Focus report: ${targetSkills.length} competenze analizzate`);
+    } else {
+      console.log(`🇪🇺 ESCO v1.2 data included in all 12 categories`);
+    }
     if (isB2B && reportData.hr_notes) console.log(`🔒 hr_notes saved (B2B — not exposed to candidate)`);
 
     return savedReport;
