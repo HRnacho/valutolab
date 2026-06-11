@@ -12,6 +12,8 @@ export default function ServiziPage() {
   const router = useRouter()
   const { user, loading } = useAuth()
 
+  useEffect(() => { router.replace('/') }, [router])
+
   useEffect(() => {
     if (!loading && !user) router.push('/login')
   }, [user, loading, router])
