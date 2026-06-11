@@ -68,7 +68,7 @@ router.get('/user/:userId', async (req, res) => {
 // GET /api/organizations/my — orgs dove l'utente è owner
 router.get('/my', verifyToken, async (req, res) => {
   try {
-    const userId = req.user.id
+    const userId = req.user.supabase_id ?? req.user.id
     const { rows } = await db.query(
       `SELECT o.id, o.name FROM organizations o
        JOIN organization_members om ON o.id = om.organization_id
