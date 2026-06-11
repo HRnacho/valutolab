@@ -14,6 +14,7 @@ import trackingRouter from './routes/tracking.js';
 import linkedinRouter from './routes/linkedin.js';
 import dataRouter from './routes/data.js';
 import reportsRouter from './routes/reports.js';
+import focusRouter from './routes/focus.js';
 import { strictLimiter, generalLimiter } from './middleware/rateLimiter.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import authRouter from './routes/auth.js';
@@ -73,6 +74,7 @@ app.use('/api/v1/trial', trialRoutes);
 app.use('/api/trial-b2c', trialB2cRoutes);
 app.use('/api/data', dataRouter);
 app.use('/api/reports', reportsRouter);
+app.use('/api/focus', focusRouter);
 app.use('/api/linkedin', linkedinRouter);
 
 // Error handler centralizzato — deve stare DOPO tutte le route

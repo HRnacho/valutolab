@@ -153,9 +153,11 @@ router.get('/:orgId/invites', async (req, res) => {
     const { orgId } = req.params;
     const { status } = req.query;
 
-    let query = `SELECT ci.*, a.id as assessment_id, a.total_score, a.completed_at as assessment_completed_at
+    let query = `SELECT ci.*, a.id as assessment_id, a.total_score, a.completed_at as assessment_completed_at,
+                        fc.name as focus_config_name, fc.skills as focus_config_skills
                  FROM candidate_invites ci
                  LEFT JOIN assessments a ON ci.assessment_id = a.id
+                 LEFT JOIN focus_configs fc ON ci.focus_config_id = fc.id
                  WHERE ci.organization_id = $1`;
     const values = [orgId];
 

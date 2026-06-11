@@ -78,26 +78,41 @@ router.get('/assessments', async (req, res, next) => {
 router.post('/assessments', async (req, res, next) => {
   try {
     const uid = userId(req);
+    const { focus_config_id } = req.body;
 
-    // Trova l'ultimo set usato da questo utente (assessment completato più recente)
-    const lastResult = await db.query(
-      `SELECT question_set FROM assessments
-       WHERE user_id = $1 AND status = 'completed'
-       ORDER BY completed_at DESC LIMIT 1`,
-      [uid]
-    );
-    const lastSet = lastResult.rows[0]?.question_set ?? null;
+    let questionSet, assessmentType = 'base', targetSkills = null;
 
-    // Seleziona casualmente tra i set disponibili escludendo l'ultimo usato
-    const allSets = ['A', 'B', 'C'];
-    const available = lastSet ? allSets.filter(s => s !== lastSet) : allSets;
-    const questionSet = available[Math.floor(Math.random() * available.length)];
+    if (focus_config_id) {
+      // Assessment Focus: set fisso A, competenze dal config
+      const cfgRes = await db.query(
+        'SELECT skills FROM focus_configs WHERE id = $1',
+        [focus_config_id]
+      );
+      if (!cfgRes.rows.length) {
+        return res.status(404).json({ success: false, message: 'Focus config non trovato' });
+      }
+      questionSet = 'A';
+      assessmentType = 'focus';
+      targetSkills = cfgRes.rows[0].skills;
+    } else {
+      // Assessment base: set randomizzato escludendo l'ultimo usato
+      const lastResult = await db.query(
+        `SELECT question_set FROM assessments
+         WHERE user_id = $1 AND status = 'completed'
+         ORDER BY completed_at DESC LIMIT 1`,
+        [uid]
+      );
+      const lastSet = lastResult.rows[0]?.question_set ?? null;
+      const allSets = ['A', 'B', 'C'];
+      const available = lastSet ? allSets.filter(s => s !== lastSet) : allSets;
+      questionSet = available[Math.floor(Math.random() * available.length)];
+    }
 
     const { rows } = await db.query(
-      `INSERT INTO assessments (user_id, status, question_set)
-       VALUES ($1, 'in_progress', $2)
-       RETURNING id, status, question_set, created_at`,
-      [uid, questionSet]
+      `INSERT INTO assessments (user_id, status, question_set, assessment_type, target_skills)
+       VALUES ($1, 'in_progress', $2, $3, $4)
+       RETURNING id, status, question_set, assessment_type, target_skills, created_at`,
+      [uid, questionSet, assessmentType, targetSkills]
     );
     res.status(201).json({ success: true, assessment: rows[0] });
   } catch (err) { next(err); }
