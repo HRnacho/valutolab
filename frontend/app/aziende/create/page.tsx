@@ -57,31 +57,41 @@ export default function AziendeCreatePage() {
       <main className="max-w-7xl mx-auto px-6 lg:px-8">
 
         {/* ── HERO ──────────────────────────────────────────────────── */}
-        <section className="py-20 max-w-3xl">
-          <p className="text-[11px] font-semibold uppercase tracking-eyebrow text-ink-400 mb-4">
-            Per le aziende
-          </p>
-          <h1 className="font-display text-display-1 text-ink-900 mb-6 leading-tight">
-            Conosci davvero<br />il tuo team.
-          </h1>
-          <p className="text-[17px] text-ink-500 leading-relaxed mb-10 max-w-2xl">
-            Misura le competenze trasversali di dipendenti e candidati. Confronta profili,
-            identifica gap, costruisci percorsi di sviluppo. Tariffa flat per
-            organizzazione — nessuna licenza per candidato.
-          </p>
-          <div className="flex flex-wrap gap-3">
-            <a
-              href="/aziende-trial"
-              className="inline-flex items-center px-6 py-3 bg-sienna-600 hover:bg-sienna-700 text-paper-50 text-[14px] font-semibold rounded-sm transition-colors"
-            >
-              Richiedi il trial gratuito
-            </a>
-            <a
-              href="mailto:info@valutolab.com"
-              className="inline-flex items-center px-6 py-3 border border-ink-300 text-ink-700 hover:border-ink-600 hover:text-ink-900 text-[14px] font-medium rounded-sm transition-colors"
-            >
-              Parla con noi
-            </a>
+        <section className="py-20 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-eyebrow text-ink-400 mb-4">
+              Per le aziende
+            </p>
+            <h1 className="font-display text-display-1 text-ink-900 mb-6 leading-tight">
+              Conosci davvero<br />il tuo team.
+            </h1>
+            <p className="text-[17px] text-ink-500 leading-relaxed mb-10 max-w-2xl">
+              Misura le competenze trasversali di dipendenti e candidati. Confronta profili,
+              identifica gap, costruisci percorsi di sviluppo. Tariffa flat per
+              organizzazione — nessuna licenza per candidato.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <a
+                href="/aziende-trial"
+                className="inline-flex items-center px-6 py-3 bg-sienna-600 hover:bg-sienna-700 text-paper-50 text-[14px] font-semibold rounded-sm transition-colors"
+              >
+                Richiedi il trial gratuito
+              </a>
+              <a
+                href="mailto:info@valutolab.com"
+                className="inline-flex items-center px-6 py-3 border border-ink-300 text-ink-700 hover:border-ink-600 hover:text-ink-900 text-[14px] font-medium rounded-sm transition-colors"
+              >
+                Parla con noi
+              </a>
+            </div>
+          </div>
+          <div className="flex items-center justify-center">
+            <img
+              src="/graphics/hero-matrice-team.svg"
+              alt=""
+              aria-hidden="true"
+              className="w-full max-w-[560px] h-auto"
+            />
           </div>
         </section>
 
