@@ -2,15 +2,33 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
+import { AlertCircle, CheckCircle } from 'lucide-react'
+import { Wordmark } from '@/components/ui/Wordmark'
+import { Button } from '@/components/ui/Button'
+
+const SKILL_LABELS: Record<string, string> = {
+  communication:    'Comunicazione',
+  leadership:       'Leadership',
+  problem_solving:  'Problem Solving',
+  teamwork:         'Lavoro di Squadra',
+  time_management:  'Gestione del Tempo',
+  adaptability:     'Adattabilità',
+  creativity:       'Creatività',
+  critical_thinking:'Pensiero Critico',
+  empathy:          'Empatia',
+  resilience:       'Resilienza',
+  negotiation:      'Negoziazione',
+  decision_making:  'Decision Making',
+}
 
 export default function InvitoPublicPage() {
   const router = useRouter()
   const params = useParams()
-  const token = params.token as string
-  
+  const token  = params.token as string
+
   const [loading, setLoading] = useState(true)
-  const [invite, setInvite] = useState<any>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [invite, setInvite]   = useState<any>(null)
+  const [error, setError]     = useState<string | null>(null)
 
   useEffect(() => {
     validateInvite()
@@ -18,9 +36,9 @@ export default function InvitoPublicPage() {
 
   const validateInvite = async () => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://valutolab-backend.onrender.com'
+      const apiUrl   = process.env.NEXT_PUBLIC_API_URL || ''
       const response = await fetch(`${apiUrl}/api/organizations/invite/${token}/validate`)
-      const data = await response.json()
+      const data     = await response.json()
 
       if (data.success && data.invite.valid) {
         setInvite(data.invite)
@@ -29,175 +47,135 @@ export default function InvitoPublicPage() {
         } else {
           localStorage.removeItem('invite_focus_config_id')
         }
-      } else if (data.invite.expired) {
+      } else if (data.invite?.expired) {
         setError('Questo invito è scaduto')
-      } else if (data.invite.completed) {
+      } else if (data.invite?.completed) {
         setError('Hai già completato questo assessment')
       } else {
         setError('Invito non valido')
       }
-
-    } catch (error) {
-      console.error('Error validating invite:', error)
-      setError('Errore nel caricamento dell\'invito')
+    } catch {
+      setError("Errore nel caricamento dell'invito")
     } finally {
       setLoading(false)
     }
   }
 
   const handleStartAssessment = () => {
-    // Salva il token in localStorage per tracciare l'invito durante l'assessment
     localStorage.setItem('invite_token', token)
     router.push('/assessment')
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 font-semibold">Verifica invito in corso...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 to-pink-50 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
-          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <span className="text-4xl">❌</span>
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Invito Non Valido</h1>
-          <p className="text-gray-600 mb-6">{error}</p>
-          <button
-            onClick={() => router.push('/')}
-            className="bg-purple-600 text-white px-8 py-3 rounded-lg font-semibold hover:shadow-lg transition"
-          >
-            Torna alla Home
-          </button>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50">
+    <div className="min-h-screen bg-paper-100 font-body text-ink-900">
+
       {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-blue-600 rounded-xl flex items-center justify-center">
-                <span className="text-xl font-black text-white">V</span>
-              </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                ValutoLab
-              </span>
-            </div>
-          </div>
+      <header className="border-b border-paper-200 bg-paper-50">
+        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center">
+          <Wordmark size={18} />
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-          {/* Top Banner */}
-          <div className="bg-gradient-to-r from-purple-600 to-blue-600 p-8 text-white text-center">
-            <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-4xl">✉️</span>
+      <main className="flex items-center justify-center px-4 py-16">
+        <div className="w-full max-w-lg">
+
+          {/* Loading */}
+          {loading && (
+            <div className="bg-paper-50 border border-paper-200 rounded-md shadow-md-ink p-10 flex items-center justify-center">
+              <span className="w-6 h-6 border-2 border-ink-300 border-t-ink-700 rounded-full animate-spin" />
             </div>
-            <h1 className="text-3xl font-bold mb-2">Sei Stato Invitato!</h1>
-            <p className="text-xl text-white/90">
-              da <strong>{invite?.organization_name}</strong>
-            </p>
-          </div>
+          )}
 
-          {/* Content */}
-          <div className="p-8">
-            <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                Completa l'Assessment delle Soft Skills
-              </h2>
-              <p className="text-lg text-gray-600 mb-2">
-                Ciao <strong>{invite?.candidate_name}</strong>! 👋
-              </p>
-              <p className="text-gray-600">
-                Sei stato invitato a completare un assessment professionale delle competenze trasversali.
-              </p>
-            </div>
-
-            {/* Info Box */}
-            <div className="bg-purple-50 border-2 border-purple-200 rounded-xl p-6 mb-8">
-              <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <span className="text-2xl">ℹ️</span>
-                Cosa ti aspetta
-              </h3>
-              
-              <div className="space-y-3">
-                <div className="flex items-start gap-3">
-                  <span className="text-purple-600 text-xl mt-1">✓</span>
-                  <div>
-                    <p className="font-semibold text-gray-900">60 domande di autovalutazione</p>
-                    <p className="text-sm text-gray-600">Valuta 12 competenze trasversali fondamentali</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <span className="text-purple-600 text-xl mt-1">✓</span>
-                  <div>
-                    <p className="font-semibold text-gray-900">Tempo stimato: 15 minuti</p>
-                    <p className="text-sm text-gray-600">Puoi completarlo in una sessione</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <span className="text-purple-600 text-xl mt-1">✓</span>
-                  <div>
-                    <p className="font-semibold text-gray-900">Report personalizzato</p>
-                    <p className="text-sm text-gray-600">Riceverai un'analisi dettagliata delle tue competenze</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <span className="text-purple-600 text-xl mt-1">✓</span>
-                  <div>
-                    <p className="font-semibold text-gray-900">Condivisione con l'azienda</p>
-                    <p className="text-sm text-gray-600">I risultati saranno visibili a {invite?.organization_name}</p>
-                  </div>
-                </div>
+          {/* Error */}
+          {!loading && error && (
+            <div className="bg-paper-50 border border-paper-200 rounded-md shadow-md-ink p-8 text-center space-y-4">
+              <AlertCircle className="w-10 h-10 text-sienna-600 mx-auto" />
+              <div>
+                <h1 className="text-[18px] font-semibold text-ink-900 mb-1">Invito non disponibile</h1>
+                <p className="text-[13px] text-ink-400">{error}</p>
               </div>
+              <button
+                onClick={() => router.push('/')}
+                className="text-[13px] text-ink-400 hover:text-ink-700 transition-colors underline"
+              >
+                Torna alla home
+              </button>
             </div>
+          )}
 
-            {/* Privacy Note */}
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-8 text-sm text-gray-600">
-              <p>
-                🔒 <strong>Privacy:</strong> I tuoi dati sono protetti e utilizzati esclusivamente per questo assessment. 
-                Completando il test, acconsenti alla condivisione dei risultati con {invite?.organization_name}.
-              </p>
+          {/* Valid invite */}
+          {!loading && invite && (
+            <div className="bg-paper-50 border border-paper-200 rounded-md shadow-md-ink p-8 space-y-6">
+
+              {/* Eyebrow + titolo */}
+              <div>
+                <p className="text-[11px] font-semibold tracking-widest uppercase text-sienna-600 mb-3">
+                  Invito Assessment
+                </p>
+                <h1 className="text-[22px] font-semibold text-ink-900 mb-1">
+                  Ciao {invite.candidate_name}!
+                </h1>
+                <p className="text-[14px] text-ink-500">
+                  <span className="font-semibold text-ink-800">{invite.organization_name}</span> ti ha invitato a completare un assessment professionale.
+                </p>
+              </div>
+
+              {/* Box Focus (solo se presente) */}
+              {invite.focus_config_id && invite.focus_skills && invite.focus_skills.length > 0 && (
+                <div className="border border-paper-300 rounded-sm bg-paper-200 p-4 space-y-2">
+                  <p className="text-[11px] font-semibold tracking-widest uppercase text-ink-500">
+                    Competenze valutate
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {invite.focus_skills.map((skill: string) => (
+                      <span
+                        key={skill}
+                        className="px-2.5 py-1 bg-sienna-100 text-sienna-800 text-[11px] font-medium rounded-sm border border-sienna-200"
+                      >
+                        {SKILL_LABELS[skill] || skill}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Box info */}
+              <div className="border border-paper-300 rounded-sm bg-paper-200 p-4">
+                <p className="text-[11px] font-semibold tracking-widest uppercase text-ink-500 mb-3">
+                  Cosa ti aspetta
+                </p>
+                <ul className="space-y-2">
+                  {[
+                    'Domande di autovalutazione',
+                    '40 minuti per completarlo',
+                    'Analisi qualitativa personalizzata',
+                    `I risultati saranno condivisi con ${invite.organization_name}`,
+                  ].map(item => (
+                    <li key={item} className="flex items-start gap-2 text-[13px] text-ink-700">
+                      <CheckCircle className="w-3.5 h-3.5 text-ink-500 flex-shrink-0 mt-0.5" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* CTA */}
+              <div className="space-y-3">
+                <Button
+                  variant="primary"
+                  onClick={handleStartAssessment}
+                  className="w-full justify-center"
+                >
+                  Inizia l&apos;Assessment →
+                </Button>
+                <p className="text-[11px] text-ink-400 text-center">
+                  Rispondendo in modo sincero otterrai un profilo più accurato. I tuoi dati sono protetti.
+                </p>
+              </div>
+
             </div>
+          )}
 
-            {/* CTA Button */}
-            <button
-              onClick={handleStartAssessment}
-              className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:shadow-2xl hover:scale-105 transition-all"
-            >
-              Inizia l'Assessment →
-            </button>
-
-            <p className="text-center text-sm text-gray-500 mt-4">
-              Rispondendo in modo sincero otterrai un profilo più accurato
-            </p>
-          </div>
-        </div>
-
-        {/* Footer Info */}
-        <div className="text-center mt-8 text-gray-600">
-          <p className="text-sm">
-            Powered by <strong className="text-purple-600">ValutoLab</strong> - 
-            Assessment Professionale delle Soft Skills
-          </p>
         </div>
       </main>
     </div>

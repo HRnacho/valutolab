@@ -235,6 +235,12 @@ router.get('/invite/:token/validate', async (req, res) => {
     const isExpired = new Date(invite.expires_at) < new Date();
     const isCompleted = invite.status === 'completed';
 
+    let focusSkills = null;
+    if (invite.focus_config_id) {
+      const cfgRes = await db.query('SELECT skills FROM focus_configs WHERE id = $1', [invite.focus_config_id]);
+      focusSkills = cfgRes.rows[0]?.skills ?? null;
+    }
+
     res.json({
       success: true,
       invite: {
@@ -244,7 +250,8 @@ router.get('/invite/:token/validate', async (req, res) => {
         candidate_name: invite.candidate_name,
         organization_name: invite.organization_name,
         assessment_type: invite.assessment_type,
-        focus_config_id: invite.focus_config_id || null
+        focus_config_id: invite.focus_config_id || null,
+        focus_skills: focusSkills
       }
     });
   } catch (error) {

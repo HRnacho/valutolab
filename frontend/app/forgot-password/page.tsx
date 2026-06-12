@@ -2,14 +2,17 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { CheckCircle, ArrowLeft } from 'lucide-react'
+import { Wordmark } from '@/components/ui/Wordmark'
+import { Button } from '@/components/ui/Button'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || ''
 
 export default function ForgotPasswordPage() {
-  const [email, setEmail]   = useState('')
+  const [email, setEmail]     = useState('')
   const [loading, setLoading] = useState(false)
-  const [sent, setSent]     = useState(false)
-  const [error, setError]   = useState<string | null>(null)
+  const [sent, setSent]       = useState(false)
+  const [error, setError]     = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -22,7 +25,6 @@ export default function ForgotPasswordPage() {
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ email: email.trim() })
       })
-      // L'endpoint risponde sempre 200 per non rivelare se l'email esiste
       if (!res.ok) throw new Error('Errore di rete')
       setSent(true)
     } catch {
@@ -33,91 +35,77 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 flex items-center justify-center p-4">
-      <div className="max-w-md w-full">
-        <div className="bg-white rounded-2xl shadow-xl p-8">
-          <div className="text-center mb-8">
-            <div className="inline-block p-3 bg-purple-100 rounded-full mb-4">
-              <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
-              </svg>
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Password Dimenticata?</h1>
-            <p className="text-gray-600 text-sm">Inserisci la tua email e ti invieremo le istruzioni per reimpostare la password.</p>
-          </div>
+    <div className="min-h-screen bg-paper-100 font-body text-ink-900 flex items-center justify-center px-4">
+      <div className="w-full max-w-sm">
+
+        <div className="text-center mb-8">
+          <Wordmark size={22} className="justify-center" />
+          <p className="mt-3 text-[11px] font-semibold tracking-widest uppercase text-sienna-600">
+            Reimposta Password
+          </p>
+        </div>
+
+        <div className="bg-paper-50 border border-paper-200 rounded-md shadow-md-ink p-8 space-y-5">
 
           {sent ? (
-            <div className="bg-green-50 border-2 border-green-200 rounded-lg p-6">
-              <div className="flex items-start gap-3">
-                <svg className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
+            <div className="space-y-4">
+              <div className="flex items-start gap-3 px-4 py-3 bg-paper-200 border border-paper-300 rounded-sm">
+                <CheckCircle className="w-4 h-4 text-ink-600 flex-shrink-0 mt-0.5" />
                 <div>
-                  <h3 className="font-semibold text-green-900 mb-1">Email Inviata!</h3>
-                  <p className="text-sm text-green-700 mb-2">
-                    Se l&apos;email è registrata, riceverai un link per reimpostare la password.
-                  </p>
-                  <p className="text-xs text-green-600">
-                    Il link è valido per 24 ore. Controlla anche la cartella spam.
+                  <p className="text-[13px] font-semibold text-ink-900 mb-0.5">Email inviata</p>
+                  <p className="text-[12px] text-ink-500">
+                    Se l&apos;email è registrata, riceverai un link per reimpostare la password. Il link è valido per 24 ore. Controlla anche la cartella spam.
                   </p>
                 </div>
               </div>
+              <Link href="/login" className="flex items-center justify-center gap-1.5 text-[13px] text-ink-500 hover:text-ink-800 transition-colors">
+                <ArrowLeft className="w-3.5 h-3.5" />
+                Torna al login
+              </Link>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <>
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                <input
-                  id="email" type="email" value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  required placeholder="tua@email.com"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
-                />
+                <h1 className="text-[20px] font-semibold text-ink-900 mb-1">Hai dimenticato la password?</h1>
+                <p className="text-[13px] text-ink-400">Inserisci la tua email e ti invieremo un link per reimpostarla.</p>
               </div>
 
               {error && (
-                <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4">
-                  <p className="text-sm text-red-700">{error}</p>
+                <div className="px-4 py-3 bg-sienna-50 border border-sienna-300 rounded-sm">
+                  <p className="text-[13px] text-sienna-700">{error}</p>
                 </div>
               )}
 
-              <button
-                type="submit" disabled={loading}
-                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold py-3 px-6 rounded-lg hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-              >
-                {loading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-                    </svg>
-                    Invio in corso...
-                  </span>
-                ) : 'Invia Link di Reset'}
-              </button>
-            </form>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label htmlFor="email" className="block text-[12px] font-medium text-ink-600 mb-1.5">Email</label>
+                  <input
+                    id="email" type="email" value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    required placeholder="nome@esempio.com"
+                    className="w-full px-4 py-2.5 border border-paper-300 rounded-sm bg-paper-100 focus:border-ink-600 focus:outline-none font-body text-[14px] text-ink-900 placeholder-ink-400"
+                    disabled={loading}
+                  />
+                </div>
+
+                <Button type="submit" variant="primary" disabled={loading} className="w-full justify-center">
+                  {loading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="w-4 h-4 border-2 border-paper-50 border-t-transparent rounded-full animate-spin" />
+                      Invio in corso…
+                    </span>
+                  ) : 'Invia link di reset →'}
+                </Button>
+              </form>
+
+              <div className="text-center pt-1">
+                <Link href="/login" className="flex items-center justify-center gap-1.5 text-[13px] text-ink-400 hover:text-ink-700 transition-colors">
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  Torna al login
+                </Link>
+              </div>
+            </>
           )}
-
-          <div className="mt-6 text-center">
-            <Link href="/login" className="text-sm text-purple-600 hover:text-purple-700 font-medium inline-flex items-center gap-1">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-              </svg>
-              Torna al Login
-            </Link>
-          </div>
-        </div>
-
-        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-start gap-3">
-            <svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-            </svg>
-            <p className="text-sm text-blue-800">
-              Problemi di accesso? Contattaci a{' '}
-              <a href="mailto:info@valutolab.com" className="underline">info@valutolab.com</a>
-            </p>
-          </div>
         </div>
       </div>
     </div>
