@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { Resend } from 'resend';
 import db from '../config/database.js';
+import { resetPassword as resetPasswordTemplate } from '../services/valutoLabEmails.js';
 
 const getResend = () => new Resend(process.env.RESEND_API_KEY);
 
@@ -260,30 +261,15 @@ async function createResetToken(userId) {
   return token;
 }
 
-async function sendResetEmail({ to, fullName, resetToken, subject, intro }) {
+async function sendResetEmail({ to, fullName, resetToken }) {
   const link = `${process.env.FRONTEND_URL || 'https://valutolab.com'}/reset-password?token=${resetToken}`;
+  const mail = resetPasswordTemplate({ fullName: fullName || 'Utente', link, RESET_TOKEN_EXPIRES_H });
   await getResend().emails.send({
     from: 'ValutoLab <noreply@valutolab.com>',
     to,
-    subject,
-    html: `
-      <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;">
-        <h1 style="color:#4F46E5;margin:0 0 4px;">ValutoLab</h1>
-        <h2 style="margin:0 0 16px;">Ciao ${fullName || 'Utente'}!</h2>
-        <p>${intro}</p>
-        <p>Il link è valido per <strong>${RESET_TOKEN_EXPIRES_H} ore</strong>.</p>
-        <div style="text-align:center;margin:32px 0;">
-          <a href="${link}"
-             style="background:#4F46E5;color:white;padding:14px 32px;border-radius:8px;
-                    text-decoration:none;font-size:16px;font-weight:bold;">
-            Imposta nuova password
-          </a>
-        </div>
-        <p style="font-size:12px;color:#6B7280;">
-          Se il pulsante non funziona, copia questo link nel browser:<br>
-          <span style="word-break:break-all;">${link}</span>
-        </p>
-      </div>`
+    subject: mail.subject,
+    html: mail.html,
+    text: mail.text
   });
 }
 
@@ -306,9 +292,7 @@ router.post('/forgot-password', async (req, res, next) => {
       await sendResetEmail({
         to: email.toLowerCase().trim(),
         fullName: rows[0].full_name,
-        resetToken: token,
-        subject: 'Reimposta la tua password — ValutoLab',
-        intro: 'Hai richiesto di reimpostare la password del tuo account ValutoLab.'
+        resetToken: token
       });
     }
 

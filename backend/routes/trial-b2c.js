@@ -2,6 +2,7 @@ import express from 'express';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 import pg from 'pg';
+import { benvenutoTrialB2C } from '../services/valutoLabEmails.js';
 
 const router = express.Router();
 
@@ -63,25 +64,13 @@ router.post('/register', async (req, res) => {
       [userId, full_name, email]
     );
 
+    const mailBenvenuto = benvenutoTrialB2C({ full_name, email, password });
     await resend.emails.send({
       from: 'ValutoLab <noreply@valutolab.com>',
       to: email,
-      subject: 'Il tuo account ValutoLab e pronto!',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h1 style="color: #7c3aed;">ValutoLab</h1>
-          <h2>Ciao ${full_name}!</h2>
-          <p>Il tuo account trial e stato creato. Hai 1 assessment gratuito valido 30 giorni.</p>
-          <div style="background: #f3f4f6; border-radius: 8px; padding: 20px; margin: 24px 0;">
-            <p><strong>Email:</strong> ${email}</p>
-            <p><strong>Password:</strong> ${password}</p>
-          </div>
-          <a href="https://valutolab.com/login" 
-             style="background: #7c3aed; color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: bold;">
-            Inizia il tuo Assessment
-          </a>
-        </div>
-      `
+      subject: mailBenvenuto.subject,
+      html: mailBenvenuto.html,
+      text: mailBenvenuto.text
     });
 
     return res.status(201).json({

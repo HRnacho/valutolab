@@ -2,6 +2,7 @@ import express from 'express';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 import pg from 'pg';
+import { confermaTrialB2B, attivazioneTrialB2B } from '../services/valutoLabEmails.js';
 
 const router = express.Router();
 
@@ -37,18 +38,13 @@ router.post('/create', async (req, res) => {
 
     const trial = result.rows[0];
 
+    const mailConferma = confermaTrialB2B({ contact_name, company_name });
     await resend.emails.send({
       from: 'ValutoLab <info@valutolab.com>',
       to: contact_email,
-      subject: 'Richiesta Trial ValutoLab Ricevuta',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>Ciao ${contact_name}!</h2>
-          <p>Abbiamo ricevuto la tua richiesta di trial per <strong>${company_name}</strong>.</p>
-          <p>Il nostro team la esaminerà a breve e riceverai le credenziali di accesso via email.</p>
-          <p>Il Team ValutoLab</p>
-        </div>
-      `
+      subject: mailConferma.subject,
+      html: mailConferma.html,
+      text: mailConferma.text
     });
 
     return res.status(201).json({ success: true, trial });
@@ -127,34 +123,19 @@ router.post('/activate/:id', async (req, res) => {
       [userId, trial.contact_email]
     );
 
+    const mailAttivazione = attivazioneTrialB2B({
+      contact_name: trial.contact_name,
+      company_name: trial.company_name,
+      quota,
+      expiresAt: expiresAt.toLocaleDateString('it-IT'),
+      activationLink
+    });
     await resend.emails.send({
       from: 'ValutoLab <info@valutolab.com>',
       to: trial.contact_email,
-      subject: 'Il tuo Trial ValutoLab è Attivo — Accedi ora',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h1 style="color: #4F46E5;">ValutoLab</h1>
-          <h2>Ciao ${trial.contact_name}!</h2>
-          <p>Il tuo trial per <strong>${trial.company_name}</strong> è attivo.</p>
-          <div style="background: #F3F4F6; border-radius: 8px; padding: 24px; margin: 24px 0;">
-            <p><strong>${quota}</strong> assessment disponibili</p>
-            <p>Valido fino al <strong>${expiresAt.toLocaleDateString('it-IT')}</strong></p>
-          </div>
-          <p>Clicca il pulsante qui sotto per impostare la tua password e accedere alla piattaforma.
-             Il link è valido per <strong>72 ore</strong> e può essere usato una sola volta.</p>
-          <div style="text-align: center; margin: 32px 0;">
-            <a href="${activationLink}"
-               style="background: #4F46E5; color: white; padding: 16px 40px; border-radius: 8px; text-decoration: none; font-size: 18px; font-weight: bold;">
-              Attiva il tuo account
-            </a>
-          </div>
-          <p style="font-size: 12px; color: #6B7280;">
-            Se il pulsante non funziona, copia e incolla questo link nel browser:<br>
-            <span style="word-break: break-all;">${activationLink}</span>
-          </p>
-          <p>Il Team ValutoLab</p>
-        </div>
-      `
+      subject: mailAttivazione.subject,
+      html: mailAttivazione.html,
+      text: mailAttivazione.text
     });
 
     return res.status(200).json({
