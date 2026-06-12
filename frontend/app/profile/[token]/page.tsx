@@ -1,214 +1,197 @@
-'use client';
+'use client'
 
-import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useEffect, useState } from 'react'
+import { useParams } from 'next/navigation'
+import { AlertCircle } from 'lucide-react'
+import { Wordmark } from '@/components/ui/Wordmark'
 
 interface ProfileData {
-  name: string;
-  completedAt: string;
-  totalScore: number;
-  results: Array<{
-    category: string;
-    score: number;
-  }>;
+  name: string
+  completedAt: string
+  totalScore: number
+  results: Array<{ category: string; score: number }>
+}
+
+function getEscoLevel(score: number): { label: string; color: string; bg: string; border: string } {
+  if (score >= 4.1) return { label: 'Esperto',     color: '#1B4332', bg: '#D1FAE5', border: '#6EE7B7' }
+  if (score >= 3.1) return { label: 'Avanzato',    color: '#2D6A4F', bg: '#ECFDF5', border: '#A7F3D0' }
+  if (score >= 2.1) return { label: 'Intermedio',  color: '#92400E', bg: '#FFFBEB', border: '#FCD34D' }
+  return               { label: 'Base',         color: '#7F1D1D', bg: '#FEF2F2', border: '#FCA5A5' }
+}
+
+function getBarColor(score: number): string {
+  if (score >= 4.1) return '#1B4332'
+  if (score >= 3.1) return '#2D6A4F'
+  if (score >= 2.1) return '#D4A017'
+  return '#C0392B'
 }
 
 export default function PublicProfilePage() {
-  const params = useParams();
-  const token = params.token as string;
-  
-  const [profile, setProfile] = useState<ProfileData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const params = useParams()
+  const token  = params.token as string
+
+  const [profile, setProfile] = useState<ProfileData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError]     = useState<string | null>(null)
 
   useEffect(() => {
     async function fetchProfile() {
       try {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/share/${token}`
-        );
-        
-        if (!response.ok) {
-          throw new Error('Profilo non trovato');
-        }
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          setProfile(data.profile);
-        } else {
-          setError(data.error);
-        }
-      } catch (err) {
-        setError('Impossibile caricare il profilo');
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/share/${token}`)
+        if (!res.ok) throw new Error('Profilo non trovato')
+        const data = await res.json()
+        if (data.success) setProfile(data.profile)
+        else setError(data.error)
+      } catch {
+        setError('Impossibile caricare il profilo')
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
     }
+    if (token) fetchProfile()
+  }, [token])
 
-    if (token) {
-      fetchProfile();
-    }
-  }, [token]);
+  if (loading) return (
+    <div className="min-h-screen bg-paper-100 flex items-center justify-center">
+      <span className="w-8 h-8 border-2 border-ink-300 border-t-ink-700 rounded-full animate-spin" />
+    </div>
+  )
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mb-4"></div>
-          <p className="text-gray-600">Caricamento profilo...</p>
+  if (error || !profile) return (
+    <div className="min-h-screen bg-paper-100 font-body flex flex-col">
+      <header className="border-b border-paper-200 bg-paper-50">
+        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center">
+          <Wordmark size={18} />
         </div>
-      </div>
-    );
-  }
-
-  if (error || !profile) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md text-center">
-          <div className="text-6xl mb-4">!</div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-4">
-            Profilo Non Disponibile
-          </h1>
-          <p className="text-gray-600 mb-6">
-            {error || 'Questo profilo non esiste o è stato disattivato.'}
-          </p>
-          <a
-            href="https://valutolab.com"
-            className="inline-block bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 transition"
-          >
+      </header>
+      <div className="flex-1 flex items-center justify-center px-4">
+        <div className="bg-paper-50 border border-paper-200 rounded-md shadow-md-ink p-10 max-w-sm w-full text-center space-y-4">
+          <AlertCircle className="w-10 h-10 text-sienna-600 mx-auto" />
+          <div>
+            <h1 className="text-[18px] font-semibold text-ink-900 mb-1">Profilo non disponibile</h1>
+            <p className="text-[13px] text-ink-400">{error || 'Questo profilo non esiste o è stato disattivato.'}</p>
+          </div>
+          <a href="https://valutolab.com" className="inline-block text-[13px] text-sienna-600 hover:underline">
             Vai a ValutoLab
           </a>
         </div>
       </div>
-    );
-  }
+    </div>
+  )
 
-  const topSkills = profile.results
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 6);
-
+  const sorted      = [...profile.results].sort((a, b) => b.score - a.score)
+  const overallEsco = getEscoLevel(profile.totalScore)
   const completedDate = new Date(profile.completedAt).toLocaleDateString('it-IT', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
+    year: 'numeric', month: 'long', day: 'numeric'
+  })
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50 py-12 px-4">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-8">
-          <div className="inline-block bg-white rounded-full p-4 shadow-lg mb-4">
-            <span className="text-5xl">🧠</span>
+    <div className="min-h-screen bg-paper-100 font-body text-ink-900">
+
+      {/* Header */}
+      <header className="border-b border-paper-200 bg-paper-50">
+        <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-center">
+          <Wordmark size={18} />
+        </div>
+      </header>
+
+      <main className="max-w-2xl mx-auto px-4 py-10 space-y-4">
+
+        {/* Hero card — sfondo scuro */}
+        <div className="bg-ink-900 rounded-md overflow-hidden">
+          <div className="p-8">
+            <p className="text-[11px] font-semibold tracking-widest uppercase text-paper-400 mb-4">
+              Profilo Competenze Verificato
+            </p>
+            <h1 className="text-[26px] font-semibold text-paper-50 mb-1">{profile.name}</h1>
+            <p className="text-[13px] text-paper-400 mb-6">Assessment completato: {completedDate}</p>
+
+            <div className="flex items-center gap-4">
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-widest text-paper-400 mb-1">Punteggio generale</p>
+                <p className="text-[36px] font-bold text-paper-50 leading-none">
+                  {Number(profile.totalScore).toFixed(1)}
+                  <span className="text-[18px] font-normal text-paper-400">/5,0</span>
+                </p>
+              </div>
+              <div>
+                <span
+                  className="inline-block px-3 py-1.5 text-[12px] font-semibold rounded-sm"
+                  style={{ background: overallEsco.bg, color: overallEsco.color, border: `1px solid ${overallEsco.border}` }}
+                >
+                  {overallEsco.label}
+                </span>
+              </div>
+            </div>
           </div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">
-            ValutoLab - Certificato Soft Skills
-          </h1>
-          <p className="text-gray-600">
-            Profilo verificato e certificato
-          </p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-          <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-8 text-white">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-2xl font-bold mb-1">{profile.name}</h2>
-                <p className="text-purple-100">Assessment completato: {completedDate}</p>
-              </div>
-              <div className="text-right">
-                <div className="text-4xl font-bold">{profile.totalScore}</div>
-                <div className="text-sm text-purple-100">Score Totale</div>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-lg px-4 py-2 inline-block">
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-              <span className="font-semibold">Certificato Verificato</span>
-            </div>
-          </div>
+        {/* Sezione competenze */}
+        <div className="bg-paper-50 border border-paper-200 rounded-md shadow-sm-ink p-6">
+          <p className="text-[11px] font-semibold tracking-widest uppercase text-ink-400 mb-5">
+            Competenze valutate ({sorted.length})
+          </p>
 
-          <div className="p-8">
-            <h3 className="text-2xl font-bold text-gray-800 mb-6">
-              Competenze Principali
-            </h3>
-            
-            <div className="grid md:grid-cols-2 gap-4 mb-8">
-              {topSkills.map((skill, index) => (
-                <div key={index} className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-semibold text-gray-800">{skill.category}</span>
-                    <span className="text-2xl font-bold text-purple-600">{skill.score}</span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {sorted.map((skill, i) => {
+              const esco    = getEscoLevel(skill.score)
+              const barPct  = Math.round((skill.score / 5) * 100)
+              const barColor = getBarColor(skill.score)
+              return (
+                <div key={i} className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[13px] font-medium text-ink-800">{skill.category}</span>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="text-[10px] font-semibold px-1.5 py-0.5 rounded-sm"
+                        style={{ background: esco.bg, color: esco.color, border: `1px solid ${esco.border}` }}
+                      >
+                        {esco.label}
+                      </span>
+                      <span className="text-[13px] font-semibold text-ink-700">
+                        {skill.score.toFixed(1)}
+                      </span>
+                    </div>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-gradient-to-r from-purple-600 to-indigo-600 h-2 rounded-full transition-all duration-500"
-                      style={{ width: `${skill.score}%` }}
+                  <div className="w-full bg-paper-200 rounded-sm h-1.5">
+                    <div
+                      className="h-1.5 rounded-sm transition-all duration-500"
+                      style={{ width: `${barPct}%`, backgroundColor: barColor }}
                     />
                   </div>
                 </div>
-              ))}
-            </div>
-
-            <h3 className="text-xl font-bold text-gray-800 mb-4">
-              Tutte le Competenze
-            </h3>
-            
-            <div className="grid md:grid-cols-3 gap-3">
-              {profile.results
-                .sort((a, b) => b.score - a.score)
-                .map((skill, index) => (
-                  <div 
-                    key={index}
-                    className="flex items-center justify-between bg-gray-50 rounded-lg p-3"
-                  >
-                    <span className="text-sm text-gray-700">{skill.category}</span>
-                    <span className="font-bold text-purple-600">{skill.score}</span>
-                  </div>
-                ))}
-            </div>
-          </div>
-
-          <div className="bg-gray-50 px-8 py-6 border-t border-gray-200">
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">V</span>
-                </div>
-                <div>
-                  <div className="font-semibold text-gray-800 text-sm">ValutoLab</div>
-                  <div className="text-xs text-gray-600">Soft Skills Assessment Platform</div>
-                </div>
-              </div>
-              
-              <a
-                href="https://valutolab.com"
-                className="bg-purple-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-purple-700 transition text-sm"
-              >
-                Crea il tuo Assessment
-              </a>
-            </div>
-            
-            <div className="mt-4 pt-4 border-t border-gray-300 text-center text-xs text-gray-500">
-              Questo certificato è verificabile su valutolab.com/profile/{token}
-            </div>
+              )
+            })}
           </div>
         </div>
 
-        <div className="mt-6 bg-white rounded-xl shadow-lg p-6 text-center">
-          <p className="text-gray-600 mb-4">
-            Vuoi misurare anche tu le tue soft skills professionali?
-          </p>
+        {/* Footer card */}
+        <div className="bg-paper-50 border border-paper-200 rounded-md shadow-sm-ink px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Wordmark size={16} />
+          </div>
           <a
-            href="https://valutolab.com/register"
-            className="inline-block bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-8 py-3 rounded-lg font-bold hover:shadow-xl transition"
+            href="https://valutolab.com/trial"
+            className="text-[13px] text-sienna-600 hover:underline font-medium"
           >
-            Inizia il Tuo Assessment Gratuito
+            Crea il tuo Assessment →
           </a>
         </div>
-      </div>
+
+        {/* CTA esterno */}
+        <div className="text-center py-6 space-y-3">
+          <p className="text-[14px] text-ink-500">
+            Vuoi misurare anche tu le tue soft skills?
+          </p>
+          <a
+            href="https://valutolab.com/trial"
+            className="inline-block px-8 py-3 bg-ink-900 text-paper-50 text-[14px] font-semibold rounded-sm hover:bg-ink-700 transition-colors"
+          >
+            Inizia l&apos;Assessment →
+          </a>
+        </div>
+
+      </main>
     </div>
-  );
+  )
 }

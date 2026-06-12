@@ -114,11 +114,11 @@ export default function DashboardPage() {
             try {
               const res = await fetch(`${apiUrl}/api/share/create`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: authUser.id, assessmentId: id })
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ assessment_id: id })
               })
               const data = await res.json()
-              return data.success ? { [id]: data.share } : null
+              return data.success ? { [id]: data } : null
             } catch { return null }
           })
         )
@@ -173,12 +173,13 @@ export default function DashboardPage() {
     if (!user || !shareData[assessmentId]) return
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'
+      const currentShare = shareData[assessmentId]
       const res = await fetch(
-        `${apiUrl}/api/share/${shareData[assessmentId].share_token}/toggle`,
-        { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: user.id }) }
+        `${apiUrl}/api/share/toggle/${currentShare.share_token}`,
+        { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_active: !currentShare.is_active }) }
       )
       const data = await res.json()
-      if (data.success) { setShareData({ ...shareData, [assessmentId]: data.share }); showMessage('success', data.message) }
+      if (data.success) { setShareData({ ...shareData, [assessmentId]: data }); showMessage('success', 'Condivisione aggiornata') }
     } catch { showMessage('error', "Errore durante l'aggiornamento") }
   }
 
@@ -209,10 +210,11 @@ export default function DashboardPage() {
 
   const handleOpenQR = async (assessmentId: string) => {
     try {
+      const share = shareData[assessmentId]
+      if (!share?.share_token) { showMessage('error', 'Token di condivisione non trovato'); return }
+      if (!share.is_active) { showMessage('error', 'Attiva prima la condivisione per generare il QR'); return }
       const pRes = await api.profile.get()
-      const shareToken = shareData[assessmentId]?.share_token
-      if (!shareToken) { showMessage('error', 'Token di condivisione non trovato'); return }
-      setQrModal({ open: true, profileUrl: `https://valutolab.com/profile/${shareToken}`, userName: pRes.profile?.full_name || 'Utente ValutoLab' })
+      setQrModal({ open: true, profileUrl: `https://valutolab.com/profile/${share.share_token}`, userName: pRes.profile?.full_name || 'Utente ValutoLab' })
     } catch { showMessage('error', 'Errore nel caricamento del QR code') }
   }
 

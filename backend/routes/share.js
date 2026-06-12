@@ -112,7 +112,7 @@ router.get('/:token', async (req, res) => {
 
     const mappedResults = resultsRes.rows.map(r => ({
       category: fmt(r.skill_category),
-      score: Math.round(parseFloat(r.final_score) * 20),
+      score: parseFloat(r.final_score),
     }));
 
     // Incrementa view count
