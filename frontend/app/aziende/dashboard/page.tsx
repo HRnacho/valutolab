@@ -9,8 +9,20 @@ import {
   ArrowLeft, Mail, BarChart3, Users, Clock, CheckCircle,
   Plus, Download, GitCompareArrows, Target, X, Trash2, FileText, RefreshCw,
 } from 'lucide-react'
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, Legend, Cell,
+  ReferenceLine, ResponsiveContainer,
+} from 'recharts'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'
+
+function escoInfo(score: number): { label: string; color: string } {
+  const v = Number(score)
+  if (v >= 4.1) return { label: 'Esperto',    color: '#1B4332' }
+  if (v >= 3.1) return { label: 'Avanzato',   color: '#2D6A4F' }
+  if (v >= 2.1) return { label: 'Intermedio', color: '#D4A017' }
+  return               { label: 'Base',       color: '#C0392B' }
+}
 
 const SKILLS = [
   'communication','leadership','problem_solving','teamwork',
@@ -965,6 +977,68 @@ function AziendeDashboardContent() {
               )
             }
 
+            // Helper barra ESCO riutilizzabile
+            const EscoBar = ({ item }: { item: any }) => {
+              const v = Number(item.avg_score)
+              const pct = Math.round((v / 5) * 100)
+              const { label, color } = escoInfo(v)
+              return (
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[14px] font-medium text-ink-900">{item.label}</span>
+                    <span className="font-mono text-[13px] font-semibold text-ink-700">
+                      {v.toFixed(2)} <span className="font-normal text-ink-400">· {label}</span>
+                    </span>
+                  </div>
+                  <div className="w-full bg-paper-200 rounded-sm h-2 mb-2">
+                    <div className="h-2 rounded-sm transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
+                  </div>
+                  {item.note && <p className="text-[12px] text-ink-500">{item.note}</p>}
+                </div>
+              )
+            }
+
+            // Mappa del Team — prepara dati recharts se candidate_scores presente
+            const candidateScores: Array<{ name: string; scores: Record<string, number | null> }> =
+              reportData?.candidate_scores || []
+            const teamSkills: string[] = candidateScores.length > 0
+              ? Object.keys(candidateScores[0].scores)
+              : []
+
+            const chartData = teamSkills.map(skillLabel => {
+              const entry: Record<string, any> = { skill: skillLabel }
+              let sum = 0, count = 0
+              candidateScores.forEach(c => {
+                const v = c.scores[skillLabel]
+                entry[c.name] = v
+                if (v != null) { sum += v; count++ }
+              })
+              entry._avg = count > 0 ? Number((sum / count).toFixed(2)) : null
+              return entry
+            })
+
+            // Palette distinta per candidati (ciclica)
+            const CANDIDATE_PALETTE = [
+              '#1C1917', '#B5541A', '#2D6A4F', '#7C3D12', '#1B4332', '#92400E',
+              '#3B82F6', '#8B5CF6', '#EC4899', '#14B8A6',
+            ]
+
+            const handleExportPdf = async () => {
+              const token = localStorage.getItem('jwt_access_token')
+              const res = await fetch(`${API_URL}/api/team-reports/${organization.id}/pdf`, {
+                headers: { Authorization: `Bearer ${token}` },
+              })
+              if (!res.ok) { setMessage({ type: 'error', text: 'Errore export PDF' }); return }
+              const blob = await res.blob()
+              const url = URL.createObjectURL(blob)
+              const a = document.createElement('a')
+              a.href = url
+              const safeName = (organization.name || 'team').toLowerCase().replace(/\s+/g, '-')
+              a.download = `report-team-${safeName}-${new Date().toISOString().slice(0, 10)}.pdf`
+              a.click()
+              URL.revokeObjectURL(url)
+            }
+
             return (
               <div className="p-6 space-y-6">
                 {/* Header */}
@@ -976,15 +1050,25 @@ function AziendeDashboardContent() {
                     </p>
                   </div>
                   {report && (
-                    <Button
-                      variant="secondary"
-                      className="flex items-center gap-2 text-[13px]"
-                      onClick={handleGenerateReport}
-                      disabled={generatingReport || completedBase.length < 3}
-                    >
-                      <RefreshCw className={`w-3.5 h-3.5 ${generatingReport ? 'animate-spin' : ''}`} />
-                      Aggiorna report
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="secondary"
+                        className="flex items-center gap-2 text-[13px]"
+                        onClick={handleExportPdf}
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        Esporta PDF
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        className="flex items-center gap-2 text-[13px]"
+                        onClick={handleGenerateReport}
+                        disabled={generatingReport || completedBase.length < 3}
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${generatingReport ? 'animate-spin' : ''}`} />
+                        Aggiorna report
+                      </Button>
+                    </div>
                   )}
                 </div>
 
@@ -1004,7 +1088,6 @@ function AziendeDashboardContent() {
                     </Button>
                   </div>
                 ) : !report ? (
-                  /* Stato: candidati sufficienti, nessun report ancora */
                   <div className="text-center py-14 border border-dashed border-paper-300 rounded-md space-y-4">
                     <FileText className="w-8 h-8 text-ink-300 mx-auto" />
                     <div>
@@ -1021,7 +1104,6 @@ function AziendeDashboardContent() {
                     </Button>
                   </div>
                 ) : (
-                  /* Stato: report disponibile */
                   <div className="space-y-4">
                     {/* Meta */}
                     <div className="flex items-center gap-3 text-[12px] text-ink-400">
@@ -1041,28 +1123,7 @@ function AziendeDashboardContent() {
                       <div className="bg-paper-100 border border-paper-200 rounded-md p-5">
                         <p className="text-[11px] font-semibold uppercase tracking-eyebrow text-ink-400 mb-4">Punti di Forza</p>
                         <div className="space-y-4">
-                          {reportData.strengths.map((s: any, i: number) => {
-                            const pct = Math.round((Number(s.avg_score) / 5) * 100)
-                            const { bg } = (() => {
-                              const v = Number(s.avg_score)
-                              if (v >= 4.1) return { bg: '#1B4332' }
-                              if (v >= 3.1) return { bg: '#2D6A4F' }
-                              if (v >= 2.1) return { bg: '#D4A017' }
-                              return { bg: '#C0392B' }
-                            })()
-                            return (
-                              <div key={i}>
-                                <div className="flex items-center justify-between mb-1.5">
-                                  <span className="text-[14px] font-medium text-ink-900">{s.label}</span>
-                                  <span className="font-mono text-[13px] font-semibold text-ink-700">{Number(s.avg_score).toFixed(2)}</span>
-                                </div>
-                                <div className="w-full bg-paper-200 rounded-sm h-2 mb-2">
-                                  <div className="h-2 rounded-sm" style={{ width: `${pct}%`, backgroundColor: bg }} />
-                                </div>
-                                {s.note && <p className="text-[12px] text-ink-500">{s.note}</p>}
-                              </div>
-                            )
-                          })}
+                          {reportData.strengths.map((s: any, i: number) => <EscoBar key={i} item={s} />)}
                         </div>
                       </div>
                     )}
@@ -1072,41 +1133,86 @@ function AziendeDashboardContent() {
                       <div className="bg-paper-100 border border-paper-200 rounded-md p-5">
                         <p className="text-[11px] font-semibold uppercase tracking-eyebrow text-ink-400 mb-4">Aree di Sviluppo</p>
                         <div className="space-y-4">
-                          {reportData.gaps.map((g: any, i: number) => {
-                            const pct = Math.round((Number(g.avg_score) / 5) * 100)
-                            const { bg } = (() => {
-                              const v = Number(g.avg_score)
-                              if (v >= 4.1) return { bg: '#1B4332' }
-                              if (v >= 3.1) return { bg: '#2D6A4F' }
-                              if (v >= 2.1) return { bg: '#D4A017' }
-                              return { bg: '#C0392B' }
-                            })()
-                            return (
-                              <div key={i}>
-                                <div className="flex items-center justify-between mb-1.5">
-                                  <span className="text-[14px] font-medium text-ink-900">{g.label}</span>
-                                  <span className="font-mono text-[13px] font-semibold text-ink-700">{Number(g.avg_score).toFixed(2)}</span>
-                                </div>
-                                <div className="w-full bg-paper-200 rounded-sm h-2 mb-2">
-                                  <div className="h-2 rounded-sm" style={{ width: `${pct}%`, backgroundColor: bg }} />
-                                </div>
-                                {g.note && <p className="text-[12px] text-ink-500">{g.note}</p>}
-                              </div>
-                            )
-                          })}
+                          {reportData.gaps.map((g: any, i: number) => <EscoBar key={i} item={g} />)}
                         </div>
                       </div>
                     )}
 
-                    {/* Outliers */}
+                    {/* Mappa del Team — recharts grouped bar (solo se candidate_scores presente) */}
+                    {candidateScores.length > 0 && teamSkills.length > 0 && (
+                      <div className="bg-paper-100 border border-paper-200 rounded-md p-5">
+                        <p className="text-[11px] font-semibold uppercase tracking-eyebrow text-ink-400 mb-5">Mappa del Team</p>
+                        <ResponsiveContainer width="100%" height={280}>
+                          <BarChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 60 }}>
+                            <XAxis
+                              dataKey="skill"
+                              tick={{ fontSize: 11, fill: '#6B6560' }}
+                              angle={-35}
+                              textAnchor="end"
+                              interval={0}
+                            />
+                            <YAxis domain={[0, 5]} tick={{ fontSize: 11, fill: '#6B6560' }} />
+                            <Tooltip
+                              formatter={(value: any, name: string) => {
+                                if (name === '_avg') return null
+                                const v = Number(value)
+                                const { label } = escoInfo(v)
+                                return [`${v.toFixed(2)} · ${label}`, name]
+                              }}
+                              contentStyle={{ fontSize: 12, borderRadius: 4, border: '1px solid #D4CBBA', background: '#FAF7F2' }}
+                            />
+                            <Legend
+                              wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
+                              formatter={(value) => value === '_avg' ? null : value}
+                            />
+                            <ReferenceLine y={0} stroke="#D4CBBA" />
+                            {candidateScores.map((c, idx) => (
+                              <Bar key={c.name} dataKey={c.name} fill={CANDIDATE_PALETTE[idx % CANDIDATE_PALETTE.length]} radius={[2, 2, 0, 0]} maxBarSize={18}>
+                                {chartData.map((entry, i) => {
+                                  const v = entry[c.name]
+                                  return <Cell key={i} fill={v != null ? escoInfo(v).color : '#D4CBBA'} />
+                                })}
+                              </Bar>
+                            ))}
+                            <ReferenceLine
+                              dataKey="_avg"
+                              stroke="#8C8070"
+                              strokeDasharray="4 3"
+                              strokeWidth={1.5}
+                            />
+                          </BarChart>
+                        </ResponsiveContainer>
+                        {/* Legenda ESCO */}
+                        <div className="flex flex-wrap items-center gap-4 mt-3 pt-3 border-t border-paper-200">
+                          {[
+                            { label: 'Esperto',    range: '4.1–5.0', color: '#1B4332' },
+                            { label: 'Avanzato',   range: '3.1–4.0', color: '#2D6A4F' },
+                            { label: 'Intermedio', range: '2.1–3.0', color: '#D4A017' },
+                            { label: 'Base',       range: '1.0–2.0', color: '#C0392B' },
+                          ].map(({ label, range, color }) => (
+                            <div key={label} className="flex items-center gap-1.5">
+                              <span className="w-3 h-3 rounded-sm flex-shrink-0" style={{ backgroundColor: color }} />
+                              <span className="text-[11px] text-ink-600 font-medium">{label}</span>
+                              <span className="text-[11px] text-ink-400">{range}</span>
+                            </div>
+                          ))}
+                          <div className="flex items-center gap-1.5 ml-2 pl-4 border-l border-paper-300">
+                            <span className="w-5 h-px border-t-2 border-dashed flex-shrink-0" style={{ borderColor: '#8C8070' }} />
+                            <span className="text-[11px] text-ink-400">Media team per competenza</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Profili in Evidenza */}
                     {reportData?.outliers && (
                       <div className="bg-paper-100 border border-paper-200 rounded-md p-5">
-                        <p className="text-[11px] font-semibold uppercase tracking-eyebrow text-ink-400 mb-3">Profili Anomali</p>
+                        <p className="text-[11px] font-semibold uppercase tracking-eyebrow text-ink-400 mb-3">Profili in Evidenza</p>
                         <p className="text-[14px] text-ink-800 leading-relaxed">{reportData.outliers}</p>
                       </div>
                     )}
 
-                    {/* Recommendation */}
+                    {/* Raccomandazione HR */}
                     {reportData?.recommendation && (
                       <div className="bg-paper-50 border-l-4 border-sienna-600 rounded-sm p-5">
                         <p className="text-[11px] font-semibold uppercase tracking-eyebrow text-sienna-600 mb-3">Raccomandazione HR</p>
@@ -1114,8 +1220,16 @@ function AziendeDashboardContent() {
                       </div>
                     )}
 
-                    {/* Genera di nuovo */}
-                    <div className="pt-2 flex justify-end">
+                    {/* Footer azioni */}
+                    <div className="pt-2 flex items-center justify-end gap-2">
+                      <Button
+                        variant="secondary"
+                        className="flex items-center gap-2 text-[13px]"
+                        onClick={handleExportPdf}
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        Esporta PDF
+                      </Button>
                       <Button
                         variant="secondary"
                         className="flex items-center gap-2 text-[13px]"
