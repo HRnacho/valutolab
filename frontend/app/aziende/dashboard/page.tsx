@@ -1142,14 +1142,13 @@ function AziendeDashboardContent() {
                     {candidateScores.length > 0 && teamSkills.length > 0 && (
                       <div className="bg-paper-100 border border-paper-200 rounded-md p-5">
                         <p className="text-[11px] font-semibold uppercase tracking-eyebrow text-ink-400 mb-5">Mappa del Team</p>
-                        <ResponsiveContainer width="100%" height={280}>
-                          <ComposedChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 60 }}>
+                        <ResponsiveContainer width="100%" height={300}>
+                          <ComposedChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 16 }}>
                             <XAxis
                               dataKey="skill"
                               tick={{ fontSize: 11, fill: '#6B6560' }}
-                              angle={-35}
-                              textAnchor="end"
                               interval={0}
+                              textAnchor="middle"
                             />
                             <YAxis domain={[0, 5]} tick={{ fontSize: 11, fill: '#6B6560' }} />
                             <Tooltip
