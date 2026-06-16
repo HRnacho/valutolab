@@ -7,7 +7,7 @@ import { Wordmark } from '@/components/ui/Wordmark'
 import { Button } from '@/components/ui/Button'
 import {
   ArrowLeft, Mail, BarChart3, Users, Clock, CheckCircle,
-  Plus, Download, GitCompareArrows, Target, X, Trash2,
+  Plus, Download, GitCompareArrows, Target, X, Trash2, FileText, RefreshCw,
 } from 'lucide-react'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'
@@ -39,7 +39,7 @@ const escoColor = (v: number): { bg: string; fg: string } => {
   return { bg: '#C0392B', fg: '#ffffff' }
 }
 
-type Tab = 'overview' | 'candidates' | 'compare' | 'new-invite' | 'focus'
+type Tab = 'overview' | 'candidates' | 'compare' | 'new-invite' | 'focus' | 'team-report'
 
 interface FocusConfig {
   id: string
@@ -85,6 +85,9 @@ function AziendeDashboardContent() {
   const [focusInviteModal, setFocusInviteModal] = useState<{ open: boolean; configId: string; configName: string } | null>(null)
   const [focusInviteForm, setFocusInviteForm] = useState({ candidateEmail: '', candidateName: '' })
   const [sendingFocusInvite, setSendingFocusInvite] = useState(false)
+  const [teamReport, setTeamReport]               = useState<any>(null)
+  const [loadingTeamReport, setLoadingTeamReport] = useState(false)
+  const [generatingReport, setGeneratingReport]   = useState(false)
 
   useEffect(() => {
     if (message) {
@@ -110,7 +113,7 @@ function AziendeDashboardContent() {
       const org = (paramId && data.organizations.find((o: any) => o.id === paramId))
         || data.organizations[0]
       setOrganization(org)
-      await Promise.all([loadInvites(org.id), loadCandidates(org.id), loadFocusConfigs(org.id)])
+      await Promise.all([loadInvites(org.id), loadCandidates(org.id), loadFocusConfigs(org.id), loadTeamReport(org.id)])
     } catch {
       setMessage({ type: 'error', text: 'Errore nel caricamento dei dati' })
     } finally {
@@ -125,7 +128,7 @@ function AziendeDashboardContent() {
     setSelected(new Set())
     setActiveTab('overview')
     setLoading(true)
-    await Promise.all([loadInvites(org.id), loadCandidates(org.id), loadFocusConfigs(org.id)])
+    await Promise.all([loadInvites(org.id), loadCandidates(org.id), loadFocusConfigs(org.id), loadTeamReport(org.id)])
     setLoading(false)
     // Aggiorna URL senza reload
     router.replace(`/aziende/dashboard?org=${org.id}`)
@@ -141,6 +144,22 @@ function AziendeDashboardContent() {
     const res  = await fetch(`${API_URL}/api/organizations/${orgId}/candidates-with-scores`)
     const data = await res.json()
     if (data.success) setCandidates(data.candidates)
+  }
+
+  const loadTeamReport = async (orgId: string) => {
+    setLoadingTeamReport(true)
+    try {
+      const token = localStorage.getItem('jwt_access_token')
+      const res = await fetch(`${API_URL}/api/team-reports/${orgId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      const data = await res.json()
+      if (data.success) setTeamReport(data.report)
+    } catch {
+      // non bloccare il caricamento
+    } finally {
+      setLoadingTeamReport(false)
+    }
   }
 
   const loadFocusConfigs = async (orgId: string) => {
@@ -227,6 +246,28 @@ function AziendeDashboardContent() {
       if (prev.skills.length >= 3) return prev
       return { ...prev, skills: [...prev.skills, skill] }
     })
+  }
+
+  const handleGenerateReport = async () => {
+    setGeneratingReport(true)
+    try {
+      const token = localStorage.getItem('jwt_access_token')
+      const res = await fetch(`${API_URL}/api/team-reports/${organization.id}/generate`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await res.json()
+      if (data.success) {
+        setTeamReport(data.report)
+        setMessage({ type: 'success', text: 'Report generato con successo!' })
+      } else {
+        setMessage({ type: 'error', text: data.message || 'Errore nella generazione' })
+      }
+    } catch {
+      setMessage({ type: 'error', text: 'Errore nella generazione del report' })
+    } finally {
+      setGeneratingReport(false)
+    }
   }
 
   const exportFocusCSV = (config: FocusConfig) => {
@@ -344,7 +385,8 @@ function AziendeDashboardContent() {
     { key: 'overview',    label: 'Overview' },
     { key: 'candidates',  label: `Candidati (${candidates.length})` },
     { key: 'compare',     label: `Confronto${selected.size >= 2 ? ` (${selected.size})` : ''}`, hidden: selected.size < 2 },
-    { key: 'focus',       label: `Focus${focusConfigs.length > 0 ? ` (${focusConfigs.length})` : ''}` },
+    { key: 'focus',        label: `Focus${focusConfigs.length > 0 ? ` (${focusConfigs.length})` : ''}` },
+    { key: 'team-report', label: 'Report di Team' },
     { key: 'new-invite',  label: 'Nuovo Invito' },
   ]
 
@@ -905,6 +947,190 @@ function AziendeDashboardContent() {
               )}
             </div>
           )}
+
+          {/* ── REPORT DI TEAM ──── */}
+          {activeTab === 'team-report' && (() => {
+            const completedBase = candidates.filter((c: any) => !c.focus_config_id)
+            const report = teamReport
+            const reportData = report?.report_data
+
+            if (loadingTeamReport) {
+              return (
+                <div className="p-10 flex items-center justify-center">
+                  <div className="text-center space-y-3">
+                    <div className="w-7 h-7 border-2 border-ink-900 border-t-transparent rounded-full animate-spin mx-auto" />
+                    <p className="text-[13px] text-ink-400">Caricamento report…</p>
+                  </div>
+                </div>
+              )
+            }
+
+            return (
+              <div className="p-6 space-y-6">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="font-display text-[18px] font-medium text-ink-900">Report di Team</h2>
+                    <p className="text-[12px] text-ink-500 mt-0.5">
+                      Analisi aggregata AI sui candidati base completati
+                    </p>
+                  </div>
+                  {report && (
+                    <Button
+                      variant="secondary"
+                      className="flex items-center gap-2 text-[13px]"
+                      onClick={handleGenerateReport}
+                      disabled={generatingReport || completedBase.length < 3}
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${generatingReport ? 'animate-spin' : ''}`} />
+                      Aggiorna report
+                    </Button>
+                  )}
+                </div>
+
+                {/* Stato: meno di 3 candidati */}
+                {completedBase.length < 3 ? (
+                  <div className="text-center py-14 border border-dashed border-paper-300 rounded-md space-y-4">
+                    <FileText className="w-8 h-8 text-ink-300 mx-auto" />
+                    <div>
+                      <p className="text-[15px] font-medium text-ink-700 mb-1">Report non disponibile</p>
+                      <p className="text-[13px] text-ink-400">
+                        Servono almeno 3 candidati con assessment base completato.
+                        Attualmente: <span className="font-medium text-ink-700">{completedBase.length}</span>.
+                      </p>
+                    </div>
+                    <Button variant="primary" disabled className="opacity-40 cursor-not-allowed">
+                      Genera Report
+                    </Button>
+                  </div>
+                ) : !report ? (
+                  /* Stato: candidati sufficienti, nessun report ancora */
+                  <div className="text-center py-14 border border-dashed border-paper-300 rounded-md space-y-4">
+                    <FileText className="w-8 h-8 text-ink-300 mx-auto" />
+                    <div>
+                      <p className="text-[15px] font-medium text-ink-700 mb-1">Nessun report generato</p>
+                      <p className="text-[13px] text-ink-400">
+                        Hai <span className="font-medium text-ink-700">{completedBase.length}</span> candidati completati. Genera il report AI del team.
+                      </p>
+                    </div>
+                    <Button variant="primary" onClick={handleGenerateReport} disabled={generatingReport}>
+                      {generatingReport
+                        ? <><span className="w-4 h-4 border-2 border-paper-50 border-t-transparent rounded-full animate-spin inline-block mr-2" />Generazione in corso…</>
+                        : 'Genera Report'
+                      }
+                    </Button>
+                  </div>
+                ) : (
+                  /* Stato: report disponibile */
+                  <div className="space-y-4">
+                    {/* Meta */}
+                    <div className="flex items-center gap-3 text-[12px] text-ink-400">
+                      <span>Basato su <span className="font-medium text-ink-700">{report.candidate_count}</span> candidati</span>
+                      <span>·</span>
+                      <span>Generato il {new Date(report.generated_at).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                    </div>
+
+                    {/* Summary */}
+                    <div className="bg-paper-100 border border-paper-200 rounded-md p-5">
+                      <p className="text-[11px] font-semibold uppercase tracking-eyebrow text-ink-400 mb-3">Sintesi</p>
+                      <p className="text-[14px] text-ink-800 leading-relaxed">{reportData?.summary}</p>
+                    </div>
+
+                    {/* Strengths */}
+                    {reportData?.strengths?.length > 0 && (
+                      <div className="bg-paper-100 border border-paper-200 rounded-md p-5">
+                        <p className="text-[11px] font-semibold uppercase tracking-eyebrow text-ink-400 mb-4">Punti di Forza</p>
+                        <div className="space-y-4">
+                          {reportData.strengths.map((s: any, i: number) => {
+                            const pct = Math.round((Number(s.avg_score) / 5) * 100)
+                            const { bg } = (() => {
+                              const v = Number(s.avg_score)
+                              if (v >= 4.1) return { bg: '#1B4332' }
+                              if (v >= 3.1) return { bg: '#2D6A4F' }
+                              if (v >= 2.1) return { bg: '#D4A017' }
+                              return { bg: '#C0392B' }
+                            })()
+                            return (
+                              <div key={i}>
+                                <div className="flex items-center justify-between mb-1.5">
+                                  <span className="text-[14px] font-medium text-ink-900">{s.label}</span>
+                                  <span className="font-mono text-[13px] font-semibold text-ink-700">{Number(s.avg_score).toFixed(2)}</span>
+                                </div>
+                                <div className="w-full bg-paper-200 rounded-sm h-2 mb-2">
+                                  <div className="h-2 rounded-sm" style={{ width: `${pct}%`, backgroundColor: bg }} />
+                                </div>
+                                {s.note && <p className="text-[12px] text-ink-500">{s.note}</p>}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Gaps */}
+                    {reportData?.gaps?.length > 0 && (
+                      <div className="bg-paper-100 border border-paper-200 rounded-md p-5">
+                        <p className="text-[11px] font-semibold uppercase tracking-eyebrow text-ink-400 mb-4">Aree di Sviluppo</p>
+                        <div className="space-y-4">
+                          {reportData.gaps.map((g: any, i: number) => {
+                            const pct = Math.round((Number(g.avg_score) / 5) * 100)
+                            const { bg } = (() => {
+                              const v = Number(g.avg_score)
+                              if (v >= 4.1) return { bg: '#1B4332' }
+                              if (v >= 3.1) return { bg: '#2D6A4F' }
+                              if (v >= 2.1) return { bg: '#D4A017' }
+                              return { bg: '#C0392B' }
+                            })()
+                            return (
+                              <div key={i}>
+                                <div className="flex items-center justify-between mb-1.5">
+                                  <span className="text-[14px] font-medium text-ink-900">{g.label}</span>
+                                  <span className="font-mono text-[13px] font-semibold text-ink-700">{Number(g.avg_score).toFixed(2)}</span>
+                                </div>
+                                <div className="w-full bg-paper-200 rounded-sm h-2 mb-2">
+                                  <div className="h-2 rounded-sm" style={{ width: `${pct}%`, backgroundColor: bg }} />
+                                </div>
+                                {g.note && <p className="text-[12px] text-ink-500">{g.note}</p>}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Outliers */}
+                    {reportData?.outliers && (
+                      <div className="bg-paper-100 border border-paper-200 rounded-md p-5">
+                        <p className="text-[11px] font-semibold uppercase tracking-eyebrow text-ink-400 mb-3">Profili Anomali</p>
+                        <p className="text-[14px] text-ink-800 leading-relaxed">{reportData.outliers}</p>
+                      </div>
+                    )}
+
+                    {/* Recommendation */}
+                    {reportData?.recommendation && (
+                      <div className="bg-paper-50 border-l-4 border-sienna-600 rounded-sm p-5">
+                        <p className="text-[11px] font-semibold uppercase tracking-eyebrow text-sienna-600 mb-3">Raccomandazione HR</p>
+                        <p className="text-[14px] text-ink-800 leading-relaxed">{reportData.recommendation}</p>
+                      </div>
+                    )}
+
+                    {/* Genera di nuovo */}
+                    <div className="pt-2 flex justify-end">
+                      <Button
+                        variant="secondary"
+                        className="flex items-center gap-2 text-[13px]"
+                        onClick={handleGenerateReport}
+                        disabled={generatingReport}
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${generatingReport ? 'animate-spin' : ''}`} />
+                        {generatingReport ? 'Aggiornamento…' : 'Aggiorna report'}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })()}
 
           {/* ── NUOVO INVITO ──── */}
           {activeTab === 'new-invite' && (
