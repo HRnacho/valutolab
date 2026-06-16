@@ -67,24 +67,24 @@ router.post('/:orgId/generate', verifyToken, async (req, res) => {
       return res.status(403).json({ success: false, message: 'Accesso non autorizzato' });
     }
 
-    // Recupera candidati base completati con punteggi
+    // Recupera candidati base completati con punteggi aggregati per skill
     const candidatesResult = await db.query(
       `SELECT
          ci.candidate_name,
          ci.candidate_email,
          a.id AS assessment_id,
-         a.completed_at,
-         car.final_score,
-         car.likert_score,
-         car.sjt_score,
-         car.skill_scores
+         ci.completed_at,
+         a.total_score AS final_score,
+         json_object_agg(car.skill_category, car.final_score) AS skill_scores
        FROM candidate_invites ci
-       JOIN assessments a ON a.invite_id = ci.id
+       JOIN assessments a ON ci.assessment_id = a.id
        JOIN combined_assessment_results car ON car.assessment_id = a.id
        WHERE ci.organization_id = $1
-         AND a.assessment_type = 'base'
-         AND a.status = 'completed'
-       ORDER BY a.completed_at DESC`,
+         AND ci.status = 'completed'
+         AND (a.assessment_type = 'base' OR a.assessment_type IS NULL)
+         AND ci.focus_config_id IS NULL
+       GROUP BY ci.candidate_name, ci.candidate_email, a.id, ci.completed_at, a.total_score
+       ORDER BY ci.completed_at DESC`,
       [orgId]
     );
 
