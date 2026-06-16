@@ -257,22 +257,24 @@ router.get('/:orgId/pdf', verifyToken, async (req, res, next) => {
       const rows = data.candidate_scores.map(c => {
         const cells = skillLabels.map(label => {
           const v = c.scores[label];
-          if (v == null) return '<td style="padding:6px 8px;text-align:center;font-size:11px;color:#aaa;">N/D</td>';
+          if (v == null) return '<td style="padding:5px 4px;text-align:center;font-size:10px;color:#aaa;">N/D</td>';
           const esco = escoLevel(v);
-          return `<td style="padding:6px 8px;text-align:center;font-size:11px;font-family:monospace;font-weight:600;background:${esco.color};color:#fff;border-radius:3px;">${v.toFixed(2)}</td>`;
+          return `<td style="padding:5px 4px;text-align:center;font-size:10px;font-family:monospace;font-weight:700;background:${esco.color};color:#fff;border-radius:3px;">${v.toFixed(2)}</td>`;
         }).join('');
-        return `<tr><td style="padding:6px 10px;font-size:12px;font-weight:500;color:#1C1917;white-space:nowrap;">${c.name}</td>${cells}</tr>`;
+        return `<tr><td style="padding:5px 6px;font-size:10px;font-weight:500;color:#1C1917;">${c.name}</td>${cells}</tr>`;
       }).join('');
-      const headers = skillLabels.map(l => `<th style="padding:6px 8px;font-size:10px;text-transform:uppercase;color:#6B6560;letter-spacing:.05em;text-align:center;">${l}</th>`).join('');
+      const headers = skillLabels.map(l => `<th style="padding:4px;font-size:9px;text-transform:uppercase;color:#6B6560;letter-spacing:.03em;text-align:center;word-break:break-word;max-width:60px;line-height:1.3;">${l}</th>`).join('');
       return `
-        <div style="background:#FAF7F2;border:1px solid #D4CBBA;border-radius:6px;padding:20px;margin-bottom:20px;">
-          <p style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#6B6560;margin:0 0 14px;">Mappa del Team</p>
-          <div style="overflow-x:auto;">
-            <table style="width:100%;border-collapse:separate;border-spacing:3px;">
-              <thead><tr><th style="padding:6px 10px;text-align:left;font-size:10px;color:#6B6560;"></th>${headers}</tr></thead>
-              <tbody>${rows}</tbody>
-            </table>
-          </div>
+        <div style="background:#FAF7F2;border:1px solid #D4CBBA;border-radius:6px;padding:16px;margin-bottom:20px;">
+          <p style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#6B6560;margin:0 0 12px;">Mappa del Team</p>
+          <table style="width:100%;table-layout:fixed;border-collapse:separate;border-spacing:3px;">
+            <colgroup>
+              <col style="width:22%;">
+              ${skillLabels.map(() => `<col style="width:${(78/skillLabels.length).toFixed(1)}%;">`).join('')}
+            </colgroup>
+            <thead><tr><th style="padding:4px 6px;text-align:left;font-size:9px;color:#6B6560;"></th>${headers}</tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
         </div>`;
     })() : '';
 
