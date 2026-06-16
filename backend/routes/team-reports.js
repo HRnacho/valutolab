@@ -165,16 +165,15 @@ Per strengths e gaps, scegli le 3 competenze con media più alta (strengths) e p
 
     // UPSERT — un report per organizzazione
     const upsertResult = await db.query(
-      `INSERT INTO team_reports (organization_id, candidate_count, report_data, generated_at, generated_by)
-       VALUES ($1, $2, $3, NOW(), $4)
+      `INSERT INTO team_reports (organization_id, candidate_count, report_data, generated_at)
+       VALUES ($1, $2, $3, NOW())
        ON CONFLICT (organization_id)
        DO UPDATE SET
          candidate_count = EXCLUDED.candidate_count,
          report_data = EXCLUDED.report_data,
-         generated_at = NOW(),
-         generated_by = EXCLUDED.generated_by
+         generated_at = NOW()
        RETURNING *`,
-      [orgId, candidates.length, JSON.stringify(reportData), userId]
+      [orgId, candidates.length, JSON.stringify(reportData)]
     );
 
     res.json({ success: true, report: upsertResult.rows[0] });
