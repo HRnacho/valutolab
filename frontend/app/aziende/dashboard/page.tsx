@@ -1165,7 +1165,6 @@ function AziendeDashboardContent() {
                               wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
                               formatter={(value) => value === '_avg' ? null : value}
                             />
-                            <ReferenceLine y={0} stroke="#D4CBBA" />
                             {candidateScores.map((c, idx) => (
                               <Bar key={c.name} dataKey={c.name} fill={CANDIDATE_PALETTE[idx % CANDIDATE_PALETTE.length]} radius={[2, 2, 0, 0]} maxBarSize={18}>
                                 {chartData.map((entry, i) => {
