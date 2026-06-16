@@ -218,6 +218,37 @@ router.get('/:orgId/invites', async (req, res) => {
   }
 });
 
+// DELETE /api/organizations/:orgId/invites/:inviteId
+router.delete('/:orgId/invites/:inviteId', verifyToken, async (req, res) => {
+  const { orgId, inviteId } = req.params;
+  const userId = req.user.supabase_id ?? req.user.id;
+  try {
+    const membership = await db.query(
+      'SELECT id FROM organization_members WHERE organization_id = $1 AND user_id = $2',
+      [orgId, userId]
+    );
+    if (membership.rows.length === 0) {
+      return res.status(403).json({ success: false, message: 'Accesso non autorizzato' });
+    }
+
+    const invite = await db.query(
+      'SELECT id, status FROM candidate_invites WHERE id = $1 AND organization_id = $2',
+      [inviteId, orgId]
+    );
+    if (invite.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Invito non trovato' });
+    }
+    if (invite.rows[0].status === 'completed') {
+      return res.status(400).json({ success: false, message: 'Impossibile eliminare un invito già completato' });
+    }
+
+    await db.query('DELETE FROM candidate_invites WHERE id = $1', [inviteId]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Errore nella cancellazione', error: error.message });
+  }
+});
+
 // GET /api/organizations/invite/:token/validate
 router.get('/invite/:token/validate', async (req, res) => {
   try {

@@ -97,6 +97,7 @@ function AziendeDashboardContent() {
   const [focusInviteModal, setFocusInviteModal] = useState<{ open: boolean; configId: string; configName: string } | null>(null)
   const [focusInviteForm, setFocusInviteForm] = useState({ candidateEmail: '', candidateName: '' })
   const [sendingFocusInvite, setSendingFocusInvite] = useState(false)
+  const [confirmDeleteInvite, setConfirmDeleteInvite] = useState<string | null>(null)
   const [teamReport, setTeamReport]               = useState<any>(null)
   const [loadingTeamReport, setLoadingTeamReport] = useState(false)
   const [generatingReport, setGeneratingReport]   = useState(false)
@@ -258,6 +259,27 @@ function AziendeDashboardContent() {
       if (prev.skills.length >= 3) return prev
       return { ...prev, skills: [...prev.skills, skill] }
     })
+  }
+
+  const handleDeleteInvite = async (inviteId: string) => {
+    try {
+      const token = localStorage.getItem('jwt_access_token')
+      const res = await fetch(`${API_URL}/api/organizations/${organization.id}/invites/${inviteId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await res.json()
+      if (data.success) {
+        setInvites(prev => prev.filter(i => i.id !== inviteId))
+        setMessage({ type: 'success', text: 'Invito eliminato' })
+      } else {
+        setMessage({ type: 'error', text: data.message || 'Errore nella cancellazione' })
+      }
+    } catch {
+      setMessage({ type: 'error', text: 'Errore nella cancellazione' })
+    } finally {
+      setConfirmDeleteInvite(null)
+    }
   }
 
   const handleGenerateReport = async () => {
@@ -657,14 +679,45 @@ function AziendeDashboardContent() {
                   </p>
                   <div className="space-y-2">
                     {invites.filter(i => i.status === 'pending').map(inv => (
-                      <div key={inv.id} className="flex items-center justify-between bg-paper-100 border border-paper-200 rounded-md px-4 py-3">
-                        <div>
-                          <span className="font-medium text-ink-800 text-[13px]">{inv.candidate_name || inv.candidate_email}</span>
-                          <span className="text-ink-500 text-[12px] ml-2">{inv.candidate_email}</span>
-                        </div>
-                        <span className="text-[10px] font-semibold uppercase tracking-eyebrow px-2 py-0.5 rounded-sm border text-level-intermedio bg-amber-50 border-amber-200">
-                          In Attesa
-                        </span>
+                      <div key={inv.id} className="bg-paper-100 border border-paper-200 rounded-md px-4 py-3">
+                        {confirmDeleteInvite === inv.id ? (
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="text-[13px] text-ink-700">Eliminare l&apos;invito di <span className="font-medium">{inv.candidate_name || inv.candidate_email}</span>?</span>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <button
+                                onClick={() => handleDeleteInvite(inv.id)}
+                                className="px-3 py-1 text-[12px] font-medium bg-[#C0392B] text-white rounded-sm hover:bg-red-800 transition-colors"
+                              >
+                                Conferma
+                              </button>
+                              <button
+                                onClick={() => setConfirmDeleteInvite(null)}
+                                className="px-3 py-1 text-[12px] font-medium border border-paper-300 text-ink-600 rounded-sm hover:bg-paper-200 transition-colors"
+                              >
+                                Annulla
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <span className="font-medium text-ink-800 text-[13px]">{inv.candidate_name || inv.candidate_email}</span>
+                              <span className="text-ink-500 text-[12px] ml-2">{inv.candidate_email}</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <span className="text-[10px] font-semibold uppercase tracking-eyebrow px-2 py-0.5 rounded-sm border text-level-intermedio bg-amber-50 border-amber-200">
+                                In Attesa
+                              </span>
+                              <button
+                                onClick={() => setConfirmDeleteInvite(inv.id)}
+                                className="text-ink-400 hover:text-[#C0392B] transition-colors"
+                                title="Elimina invito"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
