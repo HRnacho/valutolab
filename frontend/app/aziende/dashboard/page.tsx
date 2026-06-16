@@ -10,8 +10,8 @@ import {
   Plus, Download, GitCompareArrows, Target, X, Trash2, FileText, RefreshCw,
 } from 'lucide-react'
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, Legend, Cell,
-  ReferenceLine, ResponsiveContainer,
+  ComposedChart, Bar, XAxis, YAxis, Tooltip, Legend, Cell,
+  Line, ResponsiveContainer,
 } from 'recharts'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'
@@ -1143,7 +1143,7 @@ function AziendeDashboardContent() {
                       <div className="bg-paper-100 border border-paper-200 rounded-md p-5">
                         <p className="text-[11px] font-semibold uppercase tracking-eyebrow text-ink-400 mb-5">Mappa del Team</p>
                         <ResponsiveContainer width="100%" height={280}>
-                          <BarChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 60 }}>
+                          <ComposedChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 60 }}>
                             <XAxis
                               dataKey="skill"
                               tick={{ fontSize: 11, fill: '#6B6560' }}
@@ -1174,13 +1174,15 @@ function AziendeDashboardContent() {
                                 })}
                               </Bar>
                             ))}
-                            <ReferenceLine
+                            <Line
                               dataKey="_avg"
                               stroke="#8C8070"
                               strokeDasharray="4 3"
                               strokeWidth={1.5}
+                              dot={false}
+                              name="Media team"
                             />
-                          </BarChart>
+                          </ComposedChart>
                         </ResponsiveContainer>
                         {/* Legenda ESCO */}
                         <div className="flex flex-wrap items-center gap-4 mt-3 pt-3 border-t border-paper-200">
