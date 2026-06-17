@@ -35,8 +35,7 @@ export default function ServiziPage() {
               I nostri servizi
             </h1>
             <p className="text-[16px] text-ink-600 leading-relaxed max-w-xl mx-auto">
-              ValutoLab misura le soft skill professionali attraverso assessment validati sul
-              framework ESCO v1.2, producendo report AI e dati strutturati per professionisti e team HR.
+              ValutoLab misura le soft skill professionali attraverso assessment validati sul framework ESCO v1.2, producendo report con il supporto dell'intelligenza artificiale e dati strutturati per professionisti e team HR.
             </p>
           </div>
         </section>
@@ -57,9 +56,7 @@ export default function ServiziPage() {
               </div>
 
               <p className="text-[15px] text-ink-700 leading-relaxed mb-6">
-                Valutazione completa di 12 competenze trasversali mappate sul framework ESCO v1.2.
-                Al termine ricevi un report AI qualitativo con interpretazioni per competenza,
-                piano di sviluppo personalizzato e badge certificato condivisibile.
+                Il punto di partenza di ValutoLab. Le persone scoprono il proprio profilo di 12 competenze trasversali mappate sul framework ESCO v1.2, con un report AI qualitativo, un piano d'azione personalizzato, un badge certificato per LinkedIn e un QR code da inserire nel CV che certifica le competenze dichiarate. Per le aziende è la base da cui si costruisce ogni analisi successiva: dal confronto candidati al report di team aggregato.
               </p>
 
               <ul className="space-y-2.5 mb-8">
@@ -230,10 +227,7 @@ export default function ServiziPage() {
               </div>
 
               <p className="text-[15px] text-ink-700 leading-relaxed mb-6">
-                Assessment avanzato dedicato a chi gestisce persone. 30 scenari situazionali
-                analizzano 6 dimensioni manageriali — Visione Strategica, People Management,
-                Decisionalità, Change Management, Influenza e Orientamento ai Risultati —
-                con piano d'azione personalizzato.
+                Assessment avanzato che analizza 30 scenari situazionali su 6 dimensioni manageriali — Visione Strategica, People Management, Decisionalità, Change Management, Influenza e Orientamento ai Risultati. Utile sia per chi già gestisce persone sia per valutare la nomina a un ruolo di responsabilità, anticipando lo stile di leadership che la persona esprimerà.
               </p>
 
               <ul className="space-y-2.5 mb-8">
