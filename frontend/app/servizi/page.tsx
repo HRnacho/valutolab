@@ -1,194 +1,333 @@
-'use client'
-
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAuth } from '@/lib/AuthContext'
-import { api } from '@/lib/api'
+import Link from 'next/link'
 import { Wordmark } from '@/components/ui/Wordmark'
-import { Button } from '@/components/ui/Button'
-import { ArrowLeft, CheckCircle, Star } from 'lucide-react'
+import { CheckCircle, Download, Mail, Users, Target, Award } from 'lucide-react'
 
 export default function ServiziPage() {
-  const router = useRouter()
-  const { user, loading } = useAuth()
-
-  useEffect(() => { router.replace('/') }, [router])
-
-  useEffect(() => {
-    if (!loading && !user) router.push('/login')
-  }, [user, loading, router])
-
-  const handleStartBaseAssessment = async () => {
-    try {
-      const res = await api.assessments.create()
-      router.push(`/assessment/${res.assessment.id}`)
-    } catch {
-      alert("Errore nell'avvio dell'assessment base")
-    }
-  }
-
-  const handleStartLeadershipAssessment = async () => {
-    if (!user) { router.push('/login'); return }
-    try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.valutolab.com'
-      const response = await fetch(`${apiUrl}/api/leadership/start`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id })
-      })
-      const data = await response.json()
-      if (!data.success) throw new Error(data.message)
-      router.push(`/leadership/${data.assessment.id}`)
-    } catch {
-      alert("Errore nell'avvio del Leadership Assessment")
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-paper-100">
-        <div className="text-center">
-          <div className="w-8 h-8 border-2 border-ink-900 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="mt-4 font-body text-[14px] text-ink-500">Caricamento…</p>
-        </div>
-      </div>
-    )
-  }
-
-  const baseFeatures = [
-    '48 domande su 12 categorie di soft skills',
-    'Report AI personalizzato con profilo professionale',
-    'Certificato PDF scaricabile e condivisibile',
-    'Badge LinkedIn professionale',
-    'Profilo pubblico con QR code',
-  ]
-
-  const leadershipFeatures = [
-    '30 scenari situazionali specifici per leader',
-    '6 dimensioni leadership: Visione, People Mgmt, Decisionalità, Change, Influenza, Risultati',
-    'Identificazione stile di leadership (Trasformazionale, Servant, ecc.)',
-    'Piano d\'azione personalizzato con azioni concrete',
-    'Report AI avanzato con benchmark e insights',
-    'Risorse consigliate (libri, corsi)',
-  ]
-
   return (
     <div className="min-h-screen bg-paper-100 font-body text-ink-900">
 
-      {/* ── HEADER ─────────────────────────────────────────────────── */}
+      {/* Header */}
       <header className="bg-paper-50 border-b border-paper-200 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <Wordmark size={20} />
-            <button onClick={() => router.push('/dashboard')}
-              className="flex items-center gap-1.5 text-[13px] text-ink-500 hover:text-ink-900 transition-colors">
-              <ArrowLeft className="w-3.5 h-3.5" /> Dashboard
-            </button>
+            <Link href="/"><Wordmark size={20} /></Link>
+            <nav className="flex items-center gap-6">
+              <Link href="/trial" className="text-[13px] font-medium text-sienna-600 hover:text-sienna-800 transition-colors">
+                Prova gratuitamente
+              </Link>
+              <Link href="/aziende-trial" className="text-[13px] text-ink-500 hover:text-ink-900 transition-colors">
+                Per le aziende
+              </Link>
+            </nav>
           </div>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-6 lg:px-8 py-12 space-y-10">
+      <main>
 
-        {/* ── TITLE ──────────────────────────────────────────────────── */}
-        <div className="text-center max-w-2xl mx-auto">
-          <p className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400 mb-2">Percorsi di Valutazione</p>
-          <h1 className="font-display text-display-2 text-ink-900 mb-3">Scegli il Tuo Assessment</h1>
-          <p className="text-[16px] text-ink-600">Seleziona il percorso di valutazione più adatto alle tue esigenze</p>
-        </div>
-
-        {/* ── CARDS ──────────────────────────────────────────────────── */}
-        <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-
-          {/* Assessment Base */}
-          <div className="bg-paper-50 border border-paper-200 rounded-md shadow-sm-ink overflow-hidden flex flex-col">
-            <div className="bg-ink-900 p-8">
-              <div className="w-12 h-12 bg-ink-800 rounded-md flex items-center justify-center mb-5">
-                <CheckCircle className="w-6 h-6 text-paper-300" />
-              </div>
-              <h2 className="font-display text-[26px] text-paper-50 mb-1">Assessment Base</h2>
-              <p className="text-[13px] text-ink-400 mb-6">Valutazione completa delle soft skills</p>
-              <div className="border-t border-ink-700 pt-6">
-                <div className="flex items-baseline gap-1">
-                  <span className="font-display text-[42px] leading-none text-paper-50">€49</span>
-                  <span className="text-[13px] text-ink-400">pagamento unico</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-8 flex flex-col flex-1">
-              <ul className="space-y-3 mb-8 flex-1">
-                {baseFeatures.map(f => (
-                  <li key={f} className="flex items-start gap-3">
-                    <CheckCircle className="w-4 h-4 text-level-avanzato flex-shrink-0 mt-0.5" />
-                    <span className="text-[13px] text-ink-700" dangerouslySetInnerHTML={{ __html: f.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
-                  </li>
-                ))}
-              </ul>
-              <Button variant="primary" className="w-full justify-center" onClick={handleStartBaseAssessment}>
-                Inizia Assessment Base
-              </Button>
-            </div>
+        {/* Hero */}
+        <section className="bg-paper-50 border-b border-paper-200 py-16 px-6">
+          <div className="max-w-3xl mx-auto text-center">
+            <p className="text-[11px] font-semibold uppercase tracking-eyebrow text-sienna-600 mb-3">
+              Piattaforma di valutazione
+            </p>
+            <h1 className="font-display text-display-2 text-ink-900 mb-4">
+              I nostri servizi
+            </h1>
+            <p className="text-[16px] text-ink-600 leading-relaxed max-w-xl mx-auto">
+              ValutoLab misura le soft skill professionali attraverso assessment validati sul
+              framework ESCO v1.2, producendo report AI e dati strutturati per professionisti e team HR.
+            </p>
           </div>
+        </section>
 
-          {/* Leadership Deep Dive */}
-          <div className="bg-paper-50 border-2 border-level-intermedio rounded-md shadow-md-ink overflow-hidden flex flex-col relative">
-            <div className="absolute top-4 right-4">
-              <span className="text-[10px] font-semibold uppercase tracking-eyebrow px-2.5 py-1 rounded-sm border text-level-intermedio bg-amber-50 border-amber-300 flex items-center gap-1">
-                <Star className="w-3 h-3" /> Premium
-              </span>
-            </div>
+        {/* Servizio 1 — Assessment Base */}
+        <section className="py-16 px-6 border-b border-paper-200">
+          <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-12 items-start">
 
-            <div className="bg-ink-900 p-8 pt-12">
-              <div className="w-12 h-12 bg-ink-800 rounded-md flex items-center justify-center mb-5">
-                <Star className="w-6 h-6 text-amber-400" />
-              </div>
-              <h2 className="font-display text-[26px] text-paper-50 mb-1">Leadership Deep Dive</h2>
-              <p className="text-[13px] text-ink-400 mb-6">Analisi avanzata delle competenze di leadership</p>
-              <div className="border-t border-ink-700 pt-6">
-                <div className="flex items-baseline gap-1">
-                  <span className="font-display text-[42px] leading-none text-paper-50">€79</span>
-                  <span className="text-[13px] text-ink-400">pagamento unico</span>
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-ink-900 rounded-sm flex items-center justify-center flex-shrink-0">
+                  <Award className="w-5 h-5 text-paper-100" />
+                </div>
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-eyebrow text-ink-400">Per professionisti</p>
+                  <h2 className="font-display text-[26px] text-ink-900 leading-tight">Assessment Base</h2>
                 </div>
               </div>
-            </div>
 
-            <div className="p-8 flex flex-col flex-1">
-              <ul className="space-y-3 mb-8 flex-1">
-                {leadershipFeatures.map(f => (
-                  <li key={f} className="flex items-start gap-3">
-                    <CheckCircle className="w-4 h-4 text-level-avanzato flex-shrink-0 mt-0.5" />
+              <p className="text-[15px] text-ink-700 leading-relaxed mb-6">
+                Valutazione completa di 12 competenze trasversali mappate sul framework ESCO v1.2.
+                Al termine ricevi un report AI qualitativo con interpretazioni per competenza,
+                piano di sviluppo personalizzato e badge certificato condivisibile.
+              </p>
+
+              <ul className="space-y-2.5 mb-8">
+                {[
+                  '12 competenze trasversali su scala ESCO 1–5',
+                  'Report AI qualitativo con profilo professionale',
+                  'Piano di sviluppo a 90 giorni',
+                  'Badge certificato e profilo pubblico con QR code',
+                  'Export PDF scaricabile',
+                ].map(f => (
+                  <li key={f} className="flex items-start gap-2.5">
+                    <CheckCircle className="w-4 h-4 text-[#2D6A4F] flex-shrink-0 mt-0.5" />
                     <span className="text-[13px] text-ink-700">{f}</span>
                   </li>
                 ))}
               </ul>
-              <Button variant="accent" className="w-full justify-center" onClick={handleStartLeadershipAssessment}>
-                Inizia Leadership Assessment
-              </Button>
-              <p className="text-center text-[11px] text-ink-400 mt-3">💳 Pagamento sicuro con Stripe (prossimamente)</p>
+
+              <p className="text-[12px] text-ink-400 mb-5">
+                Ideale per professionisti, candidati in cerca di lavoro e chiunque voglia conoscere il proprio profilo di competenze.
+              </p>
+
+              <div className="flex flex-wrap gap-3">
+                <Link
+                  href="/demo/report-assessment-base-demo.pdf"
+                  target="_blank"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 border border-paper-300 bg-paper-50 text-ink-700 text-[13px] font-medium rounded-sm hover:bg-paper-200 transition-colors"
+                >
+                  <Download className="w-4 h-4" />
+                  Scarica report di esempio
+                </Link>
+                <Link
+                  href="/trial"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-ink-900 text-paper-50 text-[13px] font-medium rounded-sm hover:bg-ink-700 transition-colors"
+                >
+                  Prova gratuitamente
+                </Link>
+              </div>
+            </div>
+
+            {/* Preview card */}
+            <div className="bg-paper-50 border border-paper-200 rounded-md shadow-sm-ink p-6 space-y-4">
+              <p className="text-[11px] font-semibold uppercase tracking-eyebrow text-ink-400">Competenze valutate</p>
+              <div className="space-y-3">
+                {[
+                  { label: 'Problem Solving',  score: 4.2, color: '#1B4332' },
+                  { label: 'Resilienza',       score: 4.2, color: '#1B4332' },
+                  { label: 'Adattabilità',     score: 4.0, color: '#2D6A4F' },
+                  { label: 'Comunicazione',    score: 3.9, color: '#2D6A4F' },
+                  { label: 'Leadership',       score: 3.9, color: '#2D6A4F' },
+                  { label: 'Decision Making',  score: 3.8, color: '#2D6A4F' },
+                ].map(({ label, score, color }) => (
+                  <div key={label}>
+                    <div className="flex justify-between mb-1">
+                      <span className="text-[12px] text-ink-700">{label}</span>
+                      <span className="text-[12px] font-mono font-semibold text-ink-700">{score.toFixed(1)}</span>
+                    </div>
+                    <div className="w-full bg-paper-200 rounded-sm h-1.5">
+                      <div className="h-1.5 rounded-sm" style={{ width: `${(score / 5) * 100}%`, backgroundColor: color }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[11px] text-ink-400 pt-1">Esempio di report — Mario Rossi, Professionista Mid-Level</p>
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* ── BUNDLE ─────────────────────────────────────────────────── */}
-        <div className="max-w-3xl mx-auto bg-ink-900 rounded-md p-8 text-center">
-          <p className="text-[11px] font-medium uppercase tracking-eyebrow text-ink-400 mb-3">Offerta Bundle</p>
-          <h3 className="font-display text-display-3 text-paper-50 mb-2">Bundle Completo</h3>
-          <p className="text-[14px] text-ink-400 mb-6">Assessment Base + Leadership Deep Dive</p>
-          <div className="flex items-center justify-center gap-4 mb-6">
-            <span className="font-body text-[18px] line-through text-ink-500">€128</span>
-            <span className="font-display text-[48px] leading-none text-paper-50">€99</span>
-            <span className="text-[10px] font-semibold uppercase tracking-eyebrow px-2.5 py-1 rounded-sm border text-level-intermedio bg-amber-900/30 border-amber-700">
-              Risparmia €29
-            </span>
+        {/* Servizio 2 — Focus Assessment */}
+        <section className="py-16 px-6 border-b border-paper-200 bg-paper-50">
+          <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-12 items-start">
+
+            {/* Preview card */}
+            <div className="bg-paper-100 border border-paper-200 rounded-md shadow-sm-ink p-6 space-y-4 order-2 md:order-1">
+              <p className="text-[11px] font-semibold uppercase tracking-eyebrow text-ink-400">Esempio analisi team — 8 candidati</p>
+              <div className="space-y-3">
+                {[
+                  { name: 'Alessandro C.',  score: 3.5, color: '#2D6A4F' },
+                  { name: 'Marco F.',       score: 3.15, color: '#2D6A4F' },
+                  { name: 'Chiara D.',      score: 3.15, color: '#2D6A4F' },
+                  { name: 'Valentina M.',   score: 2.98, color: '#D4A017' },
+                  { name: 'Giulia R.',      score: 2.98, color: '#D4A017' },
+                  { name: 'Davide R.',      score: 2.63, color: '#D4A017' },
+                  { name: 'Luca E.',        score: 2.10, color: '#D4A017' },
+                  { name: 'Sara B.',        score: 1.75, color: '#C0392B' },
+                ].map(({ name, score, color }) => (
+                  <div key={name} className="flex items-center gap-3">
+                    <span className="text-[12px] text-ink-600 w-32 flex-shrink-0">{name}</span>
+                    <div className="flex-1 bg-paper-200 rounded-sm h-4 relative">
+                      <div className="h-4 rounded-sm" style={{ width: `${(score / 5) * 100}%`, backgroundColor: color }} />
+                    </div>
+                    <span className="font-mono text-[11px] text-ink-700 w-8 text-right flex-shrink-0">{score.toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[11px] text-ink-400 pt-1">Competenza: Leadership · Azienda Demo ValutoLab</p>
+            </div>
+
+            <div className="order-1 md:order-2">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-sienna-600 rounded-sm flex items-center justify-center flex-shrink-0">
+                  <Target className="w-5 h-5 text-paper-100" />
+                </div>
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-eyebrow text-ink-400">Per aziende HR</p>
+                  <h2 className="font-display text-[26px] text-ink-900 leading-tight">Focus Assessment</h2>
+                </div>
+              </div>
+
+              <p className="text-[15px] text-ink-700 leading-relaxed mb-6">
+                Valutazione mirata su 1–3 competenze scelte dall'HR, ideale per screening e selezione
+                su ruoli specifici. Genera report aggregati di team con analisi AI, mappa delle
+                competenze e raccomandazioni per il responsabile HR.
+              </p>
+
+              <ul className="space-y-2.5 mb-8">
+                {[
+                  'Selezione di 1–3 competenze target per ogni processo',
+                  'Inviti personalizzati per ogni candidato',
+                  'Dashboard HR con confronto candidati',
+                  'Report di team aggregato con analisi AI',
+                  'Export CSV e PDF del report aggregato',
+                ].map(f => (
+                  <li key={f} className="flex items-start gap-2.5">
+                    <CheckCircle className="w-4 h-4 text-[#2D6A4F] flex-shrink-0 mt-0.5" />
+                    <span className="text-[13px] text-ink-700">{f}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <p className="text-[12px] text-ink-400 mb-5">
+                Per aziende HR che valutano candidati su competenze specifiche di ruolo.
+              </p>
+
+              <div className="flex flex-wrap gap-3">
+                <Link
+                  href="/demo/report-team-demo.pdf"
+                  target="_blank"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 border border-paper-300 bg-paper-100 text-ink-700 text-[13px] font-medium rounded-sm hover:bg-paper-200 transition-colors"
+                >
+                  <Download className="w-4 h-4" />
+                  Scarica report di esempio
+                </Link>
+                <a
+                  href="mailto:info@valutolab.com?subject=Informazioni Focus Assessment"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 border border-sienna-600 text-sienna-600 text-[13px] font-medium rounded-sm hover:bg-sienna-50 transition-colors"
+                >
+                  <Mail className="w-4 h-4" />
+                  Richiedi informazioni
+                </a>
+              </div>
+            </div>
           </div>
-          <button onClick={() => alert('Bundle in arrivo prossimamente!')}
-            className="bg-paper-50 text-ink-900 font-medium text-[14px] px-8 py-3 rounded-sm hover:bg-paper-200 transition-colors">
-            Acquista Bundle (Presto Disponibile)
-          </button>
-        </div>
+        </section>
+
+        {/* Servizio 3 — Leadership Deep Dive */}
+        <section className="py-16 px-6">
+          <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-12 items-start">
+
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-ink-900 rounded-sm flex items-center justify-center flex-shrink-0">
+                  <Users className="w-5 h-5 text-paper-100" />
+                </div>
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-eyebrow text-ink-400">Per manager e team leader</p>
+                  <h2 className="font-display text-[26px] text-ink-900 leading-tight">Leadership Deep Dive</h2>
+                </div>
+              </div>
+
+              <p className="text-[15px] text-ink-700 leading-relaxed mb-6">
+                Assessment avanzato dedicato a chi gestisce persone. 30 scenari situazionali
+                analizzano 6 dimensioni manageriali — Visione Strategica, People Management,
+                Decisionalità, Change Management, Influenza e Orientamento ai Risultati —
+                con piano d'azione personalizzato.
+              </p>
+
+              <ul className="space-y-2.5 mb-8">
+                {[
+                  '30 scenari situazionali specifici per leader',
+                  '6 dimensioni manageriali con benchmark',
+                  'Identificazione dello stile di leadership prevalente',
+                  'Piano d\'azione con azioni concrete e risorse',
+                  'Report AI avanzato con insights comportamentali',
+                ].map(f => (
+                  <li key={f} className="flex items-start gap-2.5">
+                    <CheckCircle className="w-4 h-4 text-[#2D6A4F] flex-shrink-0 mt-0.5" />
+                    <span className="text-[13px] text-ink-700">{f}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <p className="text-[12px] text-ink-400 mb-5">
+                Per manager, team leader e chiunque gestisca persone o aspiri a ruoli di guida.
+              </p>
+
+              <a
+                href="mailto:info@valutolab.com?subject=Informazioni Leadership Deep Dive"
+                className="inline-flex items-center gap-2 px-4 py-2.5 border border-paper-300 bg-paper-50 text-ink-700 text-[13px] font-medium rounded-sm hover:bg-paper-200 transition-colors"
+              >
+                <Mail className="w-4 h-4" />
+                Richiedi informazioni
+              </a>
+            </div>
+
+            {/* Dimensioni card */}
+            <div className="bg-paper-50 border border-paper-200 rounded-md shadow-sm-ink p-6">
+              <p className="text-[11px] font-semibold uppercase tracking-eyebrow text-ink-400 mb-5">6 dimensioni analizzate</p>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  'Visione Strategica',
+                  'People Management',
+                  'Decisionalità',
+                  'Change Management',
+                  'Influenza',
+                  'Orientamento ai Risultati',
+                ].map(dim => (
+                  <div key={dim} className="bg-paper-100 border border-paper-200 rounded-sm px-3 py-2.5">
+                    <span className="text-[12px] font-medium text-ink-800">{dim}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-5 pt-5 border-t border-paper-200">
+                <p className="text-[12px] text-ink-500 leading-relaxed">
+                  Ogni dimensione è analizzata attraverso scenari comportamentali realistici
+                  calibrati su contesti manageriali italiani.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* CTA bottom */}
+        <section className="bg-ink-900 py-14 px-6">
+          <div className="max-w-2xl mx-auto text-center">
+            <p className="text-[11px] font-semibold uppercase tracking-eyebrow text-ink-400 mb-3">Inizia ora</p>
+            <h2 className="font-display text-display-3 text-paper-50 mb-3">Scopri il tuo profilo di competenze</h2>
+            <p className="text-[14px] text-ink-400 mb-8">
+              L'Assessment Base è gratuito. Completa il questionario e ricevi il tuo report in pochi minuti.
+            </p>
+            <div className="flex flex-wrap justify-center gap-3">
+              <Link
+                href="/trial"
+                className="px-6 py-3 bg-paper-50 text-ink-900 text-[14px] font-semibold rounded-sm hover:bg-paper-200 transition-colors"
+              >
+                Prova gratuitamente
+              </Link>
+              <Link
+                href="/aziende-trial"
+                className="px-6 py-3 border border-ink-600 text-ink-300 text-[14px] font-medium rounded-sm hover:border-ink-400 hover:text-paper-50 transition-colors"
+              >
+                Soluzione per aziende
+              </Link>
+            </div>
+          </div>
+        </section>
 
       </main>
+
+      {/* Footer minimo */}
+      <footer className="bg-paper-50 border-t border-paper-200 py-6 px-6">
+        <div className="max-w-5xl mx-auto flex items-center justify-between">
+          <Wordmark size={16} />
+          <p className="text-[11px] text-ink-400">
+            <a href="mailto:info@valutolab.com" className="hover:text-ink-700 transition-colors">info@valutolab.com</a>
+          </p>
+        </div>
+      </footer>
+
     </div>
   )
 }
