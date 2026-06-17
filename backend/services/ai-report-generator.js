@@ -410,7 +410,7 @@ async function getAssessmentData(assessmentId) {
   return {
     assessment,
     categoryScores,
-    overallScore: assessment.total_score,
+    overallScore: parseFloat(assessment.total_score),
     userId: assessment.user_id
   };
 }
