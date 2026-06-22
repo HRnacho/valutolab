@@ -1,250 +1,234 @@
 import express from 'express';
-import { createClient } from '@supabase/supabase-js';
 import Anthropic from '@anthropic-ai/sdk';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import db from '../config/database.js';
 
 const router = express.Router();
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname  = path.dirname(__filename);
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+// Carica le domande una sola volta in memoria
+const questionsData = JSON.parse(
+  fs.readFileSync(path.join(__dirname, '../data/leadership_questions.json'), 'utf8')
 );
-
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY
+// Mappa question_id → { dimension, pesi } per il calcolo
+const questionsMap = {};
+questionsData.leadership_assessment.questions.forEach(q => {
+  questionsMap[q.id] = { dimension: q.dimension, pesi: q.pesi };
 });
 
-router.get('/questions', async (req, res) => {
-  try {
-    const questionsPath = path.join(__dirname, '../data/leadership_questions.json');
-    const questionsData = JSON.parse(fs.readFileSync(questionsPath, 'utf8'));
-    
-    res.json({
-      success: true,
-      data: questionsData.leadership_assessment
-    });
-  } catch (error) {
-    console.error('Error loading leadership questions:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Errore nel caricamento delle domande'
-    });
-  }
+// GET /api/leadership/questions
+router.get('/questions', (req, res) => {
+  res.json({ success: true, data: questionsData.leadership_assessment });
 });
 
+// POST /api/leadership/start
 router.post('/start', async (req, res) => {
   try {
     const { userId } = req.body;
-
     if (!userId) {
-      return res.status(400).json({
-        success: false,
-        message: 'User ID richiesto'
-      });
+      return res.status(400).json({ success: false, message: 'User ID richiesto' });
     }
 
-    const { data: assessment, error } = await supabase
-      .from('leadership_assessments')
-      .insert({
-        user_id: userId,
-        status: 'in_progress'
-      })
-      .select()
-      .single();
+    const { rows } = await db.query(
+      `INSERT INTO leadership_assessments (user_id, status)
+       VALUES ($1, 'in_progress')
+       RETURNING *`,
+      [userId]
+    );
 
-    if (error) throw error;
-
-    res.json({
-      success: true,
-      assessment
-    });
+    res.json({ success: true, assessment: rows[0] });
   } catch (error) {
     console.error('Error starting leadership assessment:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Errore nella creazione dell\'assessment'
-    });
+    res.status(500).json({ success: false, message: "Errore nella creazione dell'assessment" });
   }
 });
 
+// POST /api/leadership/:assessmentId/response
+// Frontend invia { questionId, dimension, answer, score } ma la tabella locale
+// salva solo question_id e answer (A/B/C/D) — dimension e score vengono dal JSON
 router.post('/:assessmentId/response', async (req, res) => {
   try {
     const { assessmentId } = req.params;
-    const { questionId, dimension, answer, score } = req.body;
+    const { questionId, answer } = req.body;
 
-    if (!questionId || !dimension || !answer || !score) {
-      return res.status(400).json({
-        success: false,
-        message: 'Dati mancanti'
-      });
+    if (!questionId || !answer) {
+      return res.status(400).json({ success: false, message: 'Dati mancanti' });
     }
 
-    const { data, error } = await supabase
-      .from('leadership_responses')
-      .upsert({
-        assessment_id: assessmentId,
-        question_id: questionId,
-        dimension: dimension,
-        answer: answer,
-        score: score
-      }, {
-        onConflict: 'assessment_id,question_id'
-      })
-      .select()
-      .single();
+    const { rows } = await db.query(
+      `INSERT INTO leadership_responses (assessment_id, question_id, answer)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (assessment_id, question_id) DO UPDATE SET answer = EXCLUDED.answer
+       RETURNING *`,
+      [assessmentId, questionId, answer]
+    );
 
-    if (error) throw error;
-
-    res.json({
-      success: true,
-      response: data
-    });
+    res.json({ success: true, response: rows[0] });
   } catch (error) {
     console.error('Error saving leadership response:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Errore nel salvataggio della risposta'
-    });
+    res.status(500).json({ success: false, message: 'Errore nel salvataggio della risposta' });
   }
 });
 
+// GET /api/leadership/:assessmentId/progress
 router.get('/:assessmentId/progress', async (req, res) => {
   try {
     const { assessmentId } = req.params;
 
-    const { count, error } = await supabase
-      .from('leadership_responses')
-      .select('*', { count: 'exact', head: true })
-      .eq('assessment_id', assessmentId);
+    const { rows } = await db.query(
+      'SELECT COUNT(*) AS count FROM leadership_responses WHERE assessment_id = $1',
+      [assessmentId]
+    );
 
-    if (error) throw error;
-
+    const answeredCount  = parseInt(rows[0].count);
     const totalQuestions = 30;
-    const answeredCount = count || 0;
-    const progress = Math.round((answeredCount / totalQuestions) * 100);
 
     res.json({
       success: true,
       progress: {
         answeredCount,
         totalQuestions,
-        percentage: progress
+        percentage: Math.round((answeredCount / totalQuestions) * 100)
       }
     });
   } catch (error) {
     console.error('Error getting leadership progress:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Errore nel recupero del progresso'
-    });
+    res.status(500).json({ success: false, message: 'Errore nel recupero del progresso' });
   }
 });
 
+// POST /api/leadership/:assessmentId/calculate
 router.post('/:assessmentId/calculate', async (req, res) => {
   try {
     const { assessmentId } = req.params;
 
-    const { data: responses, error: responsesError } = await supabase
-      .from('leadership_responses')
-      .select('*')
-      .eq('assessment_id', assessmentId);
-
-    if (responsesError) throw responsesError;
+    const { rows: responses } = await db.query(
+      'SELECT question_id, answer FROM leadership_responses WHERE assessment_id = $1',
+      [assessmentId]
+    );
 
     if (!responses || responses.length !== 30) {
       return res.status(400).json({
         success: false,
-        message: 'Assessment incompleto'
+        message: `Assessment incompleto: ${responses?.length || 0}/30 risposte`
       });
     }
 
-    const dimensions = [
-      'visione_strategica',
-      'people_management',
-      'decisionalita',
-      'change_management',
-      'influenza_persuasione',
-      'orientamento_risultati'
-    ];
+    // Ricostruisce score e dimension dal JSON delle domande
+    const enriched = responses.map(r => {
+      const q = questionsMap[r.question_id];
+      if (!q) throw new Error(`Domanda non trovata: ${r.question_id}`);
+      return {
+        question_id: r.question_id,
+        dimension:   q.dimension,
+        score:       q.pesi[r.answer] ?? 0
+      };
+    });
 
+    const dimensions = [
+      'visione_strategica', 'people_management', 'decisionalita',
+      'change_management', 'influenza_persuasione', 'orientamento_risultati'
+    ];
     const dimensionNames = {
-      visione_strategica: 'Visione Strategica',
-      people_management: 'People Management',
-      decisionalita: 'Decisionalità',
-      change_management: 'Change Management',
-      influenza_persuasione: 'Influenza & Persuasione',
+      visione_strategica:     'Visione Strategica',
+      people_management:      'People Management',
+      decisionalita:          'Decisionalità',
+      change_management:      'Change Management',
+      influenza_persuasione:  'Influenza & Persuasione',
       orientamento_risultati: 'Orientamento ai Risultati'
     };
 
-    const results = [];
     let totalScore = 0;
+    const results = dimensions.map(dim => {
+      const dimResponses = enriched.filter(r => r.dimension === dim);
+      const score = dimResponses.length > 0
+        ? dimResponses.reduce((sum, r) => sum + r.score, 0) / dimResponses.length
+        : 0;
+      totalScore += score;
+      return { dimension: dim, dimension_name: dimensionNames[dim], score: parseFloat(score.toFixed(2)) };
+    });
 
-    for (const dimension of dimensions) {
-      const dimensionResponses = responses.filter(r => r.dimension === dimension);
-      const dimensionScore = dimensionResponses.reduce((sum, r) => sum + r.score, 0) / dimensionResponses.length;
-      
-      totalScore += dimensionScore;
+    const averageScore = parseFloat((totalScore / dimensions.length).toFixed(2));
 
-      results.push({
-        dimension,
-        dimension_name: dimensionNames[dimension],
-        score: dimensionScore.toFixed(2)
-      });
-    }
-
-    const averageScore = (totalScore / dimensions.length).toFixed(2);
-
+    // Salva risultati per dimensione (UPSERT)
     for (const result of results) {
-      await supabase
-        .from('leadership_results')
-        .upsert({
-          assessment_id: assessmentId,
-          dimension: result.dimension,
-          dimension_name: result.dimension_name,
-          score: result.score
-        }, {
-          onConflict: 'assessment_id,dimension'
-        });
+      await db.query(
+        `INSERT INTO leadership_results (assessment_id, dimension, dimension_name, score)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (assessment_id, dimension) DO UPDATE
+           SET dimension_name = EXCLUDED.dimension_name, score = EXCLUDED.score`,
+        [assessmentId, result.dimension, result.dimension_name, result.score]
+      );
     }
 
-    const aiReport = await generateLeadershipReport(assessmentId, results, responses);
+    // Genera report AI (logica invariata)
+    const aiReport = await generateLeadershipReport(assessmentId, results, enriched);
 
-    await supabase
-      .from('leadership_assessments')
-      .update({
-        status: 'completed',
-        completed_at: new Date().toISOString(),
-        total_score: averageScore
-      })
-      .eq('id', assessmentId);
+    // Segna assessment come completato
+    await db.query(
+      `UPDATE leadership_assessments
+       SET status = 'completed', completed_at = NOW(), total_score = $1
+       WHERE id = $2`,
+      [averageScore, assessmentId]
+    );
 
     res.json({
       success: true,
-      results: {
-        totalScore: averageScore,
-        dimensions: results,
-        aiReport
-      }
+      results: { totalScore: averageScore, dimensions: results, aiReport }
     });
   } catch (error) {
     console.error('Error calculating leadership results:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Errore nel calcolo dei risultati'
-    });
+    res.status(500).json({ success: false, message: 'Errore nel calcolo dei risultati' });
   }
 });
 
-async function generateLeadershipReport(assessmentId, results, responses) {
+// GET /api/leadership/:assessmentId/results
+router.get('/:assessmentId/results', async (req, res) => {
   try {
-    const dimensionsText = results
-      .map(r => `${r.dimension_name}: ${r.score}/5.0`)
-      .join('\n');
+    const { assessmentId } = req.params;
+
+    const { rows: assessmentRows } = await db.query(
+      'SELECT * FROM leadership_assessments WHERE id = $1',
+      [assessmentId]
+    );
+    if (assessmentRows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Assessment non trovato' });
+    }
+
+    const { rows: results } = await db.query(
+      'SELECT * FROM leadership_results WHERE assessment_id = $1 ORDER BY score DESC',
+      [assessmentId]
+    );
+
+    const { rows: aiReportRows } = await db.query(
+      'SELECT * FROM leadership_ai_reports WHERE assessment_id = $1 LIMIT 1',
+      [assessmentId]
+    );
+
+    res.json({
+      success: true,
+      data: {
+        assessment: assessmentRows[0],
+        results,
+        aiReport: aiReportRows[0] || null
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching leadership results:', error);
+    res.status(500).json({ success: false, message: 'Errore nel recupero dei risultati' });
+  }
+});
+
+// ── Generazione report AI (logica invariata, solo storage migrato) ─────────────
+async function generateLeadershipReport(assessmentId, results) {
+  try {
+    const dimensionsText = results.map(r => `${r.dimension_name}: ${r.score}/5.0`).join('\n');
 
     const prompt = `Sei un esperto di leadership e organizational development. Analizza i risultati di questo Leadership Assessment e genera un report dettagliato.
 
@@ -284,85 +268,35 @@ FORMATO RISPOSTA (JSON):
 }`;
 
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
+      model:      'claude-sonnet-4-6',
       max_tokens: 2000,
-      messages: [{
-        role: 'user',
-        content: prompt
-      }]
+      messages:   [{ role: 'user', content: prompt }]
     });
 
-    const responseText = message.content[0].text;
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    const aiData = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+    const jsonMatch = message.content[0].text.match(/\{[\s\S]*\}/);
+    const aiData    = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+    if (!aiData) throw new Error('Invalid AI response format');
 
-    if (!aiData) {
-      throw new Error('Invalid AI response format');
-    }
+    const { rows } = await db.query(
+      `INSERT INTO leadership_ai_reports
+         (assessment_id, leadership_style, style_description, key_strengths, development_areas, action_plan)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (assessment_id) DO UPDATE SET
+         leadership_style  = EXCLUDED.leadership_style,
+         style_description = EXCLUDED.style_description,
+         key_strengths     = EXCLUDED.key_strengths,
+         development_areas = EXCLUDED.development_areas,
+         action_plan       = EXCLUDED.action_plan
+       RETURNING *`,
+      [assessmentId, aiData.leadership_style, aiData.style_description,
+       aiData.key_strengths, aiData.development_areas, JSON.stringify(aiData.action_plan)]
+    );
 
-    const { data: report, error } = await supabase
-      .from('leadership_ai_reports')
-      .insert({
-        assessment_id: assessmentId,
-        leadership_style: aiData.leadership_style,
-        style_description: aiData.style_description,
-        key_strengths: aiData.key_strengths,
-        development_areas: aiData.development_areas,
-        action_plan: aiData.action_plan
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    return report;
+    return rows[0];
   } catch (error) {
     console.error('Error generating AI report:', error);
     return null;
   }
 }
-
-router.get('/:assessmentId/results', async (req, res) => {
-  try {
-    const { assessmentId } = req.params;
-
-    const { data: assessment, error: assessmentError } = await supabase
-      .from('leadership_assessments')
-      .select('*')
-      .eq('id', assessmentId)
-      .single();
-
-    if (assessmentError) throw assessmentError;
-
-    const { data: results, error: resultsError } = await supabase
-      .from('leadership_results')
-      .select('*')
-      .eq('assessment_id', assessmentId)
-      .order('score', { ascending: false });
-
-    if (resultsError) throw resultsError;
-
-    const { data: aiReport } = await supabase
-      .from('leadership_ai_reports')
-      .select('*')
-      .eq('assessment_id', assessmentId)
-      .single();
-
-    res.json({
-      success: true,
-      data: {
-        assessment,
-        results,
-        aiReport: aiReport || null
-      }
-    });
-  } catch (error) {
-    console.error('Error fetching leadership results:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Errore nel recupero dei risultati'
-    });
-  }
-});
 
 export default router;
