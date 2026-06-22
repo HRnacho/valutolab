@@ -5,7 +5,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { Resend } from 'resend';
 import db from '../config/database.js';
-import { resetPassword as resetPasswordTemplate } from '../services/valutoLabEmails.js';
+import { resetPassword as resetPasswordTemplate, benvenutoTrialB2C as benvenutoTemplate } from '../services/valutoLabEmails.js';
 
 const getResend = () => new Resend(process.env.RESEND_API_KEY);
 
@@ -87,6 +87,20 @@ router.post('/register', async (req, res, next) => {
     const accessToken  = generateAccessToken(user);
     const refreshToken = generateRefreshToken();
     await saveRefreshToken(user.id, refreshToken);
+
+    // Email di benvenuto (non bloccante)
+    try {
+      const mail = benvenutoTemplate({ full_name: user.full_name || '', email: user.email, source: 'direct' });
+      await getResend().emails.send({
+        from: 'ValutoLab <noreply@valutolab.com>',
+        to: user.email,
+        subject: mail.subject,
+        html: mail.html,
+        text: mail.text
+      });
+    } catch (emailErr) {
+      console.error('Welcome email failed:', emailErr.message);
+    }
 
     return res.status(201).json({
       success: true,

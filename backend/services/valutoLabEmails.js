@@ -428,8 +428,12 @@ ValutoLab · Analisi qualitativa delle soft skills
 }
 
 // EMAIL 5 — Benvenuto Trial B2C
-function benvenutoTrialB2C({ full_name, email, password = null }) {
+function benvenutoTrialB2C({ full_name, email, password = null, source = 'trial' }) {
+  const isTrial = source === 'trial';
   const dashboardUrl = 'https://valutolab.com/dashboard';
+  const subline = isTrial
+    ? 'Hai <strong>1 assessment gratuito</strong> valido 30 giorni.'
+    : 'Il tuo account è attivo. Puoi iniziare il tuo primo assessment quando vuoi.';
   const credentialsBox = password ? `
 <!-- Credentials box -->
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 26px 0; background-color:#FFFFFF; border:1px solid #D9D0BC; border-radius:6px;">
@@ -481,7 +485,7 @@ function benvenutoTrialB2C({ full_name, email, password = null }) {
 <title>Il tuo account ValutoLab &egrave; pronto</title>
 </head>
 <body style="margin:0; padding:0; width:100%; background-color:#F5F0E8; -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%;">
-<span style="display:none; font-size:0; line-height:0; max-height:0; max-width:0; opacity:0; overflow:hidden; mso-hide:all;">Il tuo account ValutoLab &egrave; pronto. Hai 1 assessment gratuito valido 30 giorni.</span>
+<span style="display:none; font-size:0; line-height:0; max-height:0; max-width:0; opacity:0; overflow:hidden; mso-hide:all;">Il tuo account ValutoLab &egrave; pronto. ${isTrial ? 'Hai 1 assessment gratuito valido 30 giorni.' : 'Inizia subito il tuo assessment.'}</span>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F5F0E8;">
 <tr>
 <td align="center" style="padding:32px 16px;">
@@ -500,7 +504,7 @@ function benvenutoTrialB2C({ full_name, email, password = null }) {
 <p style="margin:0 0 14px 0; font-family:Arial,Helvetica,sans-serif; font-size:12px; font-weight:bold; letter-spacing:1.5px; text-transform:uppercase; color:#B5541A;">Benvenuto</p>
 <h1 style="margin:0 0 22px 0; font-family:Arial,Helvetica,sans-serif; font-size:24px; line-height:1.3; font-weight:bold; letter-spacing:-0.3px; color:#1C1917;">Il tuo account &egrave; pronto</h1>
 <p style="margin:0 0 18px 0; font-family:Arial,Helvetica,sans-serif; font-size:17px; line-height:1.6; color:#1C1917;">Ciao <strong>${full_name}</strong>!</p>
-<p style="margin:0 0 24px 0; font-family:Arial,Helvetica,sans-serif; font-size:16px; line-height:1.6; color:#1C1917;">Il tuo account &egrave; stato creato. Hai <strong>1 assessment gratuito</strong> valido 30 giorni.</p>
+<p style="margin:0 0 24px 0; font-family:Arial,Helvetica,sans-serif; font-size:16px; line-height:1.6; color:#1C1917;">${subline}</p>
 
 ${credentialsBox}
 
@@ -544,7 +548,7 @@ Il tuo account è pronto
 
 Ciao ${full_name}!
 
-Il tuo account è stato creato. Hai 1 assessment gratuito valido 30 giorni.
+Il tuo account è stato creato. ${isTrial ? 'Hai 1 assessment gratuito valido 30 giorni.' : 'Inizia subito il tuo primo assessment.'}
 
 Il tuo account:
 - Email: ${email}${password ? `\n- Password: ${password}\n\nTi consigliamo di cambiare la password al primo accesso.` : ''}
