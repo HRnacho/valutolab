@@ -271,7 +271,7 @@ export default function DashboardPage() {
   const completedAssessments   = assessments.filter(a => a.status === 'completed')
   const inProgressLeadership   = leadershipAssessments.filter(a => a.status === 'in_progress')
   const completedLeadership    = leadershipAssessments.filter(a => a.status === 'completed')
-  const isTrial = user?.user_metadata?.role === 'trial_user'
+  const isTrial = user?.role === 'trial_user'
   const isEmpty = assessments.length === 0 && leadershipAssessments.length === 0
 
   return (

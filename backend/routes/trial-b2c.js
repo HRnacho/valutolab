@@ -1,81 +1,121 @@
 import express from 'express';
-import { createClient } from '@supabase/supabase-js';
+import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 import { Resend } from 'resend';
-import pg from 'pg';
-import { benvenutoTrialB2C } from '../services/valutoLabEmails.js';
+import db from '../config/database.js';
 
 const router = express.Router();
-
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
-
 const resend = new Resend(process.env.RESEND_API_KEY);
+const BCRYPT_ROUNDS = 12;
 
-const db = new pg.Pool({
-  connectionString: process.env.DATABASE_URL
-});
+function generateRefreshToken() {
+  return crypto.randomBytes(40).toString('hex');
+}
 
+function hashToken(token) {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+async function saveRefreshToken(userId, token) {
+  const expiresAt = new Date(Date.now() + 7 * 86_400_000);
+  await db.query(
+    `INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3)`,
+    [userId, hashToken(token), expiresAt.toISOString()]
+  );
+}
+
+// Importa il generatore di access token da auth.js non è possibile (circular),
+// quindi duplica la logica minima qui usando le stesse env vars
+import jwt from 'jsonwebtoken';
+
+function generateAccessToken(user) {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error('JWT_SECRET non configurato');
+  return jwt.sign(
+    {
+      sub:         user.id,
+      email:       user.email,
+      role:        user.role,
+      source:      user.source ?? 'trial',
+      supabase_id: user.supabase_id ?? null
+    },
+    secret,
+    { expiresIn: process.env.JWT_ACCESS_EXPIRES || '8h' }
+  );
+}
+
+// POST /api/trial-b2c/register
 router.post('/register', async (req, res) => {
   const { full_name, email, password } = req.body;
 
   if (!full_name || !email || !password) {
     return res.status(400).json({ error: 'Tutti i campi sono obbligatori.' });
   }
-
   if (password.length < 8) {
     return res.status(400).json({ error: 'La password deve essere di almeno 8 caratteri.' });
   }
 
   try {
+    // Controlla duplicato in users (sistema principale)
     const existing = await db.query(
-      'SELECT id FROM trial_users WHERE email = $1',
-      [email]
+      'SELECT id FROM users WHERE email = $1',
+      [email.toLowerCase().trim()]
     );
     if (existing.rows.length > 0) {
-      return res.status(409).json({ error: 'Questa email e già registrata. Prova ad accedere.' });
+      return res.status(409).json({ error: 'Questa email è già registrata. Prova ad accedere.' });
     }
 
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: {
-        full_name,
-        role: 'trial_user'
-      }
-    });
+    const password_hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
-    if (authError) {
-      console.error('Supabase Auth error:', authError);
-      if (authError.message.includes('already been registered')) {
-        return res.status(409).json({ error: 'Questa email e già registrata. Prova ad accedere.' });
-      }
-      return res.status(500).json({ error: 'Errore durante la creazione account.' });
-    }
-
-    const userId = authData.user.id;
-
-    await db.query(
-      `INSERT INTO trial_users 
-        (user_id, full_name, email, assessment_quota, used_assessments, status, expires_at)
-       VALUES ($1, $2, $3, 1, 0, 'active', NOW() + INTERVAL '30 days')`,
-      [userId, full_name, email]
+    const { rows } = await db.query(
+      `INSERT INTO users (email, password_hash, full_name, role, source)
+       VALUES ($1, $2, $3, 'trial_user', 'trial')
+       RETURNING id, email, full_name, role, source`,
+      [email.toLowerCase().trim(), password_hash, full_name.trim()]
     );
+    const user = rows[0];
 
-    const mailBenvenuto = benvenutoTrialB2C({ full_name, email, password });
-    await resend.emails.send({
-      from: 'ValutoLab <noreply@valutolab.com>',
-      to: email,
-      subject: mailBenvenuto.subject,
-      html: mailBenvenuto.html,
-      text: mailBenvenuto.text
-    });
+    // Log in trial_users per analytics/quota
+    try {
+      await db.query(
+        `INSERT INTO trial_users (user_id, full_name, email, assessment_quota, used_assessments, status, expires_at)
+         VALUES ($1, $2, $3, 1, 0, 'active', NOW() + INTERVAL '30 days')
+         ON CONFLICT DO NOTHING`,
+        [user.id, full_name.trim(), email.toLowerCase().trim()]
+      );
+    } catch (trialErr) {
+      // Non bloccante: se trial_users ha vincoli incompatibili, logga ma continua
+      console.warn('trial_users insert skipped:', trialErr.message);
+    }
+
+    const accessToken  = generateAccessToken(user);
+    const refreshToken = generateRefreshToken();
+    await saveRefreshToken(user.id, refreshToken);
+
+    // Email di benvenuto (senza password in chiaro)
+    try {
+      await resend.emails.send({
+        from: 'ValutoLab <noreply@valutolab.com>',
+        to: email.toLowerCase().trim(),
+        subject: 'Benvenuto su ValutoLab — il tuo account è pronto',
+        html: `
+          <p>Ciao ${full_name},</p>
+          <p>Il tuo account ValutoLab è stato creato con successo.</p>
+          <p>Puoi accedere con la tua email e la password che hai scelto in fase di registrazione.</p>
+          <p><a href="${process.env.FRONTEND_URL || 'https://valutolab.com'}/dashboard">Vai alla tua dashboard →</a></p>
+          <p>Il team ValutoLab</p>
+        `,
+        text: `Ciao ${full_name},\n\nIl tuo account ValutoLab è pronto.\nAccedi su: ${process.env.FRONTEND_URL || 'https://valutolab.com'}/login\n\nIl team ValutoLab`
+      });
+    } catch (emailErr) {
+      console.error('Welcome email failed:', emailErr.message);
+    }
 
     return res.status(201).json({
-      success: true,
-      message: 'Account creato! Controlla la tua email per le credenziali.'
+      success:       true,
+      access_token:  accessToken,
+      refresh_token: refreshToken,
+      user: { id: user.id, email: user.email, full_name: user.full_name, role: user.role, source: user.source }
     });
 
   } catch (err) {

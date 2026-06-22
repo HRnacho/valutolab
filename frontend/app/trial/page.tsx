@@ -2,15 +2,15 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Wordmark } from '@/components/ui/Wordmark'
 import { Button } from '@/components/ui/Button'
-import { CheckCircle } from 'lucide-react'
 
 export default function TrialPage() {
+  const router = useRouter()
   const [formData, setFormData] = useState({ full_name: '', email: '', password: '', confirmPassword: '' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }))
@@ -30,33 +30,16 @@ export default function TrialPage() {
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Errore durante la registrazione.'); return }
-      setSuccess(true)
+      // Auto-login: salva i token e vai alla dashboard
+      localStorage.setItem('jwt_access_token',  data.access_token)
+      localStorage.setItem('jwt_refresh_token', data.refresh_token)
+      router.push('/dashboard')
     } catch { setError('Errore di connessione. Riprova tra qualche minuto.') }
     finally { setLoading(false) }
   }
 
   const inputCls = 'w-full px-4 py-2.5 border border-paper-300 rounded-sm bg-paper-100 focus:border-ink-600 focus:outline-none font-body text-[14px] text-ink-900 placeholder-ink-400'
   const labelCls = 'block text-[12px] font-medium text-ink-600 mb-1.5'
-
-  if (success) {
-    return (
-      <div className="min-h-screen bg-paper-100 font-body flex items-center justify-center p-4">
-        <div className="bg-paper-50 border border-paper-200 rounded-md shadow-md-ink p-10 max-w-md w-full text-center">
-          <div className="w-12 h-12 bg-green-50 border border-green-200 rounded-full flex items-center justify-center mx-auto mb-5">
-            <CheckCircle className="w-6 h-6 text-level-avanzato" />
-          </div>
-          <h1 className="font-display text-[24px] font-medium text-ink-900 mb-2">Account creato!</h1>
-          <p className="text-[14px] text-ink-500 mb-6">
-            Controlla la tua email — ti abbiamo inviato le credenziali di accesso per iniziare il tuo assessment gratuito.
-          </p>
-          <Button variant="primary" className="w-full justify-center" onClick={() => window.location.href = '/login'}>
-            Vai al Login →
-          </Button>
-          <p className="text-[11px] text-ink-400 mt-4">Non hai ricevuto l'email? Controlla la cartella spam.</p>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="min-h-screen bg-paper-100 font-body text-ink-900 flex items-center justify-center p-4">
