@@ -428,7 +428,46 @@ ValutoLab · Analisi qualitativa delle soft skills
 }
 
 // EMAIL 5 — Benvenuto Trial B2C
-function benvenutoTrialB2C({ full_name, email, password }) {
+function benvenutoTrialB2C({ full_name, email, password = null }) {
+  const dashboardUrl = 'https://valutolab.com/dashboard';
+  const credentialsBox = password ? `
+<!-- Credentials box -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 26px 0; background-color:#FFFFFF; border:1px solid #D9D0BC; border-radius:6px;">
+<tr>
+<td style="padding:22px 24px;">
+<p style="margin:0 0 16px 0; font-family:Arial,Helvetica,sans-serif; font-size:11px; font-weight:bold; letter-spacing:1.5px; text-transform:uppercase; color:#78716C;">Le tue credenziali</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+<tr>
+<td style="padding:0 0 14px 0; border-bottom:1px solid #D9D0BC;">
+<p style="margin:0 0 4px 0; font-family:Arial,Helvetica,sans-serif; font-size:12px; color:#78716C;">Email</p>
+<p style="margin:0; font-family:'Courier New',Courier,monospace; font-size:15px; color:#1C1917; word-break:break-all;">${email}</p>
+</td>
+</tr>
+<tr>
+<td style="padding:14px 0 0 0;">
+<p style="margin:0 0 4px 0; font-family:Arial,Helvetica,sans-serif; font-size:12px; color:#78716C;">Password</p>
+<p style="margin:0; font-family:'Courier New',Courier,monospace; font-size:15px; color:#1C1917; letter-spacing:0.5px;">${password}</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+</table>` : `
+<!-- Email box (no password) -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 26px 0; background-color:#FFFFFF; border:1px solid #D9D0BC; border-radius:6px;">
+<tr>
+<td style="padding:22px 24px;">
+<p style="margin:0 0 16px 0; font-family:Arial,Helvetica,sans-serif; font-size:11px; font-weight:bold; letter-spacing:1.5px; text-transform:uppercase; color:#78716C;">Il tuo account</p>
+<p style="margin:0 0 4px 0; font-family:Arial,Helvetica,sans-serif; font-size:12px; color:#78716C;">Email</p>
+<p style="margin:0; font-family:'Courier New',Courier,monospace; font-size:15px; color:#1C1917; word-break:break-all;">${email}</p>
+</td>
+</tr>
+</table>`;
+
+  const ctaUrl   = password ? 'https://valutolab.com/login' : dashboardUrl;
+  const ctaLabel = password ? 'Inizia il tuo Assessment &rarr;' : 'Vai alla tua Dashboard &rarr;';
+  const fallbackUrl = ctaUrl;
+
   return {
     subject: "Il tuo account ValutoLab è pronto",
     html: `<!DOCTYPE html>
@@ -463,41 +502,20 @@ function benvenutoTrialB2C({ full_name, email, password }) {
 <p style="margin:0 0 18px 0; font-family:Arial,Helvetica,sans-serif; font-size:17px; line-height:1.6; color:#1C1917;">Ciao <strong>${full_name}</strong>!</p>
 <p style="margin:0 0 24px 0; font-family:Arial,Helvetica,sans-serif; font-size:16px; line-height:1.6; color:#1C1917;">Il tuo account &egrave; stato creato. Hai <strong>1 assessment gratuito</strong> valido 30 giorni.</p>
 
-<!-- Credentials box -->
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 26px 0; background-color:#FFFFFF; border:1px solid #D9D0BC; border-radius:6px;">
-<tr>
-<td style="padding:22px 24px;">
-<p style="margin:0 0 16px 0; font-family:Arial,Helvetica,sans-serif; font-size:11px; font-weight:bold; letter-spacing:1.5px; text-transform:uppercase; color:#78716C;">Le tue credenziali</p>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-<tr>
-<td style="padding:0 0 14px 0; border-bottom:1px solid #D9D0BC;">
-<p style="margin:0 0 4px 0; font-family:Arial,Helvetica,sans-serif; font-size:12px; color:#78716C;">Email</p>
-<p style="margin:0; font-family:'Courier New',Courier,monospace; font-size:15px; color:#1C1917; word-break:break-all;">${email}</p>
-</td>
-</tr>
-<tr>
-<td style="padding:14px 0 0 0;">
-<p style="margin:0 0 4px 0; font-family:Arial,Helvetica,sans-serif; font-size:12px; color:#78716C;">Password</p>
-<p style="margin:0; font-family:'Courier New',Courier,monospace; font-size:15px; color:#1C1917; letter-spacing:0.5px;">${password}</p>
-</td>
-</tr>
-</table>
-</td>
-</tr>
-</table>
+${credentialsBox}
 
 <!-- CTA -->
 <table role="presentation" cellpadding="0" cellspacing="0" border="0">
 <tr>
 <td align="center" bgcolor="#B5541A" style="border-radius:6px;">
-<a href="https://valutolab.com/login" target="_blank" style="display:inline-block; font-family:Arial,Helvetica,sans-serif; font-size:16px; font-weight:bold; color:#FFFFFF; text-decoration:none; padding:14px 32px; border-radius:6px;">Inizia il tuo Assessment &rarr;</a>
+<a href="${ctaUrl}" target="_blank" style="display:inline-block; font-family:Arial,Helvetica,sans-serif; font-size:16px; font-weight:bold; color:#FFFFFF; text-decoration:none; padding:14px 32px; border-radius:6px;">${ctaLabel}</a>
 </td>
 </tr>
 </table>
 
 <!-- Fallback link -->
 <p style="margin:28px 0 6px 0; font-family:Arial,Helvetica,sans-serif; font-size:13px; line-height:1.6; color:#78716C;">Oppure accedi da:</p>
-<p style="margin:0; font-family:Arial,Helvetica,sans-serif; font-size:13px; line-height:1.6; word-break:break-all;"><a href="https://valutolab.com/login" target="_blank" style="color:#B5541A; text-decoration:underline;">https://valutolab.com/login</a></p>
+<p style="margin:0; font-family:Arial,Helvetica,sans-serif; font-size:13px; line-height:1.6; word-break:break-all;"><a href="${fallbackUrl}" target="_blank" style="color:#B5541A; text-decoration:underline;">${fallbackUrl}</a></p>
 </td>
 </tr>
 
@@ -528,14 +546,11 @@ Ciao ${full_name}!
 
 Il tuo account è stato creato. Hai 1 assessment gratuito valido 30 giorni.
 
-Le tue credenziali:
-- Email: ${email}
-- Password: ${password}
+Il tuo account:
+- Email: ${email}${password ? `\n- Password: ${password}\n\nTi consigliamo di cambiare la password al primo accesso.` : ''}
 
-Ti consigliamo di cambiare la password al primo accesso.
-
-Inizia il tuo assessment:
-https://valutolab.com/login
+${password ? 'Inizia il tuo assessment' : 'Vai alla tua dashboard'}:
+${ctaUrl}
 
 —
 ValutoLab · Analisi qualitativa delle soft skills

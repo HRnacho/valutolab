@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { Resend } from 'resend';
 import db from '../config/database.js';
+import { benvenutoTrialB2C } from '../services/valutoLabEmails.js';
 
 const router = express.Router();
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -92,20 +93,15 @@ router.post('/register', async (req, res) => {
     const refreshToken = generateRefreshToken();
     await saveRefreshToken(user.id, refreshToken);
 
-    // Email di benvenuto (senza password in chiaro)
+    // Email di benvenuto con template grafico (senza password in chiaro)
     try {
+      const mail = benvenutoTrialB2C({ full_name, email: email.toLowerCase().trim() });
       await resend.emails.send({
         from: 'ValutoLab <noreply@valutolab.com>',
         to: email.toLowerCase().trim(),
-        subject: 'Benvenuto su ValutoLab — il tuo account è pronto',
-        html: `
-          <p>Ciao ${full_name},</p>
-          <p>Il tuo account ValutoLab è stato creato con successo.</p>
-          <p>Puoi accedere con la tua email e la password che hai scelto in fase di registrazione.</p>
-          <p><a href="${process.env.FRONTEND_URL || 'https://valutolab.com'}/dashboard">Vai alla tua dashboard →</a></p>
-          <p>Il team ValutoLab</p>
-        `,
-        text: `Ciao ${full_name},\n\nIl tuo account ValutoLab è pronto.\nAccedi su: ${process.env.FRONTEND_URL || 'https://valutolab.com'}/login\n\nIl team ValutoLab`
+        subject: mail.subject,
+        html: mail.html,
+        text: mail.text
       });
     } catch (emailErr) {
       console.error('Welcome email failed:', emailErr.message);
