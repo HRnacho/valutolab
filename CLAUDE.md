@@ -8,6 +8,7 @@ Istruzioni permanenti per Claude Code in questo repo.
 
 - **Frontend**: Next.js 14, TypeScript, Tailwind CSS — deploy su Vercel (auto su `git push`)
 - **Backend**: Express.js ESM (`import/export`), Node.js — deploy su Docker VPS `72.60.35.192`
+- **Admin**: `admin-frontend/` è un'app separata, servita dal container `valutolab2-admin-1` — VIVA, distinta dal backend. Non trattarla come codice morto.
 - **Database**: PostgreSQL locale nel container `valutolab2-postgres-1`, database `valutolab`
 - **AI**: Anthropic SDK, modello `claude-sonnet-4-6`
 - **Email**: Resend (`resend.emails.send`), sempre includere campo `text` oltre a `html`
@@ -18,9 +19,20 @@ Istruzioni permanenti per Claude Code in questo repo.
 
 - **Mai usare Supabase** — il progetto è migrato completamente a PostgreSQL locale. Usa sempre `db.query()` (pg pool).
 - **Mai toccare `verifyToken.js`**.
+- **Mai modificare il `docker-compose.yml` di produzione** (quello nella root del repo).
 - **Il campo `supabase_id` nel JWT è un nome legacy** — contiene l'UUID PostgreSQL locale, non ha nulla a che fare con Supabase.
 - Negli endpoint che usano `organization_members`, usare sempre `req.user.supabase_id ?? req.user.id` (i due campi possono divergere).
 - I file backend sono ESM: niente `require()`, niente annotazioni di tipo TypeScript (es. `Record<string, number>`) nei `.js`.
+
+---
+
+## Accesso VPS
+
+Claude Code gira sul PC dell'utente ed entra nel VPS via SSH con **chiave già installata (accesso passwordless)**. Può quindi eseguire deploy, restart e lettura log da solo.
+
+- IP: `72.60.35.192` (host `srv967276`), utente `root`
+- Root repo sul VPS: `/root/valutolab` (monorepo: `frontend/`, `backend/`, `admin-frontend/`)
+- Container: `valutolab2-backend-1` (porta interna 3001), `valutolab2-nginx-1`, `valutolab2-postgres-1`, `valutolab2-adminer-1`, `valutolab2-admin-1`
 
 ---
 
@@ -32,16 +44,22 @@ git push origin main
 ```
 Vercel fa il deploy automaticamente.
 
-### Backend (VPS)
+### Backend (VPS) — eseguibile dal PC via SSH
 ```
-cd /root/valutolab && git stash && git pull --rebase origin main && docker restart valutolab2-backend-1
+ssh root@72.60.35.192 "cd /root/valutolab && git stash && git pull --rebase origin main && docker restart valutolab2-backend-1"
 ```
-- **Sempre** usare `git stash` prima del pull per evitare errori di unstaged changes.
+- **Sempre** `git stash` prima del pull per evitare errori di unstaged changes (no-op se non c'è nulla).
+- Dopo il deploy, **verificare sempre che il VPS sia allineato** prima di dare per live un fix:
+```
+ssh root@72.60.35.192 "cd /root/valutolab && git log --oneline -3"
+```
+  Il VPS resta indietro rispetto a GitHub se il pull non viene eseguito (problema ricorrente).
 - Se il sito non risponde dopo un rebuild, il container potrebbe essere uscito dalle reti Docker:
 ```bash
-docker network connect --alias backend mautic-1dii_default valutolab2-backend-1
-docker network connect valutolab2_default valutolab2-backend-1
+ssh root@72.60.35.192 "docker network connect --alias backend mautic-1dii_default valutolab2-backend-1"
+ssh root@72.60.35.192 "docker network connect valutolab2_default valutolab2-backend-1"
 ```
+- NON usare `docker-compose` per i rebuild — solo `git pull` + `docker restart`.
 
 ### Nano editor sul VPS
 `Ctrl+X` → `Y` → `Invio`
