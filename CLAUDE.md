@@ -32,7 +32,28 @@ Claude Code gira sul PC dell'utente ed entra nel VPS via SSH con **chiave già i
 
 - IP: `72.60.35.192` (host `srv967276`), utente `root`
 - Root repo sul VPS: `/root/valutolab` (monorepo: `frontend/`, `backend/`, `admin-frontend/`)
+- Stack Docker reale (compose): `/docker/valutolab2/docker-compose.yml` (gestito via Hostinger Docker Manager)
 - Container: `valutolab2-backend-1` (porta interna 3001), `valutolab2-nginx-1`, `valutolab2-postgres-1`, `valutolab2-adminer-1`, `valutolab2-admin-1`
+
+---
+
+## Query al database (senza Adminer)
+
+Adminer NON è più esposto su internet (bind su `127.0.0.1`, raggiungibile solo via tunnel SSH dell'utente). Per interrogare il DB, Claude Code NON usa Adminer ma `psql` direttamente sul container postgres via SSH.
+
+Connessione interattiva:
+```
+ssh root@72.60.35.192 "docker exec -it valutolab2-postgres-1 psql -U valutolab -d valutolab"
+```
+
+Query singola (consigliata per controlli/debug):
+```
+ssh root@72.60.35.192 "docker exec valutolab2-postgres-1 psql -U valutolab -d valutolab -c \"SELECT ...\""
+```
+
+- Database: `valutolab` — Utente: `valutolab` — Host interno: `valutolab2-postgres-1` — Porta `5432` (non esposta)
+- La password NON va nel repo: è nelle env del container (`docker exec valutolab2-postgres-1 env | grep POSTGRES_PASSWORD`).
+- Mostrare SEMPRE le query SQL prima di eseguirle se modificano dati o schema; attendere conferma.
 
 ---
 
@@ -160,3 +181,6 @@ In caso di errore email: `try/catch` che loga ma non blocca la response.
 - Git divergence VPS/GitHub ricorrente — valutare soluzione strutturale
 - `npm audit fix` per 13 vulnerabilità dipendenze
 - Test end-to-end completo flusso Focus
+
+### Pendenze di sicurezza
+- `POST /api/leadership/start` NON passa da `verifyToken` e si fida dello userId nel body → proteggere con `verifyToken` e prendere lo userId dal token
