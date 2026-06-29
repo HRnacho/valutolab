@@ -15,7 +15,7 @@ export default function LoginPage() {
   const [error, setError]       = useState('')
 
   useEffect(() => {
-    if (!loading && user) router.replace('/')
+    if (!loading && user) router.replace('/dashboard')
   }, [user, loading, router])
 
   const handleEmailLogin = async (e: React.FormEvent) => {
@@ -23,7 +23,7 @@ export default function LoginPage() {
     if (!email || !password) { setError('Inserisci email e password'); return }
     setSubmitting(true); setError('')
     const result = await login(email.trim(), password)
-    if (result.success) { router.push('/'); router.refresh() }
+    if (result.success) { router.push('/dashboard'); router.refresh() }
     else setError(result.error || 'Email o password non corretti')
     setSubmitting(false)
   }
