@@ -106,6 +106,8 @@ export const api = {
   leadership: {
     list:   ()          => request<any>('/api/data/leadership'),
     delete: (id: string)=> request<any>(`/api/data/leadership/${id}`, { method: 'DELETE' }),
+    // POST /api/leadership/start non usa verifyToken — richiede userId nel body
+    create: (userId: string) => request<any>('/api/leadership/start', { method: 'POST', body: JSON.stringify({ userId }) }),
     responses: {
       list:  (id: string) => request<any>(`/api/data/leadership/${id}/responses`),
       count: (id: string) => request<any>(`/api/data/leadership/${id}/responses/count`)

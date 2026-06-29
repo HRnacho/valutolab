@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/Button'
 import { ScoreRing } from '@/components/ui/ScoreRing'
 import BadgeGenerator from '@/components/BadgeGenerator'
 import QRCodeGenerator from '@/components/QRCodeGenerator'
-import { FileText, Share2, Mail, Trash2, Play, ChevronRight, BarChart3, Building2 } from 'lucide-react'
+import { FileText, Share2, Mail, Trash2, Play, ChevronRight, BarChart3, Building2, Sparkles, Target } from 'lucide-react'
 
 interface Assessment {
   id: string
@@ -44,6 +44,7 @@ export default function DashboardPage() {
   const [responsesCount, setResponsesCount] = useState<Record<string, number>>({})
   const [leadershipResponsesCount, setLeadershipResponsesCount] = useState<Record<string, number>>({})
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [startingAssessment, setStartingAssessment] = useState<'base' | 'leadership' | null>(null)
   const [shareData, setShareData] = useState<Record<string, ShareData>>({})
   const [generatingPDF, setGeneratingPDF] = useState<string | null>(null)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
@@ -218,6 +219,35 @@ export default function DashboardPage() {
     } catch { showMessage('error', 'Errore nel caricamento del QR code') }
   }
 
+  const handleStartBase = async () => {
+    setStartingAssessment('base')
+    try {
+      const res = await api.assessments.create()
+      router.push(`/assessment/${res.assessment.id}`)
+    } catch (err: any) {
+      showMessage('error', err.message || "Errore nell'avvio dell'assessment")
+    } finally {
+      setStartingAssessment(null)
+    }
+  }
+
+  const handleStartLeadership = async () => {
+    // userId: user.id = supabase_id per utenti migrati, id locale per nuovi utenti.
+    // Corrisponde a req.user.supabase_id ?? req.user.id sul backend (data.js riga 20).
+    // POST /api/leadership/start non usa verifyToken — richiede userId nel body.
+    const uid = user?.id
+    if (!uid) { showMessage('error', 'Sessione non valida, rieffettua il login'); return }
+    setStartingAssessment('leadership')
+    try {
+      const res = await api.leadership.create(uid)
+      router.push(`/leadership/${res.assessment.id}`)
+    } catch (err: any) {
+      showMessage('error', err.message || "Errore nell'avvio del Leadership Deep Dive")
+    } finally {
+      setStartingAssessment(null)
+    }
+  }
+
   const handleStartNewAssessment = async () => {
     const isTrial = user?.role === 'trial_user'
     if (isTrial) {
@@ -322,6 +352,65 @@ export default function DashboardPage() {
             {isTrial ? 'Inizia assessment' : '+ Vai ai servizi'}
           </Button>
         </div>
+
+        {/* ── INIZIA NUOVO ASSESSMENT ────────────────────────────────── */}
+        <section className="bg-paper-50 border border-paper-200 rounded-md shadow-sm-ink p-6">
+          <p className="text-[11px] font-semibold tracking-widest uppercase text-sienna-600 mb-1">Nuovo assessment</p>
+          <h2 className="font-display text-[20px] font-medium text-ink-900 mb-5">Cosa vuoi misurare oggi?</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+            {/* Card — Assessment Soft Skills */}
+            <div className="bg-paper-100 border border-paper-200 rounded-md p-5 flex flex-col gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 bg-ink-900 rounded-md flex items-center justify-center flex-shrink-0">
+                  <Sparkles className="w-4 h-4 text-paper-50" />
+                </div>
+                <h3 className="font-display text-[16px] font-medium text-ink-900">Assessment Soft Skills</h3>
+              </div>
+              <p className="text-[13px] text-ink-500 leading-relaxed flex-1">
+                48 domande Likert + 12 situazionali. Misura 12 competenze trasversali e ottieni il tuo profilo completo con report AI.
+              </p>
+              <Button
+                variant="primary"
+                className="w-full flex items-center justify-center gap-2"
+                onClick={handleStartBase}
+                disabled={startingAssessment !== null}
+              >
+                {startingAssessment === 'base' ? (
+                  <><span className="w-4 h-4 border-2 border-paper-50 border-t-transparent rounded-full animate-spin" />Avvio...</>
+                ) : (
+                  <>Inizia assessment</>
+                )}
+              </Button>
+            </div>
+
+            {/* Card — Leadership Deep Dive */}
+            <div className="bg-paper-100 border border-paper-200 rounded-md p-5 flex flex-col gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 bg-sienna rounded-md flex items-center justify-center flex-shrink-0">
+                  <Target className="w-4 h-4 text-paper-50" />
+                </div>
+                <h3 className="font-display text-[16px] font-medium text-ink-900">Leadership Deep Dive</h3>
+              </div>
+              <p className="text-[13px] text-ink-500 leading-relaxed flex-1">
+                30 domande su 6 dimensioni di leadership. Scopri il tuo stile predominante e ricevi un piano d'azione personalizzato.
+              </p>
+              <Button
+                variant="primary"
+                className="w-full flex items-center justify-center gap-2 !bg-sienna hover:!bg-sienna-700"
+                onClick={handleStartLeadership}
+                disabled={startingAssessment !== null}
+              >
+                {startingAssessment === 'leadership' ? (
+                  <><span className="w-4 h-4 border-2 border-paper-50 border-t-transparent rounded-full animate-spin" />Avvio...</>
+                ) : (
+                  <>Inizia Deep Dive</>
+                )}
+              </Button>
+            </div>
+
+          </div>
+        </section>
 
         {/* ── AREA AZIENDA ───────────────────────────────────────────── */}
         {ownerOrg && (
